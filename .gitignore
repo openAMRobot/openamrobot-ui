@@ -1,1 +1,23 @@
-CMakeLists.txt
+# Node / frontend
+node_modules/
+web/node_modules/
+robotui/node_modules/
+robot_ui/node_modules/
+
+# Frontend build output
+web/dist/
+web/build/
+dist/
+build/
+
+# ROS / colcon build
+**/build/
+**/install/
+**/log/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+
+# Editor
+.vscode/
