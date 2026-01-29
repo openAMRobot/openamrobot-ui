@@ -21,3 +21,6 @@ build/
 
 # Editor
 .vscode/
+
+# Generated UI copied into ROS package
+ros2/openamr_ui_package/www/
