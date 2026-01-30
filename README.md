@@ -1,4 +1,17 @@
 
+# OpenAMRobot UI (ROS 2 Jazzy)
+
+ACTIVE REPOSITORY
+
+This is the main OpenAMRobot UI repository. All new development happens here.
+
+Legacy repositories (kept for reference only):
+- OpenAMR_UI_package (legacy UI package repository)
+- OpenAMR_UI_dev (legacy early UI development sandbox)
+
+For legacy code or history, use the legacy repos above.
+For any new work (issues, PRs, development), use this repository.
+
 **IMPORTANT**
 ----------------------------
 This branch is still a WIP. As such, certain functions such as navigation and route following remain untested. We apologize for the inconveniance and are grateful for your trust and patience.
