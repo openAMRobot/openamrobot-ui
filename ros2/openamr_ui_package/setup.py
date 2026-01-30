@@ -49,11 +49,10 @@ setup(
     ] + package_files('www'),
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='darkadius',
-    maintainer_email='tobbalya@gmail.com',
+    maintainer='BotshareAI',
+    maintainer_email='alex@botshare.ai',
     description='ROS2 Conversion for the OpenAMR platform',
     license='Apache-2.0',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'handler=openamr_ui_package.folders_handler:main',
