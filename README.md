@@ -6,8 +6,8 @@ ACTIVE REPOSITORY
 This is the main OpenAMRobot UI repository. All new development happens here.
 
 Legacy repositories (kept for reference only):
-- OpenAMR_UI_package (legacy UI package repository)
-- OpenAMR_UI_dev (legacy early UI development sandbox)
+- OpenAMRobot_UI_package (legacy UI package repository)
+- OpenAMRobot_UI_dev (legacy early UI development sandbox)
 
 For legacy code or history, use the legacy repos above.
 For any new work (issues, PRs, development), use this repository.
