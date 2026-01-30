@@ -36,3 +36,7 @@ web/.eslintcache
 # Frontend build output
 web/build/
 web/dist/
+
+# Editor backups
+*.save
+*~
