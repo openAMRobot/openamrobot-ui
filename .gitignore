@@ -7,8 +7,6 @@ web/.eslintcache
 # Frontend build output
 web/dist/
 web/build/
-dist/
-build/
 
 # ROS / colcon build
 **/build/
@@ -24,6 +22,10 @@ build/
 
 # Generated UI copied into ROS package
 ros2/openamr_ui_package/www/
+
+# Node cashe
+web/node_modules/.cashe/
+web/.eslintcashe
 
 # Node / frontend
 node_modules/
