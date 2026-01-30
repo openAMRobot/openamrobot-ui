@@ -1,41 +1,35 @@
-# Node / frontend
+# =========================
+# Node / Frontend
+# =========================
 node_modules/
 web/node_modules/
 web/node_modules/.cache/
 web/.eslintcache
 
 # Frontend build output
-web/dist/
 web/build/
+web/dist/
 
-# ROS / colcon build
+# =========================
+# ROS2 / colcon
+# =========================
 **/build/
 **/install/
 **/log/
 
-# Python cache
-**/__pycache__/
-**/*.pyc
-
-# Editor
-.vscode/
-
 # Generated UI copied into ROS package
 ros2/openamr_ui_package/www/
 
-# Node cashe
-web/node_modules/.cashe/
-web/.eslintcashe
+# =========================
+# Python
+# =========================
+**/__pycache__/
+**/*.pyc
 
-# Node / frontend
-node_modules/
-web/node_modules/
-web/node_modules/.cache/
-web/.eslintcache
-
-# Frontend build output
-web/build/
-web/dist/
+# =========================
+# Editor / IDE
+# =========================
+.vscode/
 
 # Editor backups
 *.save
