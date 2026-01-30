@@ -4,7 +4,7 @@
   <name>openamr_ui_msgs</name>
   <version>0.0.0</version>
   <description>Messages, Services and Actions for the OpenAMR UI</description>
-  <maintainer email="tobbalya@gmail.com">darkadius</maintainer>
+  <maintainer email="alex@botshare.ai">BotshareAI</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
