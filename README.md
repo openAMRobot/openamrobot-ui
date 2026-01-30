@@ -19,7 +19,7 @@ This branch is still a WIP. As such, certain functions such as navigation and ro
 **User interface**
 ----------------------------
 
-**OpenAMR\_UI** is an open-source user interface designed for the intuitive control and management of autonomous mobile robots (AMRs)- its primary focus is on providing a user-friendly experience for effective AMR management. It offers a simple and understandable interface that allows users to monitor telemetry, set up tasks, configure waypoints, and define paths. Built with ease of exploitation, implementation, editing, and redesigning in mind, OpenAMR_UI is optimized for seamless integration with platforms like Linorobot and similar systems and well-suited for use with the Robot Operating System (ROS2) Jazzy distribution.
+**OpenAMRobot_UI** is an open-source user interface designed for the intuitive control and management of autonomous mobile robots (AMRs)- its primary focus is on providing a user-friendly experience for effective AMR management. It offers a simple and understandable interface that allows users to monitor telemetry, set up tasks, configure waypoints, and define paths. Built with ease of exploitation, implementation, editing, and redesigning in mind, OpenAMRobot_UI is optimized for seamless integration with platforms like Linorobot and similar systems and well-suited for use with the Robot Operating System (ROS2) Jazzy distribution.
 
 **Key functionalities:**
 
@@ -338,7 +338,7 @@ Replace link\_on\_ui\_package\_github with the actual URL of your UI package's G
 
         cd your_workspace/src
         
-        git clone https://github.com/openAMRobot/OpenAMR_UI_package
+        git clone https://github.com/openAMRobot/OpenAMRobot_UI
 
 Build the UI package (assuming it's a ROS2 package): 
 
