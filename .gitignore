@@ -1,8 +1,8 @@
 # Node / frontend
 node_modules/
 web/node_modules/
-robotui/node_modules/
-robot_ui/node_modules/
+web/node_modules/.cache/
+web/.eslintcache
 
 # Frontend build output
 web/dist/
@@ -24,3 +24,13 @@ build/
 
 # Generated UI copied into ROS package
 ros2/openamr_ui_package/www/
+
+# Node / frontend
+node_modules/
+web/node_modules/
+web/node_modules/.cache/
+web/.eslintcache
+
+# Frontend build output
+web/build/
+web/dist/
