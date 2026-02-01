@@ -1,3 +1,14 @@
+# OpenAMRobot UI
+
+This repository contains the OpenAMRobot UI (frontend + ROS2-side serving/integration).
+
+Documentation (start here):
+- docs/README.md
+- docs/00-repo-map.md
+
+Documentation images:
+- docs/assets/
+
 
 # OpenAMRobot UI (ROS 2 Jazzy)
 
