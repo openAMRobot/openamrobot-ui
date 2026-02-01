@@ -34,3 +34,23 @@ ros2/openamr_ui_package/www/
 # Editor backups
 *.save
 *~
+
+# --- PR-01 hygiene ---
+# Node / React
+web/node_modules/
+web/build/
+
+# Python caches
+**/__pycache__/
+*.pyc
+
+# ROS2 build artifacts
+ros2/**/build/
+ros2/**/install/
+ros2/**/log/
+
+# Test caches
+.pytest_cache/
+
+# OS
+.DS_Store

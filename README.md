@@ -1,3 +1,14 @@
+# OpenAMRobot UI
+
+This repository contains the OpenAMRobot UI (frontend + ROS2-side serving/integration).
+
+Documentation (start here):
+- docs/README.md
+- docs/00-repo-map.md
+
+Documentation images:
+- docs/assets/
+
 
 # OpenAMRobot UI (ROS 2 Jazzy)
 
@@ -99,7 +110,7 @@ chmod +x launch.bash
 
 OpenAMR\_UI's functionality relies on a robust architecture composed of interconnected ROS2 nodes, standard packages, and communication libraries. Let's delve deeper into each of these components
 
-![Architecture](images/UI_architecture.jpg "Architecture")
+![Architecture](docs/assets/UI_architecture.jpg "Architecture")
 
 **Core nodes:**
 
@@ -154,7 +165,7 @@ Our package uses next external packages:
 
 ### **Map page**
 
-![Architecture](images/map.png "Map")
+![Architecture](docs/assets/map.png "Map")
 
 The Map page serves as your central hub for visualizing and managing your robot's operational environment. Here's a breakdown of what you can expect:
 
@@ -198,7 +209,7 @@ When you move the joystick, UINode sends the **geometry\_msgs/Twis** message to 
 
 ### **Route page**
 
-![Architecture](images/route.png "Route")
+![Architecture](docs/assets/route.png "Route")
 
 The Route page empowers you to define specific paths for your robot to navigate within the maps you've created. Here's how it helps you chart your AMR's course:
 
@@ -229,7 +240,7 @@ When you click on the buttons, UINode sends the **std\_msgs/String** message to 
 
 ### **Control page**
 
-![Architecture](images/control.png "Control")
+![Architecture](docs/assets/control.png "Control")
 
 The Control page serves as your mission control center, allowing you to send navigation commands and guide your robot's movements. When you click on the buttons, UINode sends the **std\_msgs/String** message to the topic “**/ui\_operation**” and it will be parsed in other nodes of ui\_package/ While it doesn't provide direct, physical control like a remote control car, it empowers you to strategically direct the robot's path:
 
@@ -267,7 +278,7 @@ The Control page serves as your mission control center, allowing you to send nav
 
 ### **Info page**
 
-![Architecture](images/info_warehouse.png "Info")
+![Architecture](docs/assets/info_warehouse.png "Info")
 
 The Info page acts as your information hub, providing a comprehensive overview of your robot's status and sensor data. Here's what you can expect:
 
@@ -404,7 +415,7 @@ Edit the configuration parameters to match your specific needs:
 
 Save your changes to config.yaml.
 
-![Architecture](images/config.png "Config")
+![Architecture](docs/assets/config.png "Config")
 
 ### **Run the UI package:**
 
@@ -420,13 +431,13 @@ This command runs the user interface at web page in the local network. You can f
 
 Where ip and port are configurable values. You can change them in the **config.yaml** file (check it above).
 
-![Ip](images/ip_connect.png "Ip_connect")
+![Ip](docs/assets/ip_connect.png "Ip_connect")
 
 ### **Additional launches:**
 
 The ui_package can reload some nodes or even run launches, so in the launchesTemplate folder we placed templates for running navigation and mapping nodes. These launches used to run your navigation and mapping nodes. In the config.yaml file you can change these launches by clyrifying package and launch name. (check config.yaml screen above)
 
-![Launches](images/launch_struct.png "Launch")
+![Launches](docs/assets/launch_struct.png "Launch")
 
 ### **First use**
 
