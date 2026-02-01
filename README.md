@@ -27,8 +27,10 @@ Prerequisites:
 **Steps:**
 
 ## Clone repo
+```bash
 git clone https://github.com/openAMRobot/openamrobot-ui.git
 cd openamrobot-ui
+```
 
 ## Install dependencies
 chmod +x install_openamr_deps.bash
