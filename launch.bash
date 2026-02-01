@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Compiles the UI for the OpenAMR project and moves it to the ROS2 package.
-
-ros2 launch openamr_ui_package ui_launch.py
+# Legacy entrypoint kept for compatibility.
+# Canonical run flow lives in ./scripts/
+bash scripts/run_ui_backend.sh
