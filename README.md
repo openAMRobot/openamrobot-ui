@@ -16,6 +16,32 @@ For any new work (issues, PRs, development), use this repository.
 ----------------------------
 This branch is still a WIP. As such, certain functions such as navigation and route following remain untested. We apologize for the inconveniance and are grateful for your trust and patience.
 
+# Quick Start (ROS2 Jazzy)
+
+Prerequisites:
+- Ubuntu 22.04
+- ROS2 Jazzy installed
+- Node.js & npm
+- colcon workspace setup
+
+**Steps:**
+
+## Clone repo
+git clone https://github.com/openAMRobot/openamrobot-ui.git
+cd openamrobot-ui
+
+## Install dependencies
+chmod +x install_openamr_deps.bash
+./install_openamr_deps.bash
+
+## Build UI
+chmod +x compile_ui.bash
+./compile_ui.bash
+
+## Launch
+chmod +x launch.bash
+./launch.bash
+
 **User interface**
 ----------------------------
 
