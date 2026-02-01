@@ -33,16 +33,22 @@ cd openamrobot-ui
 ```
 
 ## Install dependencies
+```bash
 chmod +x install_openamr_deps.bash
 ./install_openamr_deps.bash
+```
 
 ## Build UI
+```bash
 chmod +x compile_ui.bash
 ./compile_ui.bash
+```
 
 ## Launch
+```bash
 chmod +x launch.bash
 ./launch.bash
+```
 
 **User interface**
 ----------------------------
