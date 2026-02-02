@@ -17,6 +17,25 @@ self-contained.
 - **Serving UI**: Flask (ROS2 backend)
 - **Automation**: helper scripts (scripts/)
 
+```
+Browser / Touchscreen
+        |
+        v
+React UI (web/)
+        |
+        v
+roslibjs (WebSocket)
+        |
+        v
+rosbridge_server
+        |
+        v
+ROS2 UI backend (ros2/)
+        |
+        v
+Navigation / Robot systems 
+```
+
 ---
 
 ## Main directories
