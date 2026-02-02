@@ -32,7 +32,7 @@ The frontend is built into static files and served by the ROS2 backend using Fla
 
 ## Top-level repository structure
 
-.
+.    
 ├── docs/    
 ├── scripts/    
 ├── web/    
