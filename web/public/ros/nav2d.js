@@ -1,5 +1,10 @@
+/* eslint-disable no-undef */
+/* eslint-disable no-restricted-globals */
+
+// NAV2D global namespace
 window.NAV2D = window.NAV2D || {};
 
+// State
 window.NAV2D.pointsArray = [];
 window.NAV2D.pointsFromTopic = [];
 window.NAV2D.arePointsSettable = false;
@@ -11,39 +16,77 @@ window.NAV2D.orientatedPointItem = null;
 window.NAV2D.mapInited = false;
 window.NAV2D.scale = { x: 0, y: 0 };
 
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
+const getScene = () => {
+  // This file is loaded before Map sometimes, so NAV2D.canvas may be null.
+  const nav2d = window.NAV2D;
+  if (!nav2d || !nav2d.canvas || !nav2d.canvas.scene) return null;
+  return nav2d.canvas.scene;
+};
+
+// ------------------------------------------------------------
+// Scale watcher (prevents crash on startup)
+// ------------------------------------------------------------
 window.NAV2D.checkScale = () => {
-  // Your code to be executed periodically
-  if (window.NAV2D.scale.x != window.NAV2D.canvas.scene.scaleX || window.NAV2D.scale.y != window.NAV2D.canvas.scene.scaleY) 
-  {
-    window.NAV2D.scale.x = window.NAV2D.canvas.scene.scaleX;
-    window.NAV2D.scale.y = window.NAV2D.canvas.scene.scaleY;
-    window.NAV2D.pointsArray = drawPoints(
-      window.NAV2D.pointsFromTopic,
-      window.NAV2D.canvas.scene,
-    );
+  const scene = getScene();
+  if (!scene) {
+    // Early init: scene not ready yet, do nothing.
+    return;
   }
-}
 
-// Call the function every 1 second (1000 milliseconds)
-const intervalId = setInterval(window.NAV2D.checkScale, 100);
+  // If scene exists, we can stop the polling interval (it was only for bootstrap)
+  if (window.NAV2D._checkScaleIntervalId) {
+    clearInterval(window.NAV2D._checkScaleIntervalId);
+    window.NAV2D._checkScaleIntervalId = null;
+  }
 
-console.log("hello ");
+  // Detect scale changes (zoom)
+  if (
+    window.NAV2D.scale.x !== scene.scaleX ||
+    window.NAV2D.scale.y !== scene.scaleY
+  ) {
+    window.NAV2D.scale.x = scene.scaleX;
+    window.NAV2D.scale.y = scene.scaleY;
 
+    window.NAV2D.pointsArray = drawPoints(window.NAV2D.pointsFromTopic, scene);
+  }
+};
+
+// Poll quickly until scene exists, then it self-stops inside checkScale()
+window.NAV2D._checkScaleIntervalId = setInterval(window.NAV2D.checkScale, 100);
+
+// ------------------------------------------------------------
+// Public API
+// ------------------------------------------------------------
 window.NAV2D.InitMap = (ros) => {
   console.log("InitMap");
+
+  const scene = getScene();
+  if (!scene) {
+    // Map.jsx should set NAV2D.canvas before calling InitMap,
+    // but guard anyway to avoid a hard crash.
+    console.warn("NAV2D.InitMap called before NAV2D.canvas.scene is ready");
+    return;
+  }
+
   const topic = "/map";
 
-  /* setup a client to get the map */
+  // Setup a client to get the map
   const client = new window.ROS2D.OccupancyGridClient({
     ros,
-    rootObject: window.NAV2D.canvas.scene,
+    rootObject: scene,
     continuous: true,
     topic,
   });
 
-  /* Updating map after topic event */
+  // Updating map after topic event
   client.on("change", () => {
-    /* Scale the canvas to fit the map */
+    // Canvas must exist here
+    if (!window.NAV2D.canvas) return;
+
+    // Scale the canvas to fit the map
     window.NAV2D.canvas.scaleToDimensions(
       client.currentGrid.width,
       client.currentGrid.height,
@@ -53,28 +96,49 @@ window.NAV2D.InitMap = (ros) => {
       client.currentGrid.pose.position.y,
     );
 
+    // Re-draw points on map update
+    const currentScene = getScene();
+    if (!currentScene) return;
+
     window.NAV2D.pointsArray = drawPoints(
       window.NAV2D.pointsFromTopic,
-      window.NAV2D.canvas.scene,
+      currentScene,
     );
   });
 
+  // Run navigator only once per init cycle
   if (!window.NAV2D.mapInited) {
     window.NAV2D.mapInited = true;
     navigator(ros);
   }
 };
 
-/* Cleaning map */
+// Cleaning map
 window.NAV2D.ClearMap = () => {
-  window.NAV2D.pointsArray.forEach((marker) =>
-    window.NAV2D.canvas.scene.removeChild(marker),
-  );
+  const scene = getScene();
+  if (!scene) {
+    // If we have no scene yet, just reset arrays safely.
+    window.NAV2D.pointsArray = [];
+    return;
+  }
+
+  window.NAV2D.pointsArray.forEach((marker) => {
+    try {
+      scene.removeChild(marker);
+    } catch (e) {
+      // ignore individual marker removal issues
+    }
+  });
+
   window.NAV2D.pointsArray = [];
 };
 
+// ------------------------------------------------------------
+// Internal functions
+// ------------------------------------------------------------
 const drawPoints = (points, canvas) => {
-  if (!(points && canvas)) return;
+  if (!Array.isArray(points) || !canvas) return [];
+
   window.NAV2D.ClearMap();
 
   window.NAV2D.pointsArray = points.map((point) => {
@@ -82,66 +146,69 @@ const drawPoints = (points, canvas) => {
     canvas.addChild(defaultPointItem);
     return defaultPointItem;
   });
+
   return window.NAV2D.pointsArray;
 };
 
-
 const navigator = (ros) => {
-  const canvas = window.NAV2D.canvas.scene;
+  const canvas = getScene();
+  if (!canvas) {
+    console.warn("navigator() called before NAV2D.canvas.scene is ready");
+    return;
+  }
 
-  /* Send message about map initialization */
+  // Send message about map initialization
   const messageTopic = new window.ROSLIB.Topic({
     ros,
     name: "/ui_message",
     messageType: "std_msgs/String",
   });
-  /*
-  messageTopic.publish(
-    new window.ROSLIB.Message({ data: "Initialization completed" }),
-  );
- */
 
-  /* Receiving array of points*/
-
+  // Receiving array of points
   createSubscribeTopic(
     ros,
     "/WayPoints_topic",
     "openamr_ui_msgs/ArrayPoseStampedWithCovariance",
     (data) => {
-      if (!Array.isArray(data.poses)) {
+      if (!data || !Array.isArray(data.poses)) {
         console.error("WayPoints_topic data.poses is not an array");
         return;
       }
+
       window.NAV2D.pointsFromTopic = data.poses;
-      window.NAV2D.pointsArray = drawPoints(data.poses, canvas);
+
+      const scene = getScene();
+      if (!scene) return;
+
+      window.NAV2D.pointsArray = drawPoints(data.poses, scene);
+
+      // This flag looks odd in your original code (sets false on update),
+      // but keeping behavior unchanged.
       window.NAV2D.mapInited = false;
     },
   );
 
-  /* ROBOT MARKER SECTION: */
-  const robotMarker = createCanvasPoint(25, {
-    r: 0,
-    g: 0,
-    b: 255,
-    a: 1,
-  });
+  // ROBOT MARKER SECTION:
+  const robotMarker = createCanvasPoint(25, { r: 0, g: 0, b: 255, a: 1 });
   robotMarker.visible = false;
   canvas.addChild(robotMarker);
 
-  /* Robot position watcher */
+  // Robot position watcher
   createSubscribeTopic(ros, "/odom", "nav_msgs/Odometry", (data) => {
+    const scene = getScene();
+    if (!scene || !data?.pose?.pose) return;
+
     const pose = data.pose.pose;
+
     robotMarker.x = pose.position.x;
     robotMarker.y = -pose.position.y;
-    robotMarker.scaleX = 1.0 / canvas.scaleX;
-    robotMarker.scaleY = 1.0 / canvas.scaleY;
-    robotMarker.rotation = canvas.rosQuaternionToGlobalTheta(pose.orientation);
+    robotMarker.scaleX = 1.0 / scene.scaleX;
+    robotMarker.scaleY = 1.0 / scene.scaleY;
+    robotMarker.rotation = scene.rosQuaternionToGlobalTheta(pose.orientation);
     robotMarker.visible = true;
-
-    console.log("odom", window.NAV2D.canvas.scene.scaleX, window.NAV2D.canvas.scene.scaleY);
   });
 
-  /* MOUSE EVENT SECTION */
+  // MOUSE EVENT SECTION
   let isMousePressed = false;
   let isMouseMoved = false;
   let positionVectorItem = null;
@@ -156,17 +223,19 @@ const navigator = (ros) => {
   const handleMouseMove = (event) => {
     if (!isMousePressed) return;
     isMouseMoved = true;
-    canvas.removeChild(orientationMarker);
+
+    if (orientationMarker) {
+      try {
+        canvas.removeChild(orientationMarker);
+      } catch (e) {
+        // ignore
+      }
+    }
 
     const currentPos = canvas.globalToRos(event.stageX, event.stageY);
     const currentPositionVectorItem = new window.ROSLIB.Vector3(currentPos);
 
-    orientationMarker = createCanvasPoint(25, {
-      r: 0,
-      g: 255,
-      b: 0,
-      a: 1,
-    });
+    orientationMarker = createCanvasPoint(25, { r: 0, g: 255, b: 0, a: 1 });
 
     const xDelta = currentPositionVectorItem.x - positionVectorItem.x;
     const yDelta = currentPositionVectorItem.y - positionVectorItem.y;
@@ -189,6 +258,7 @@ const navigator = (ros) => {
 
   const handleMouseUp = (event) => {
     if (!isMousePressed) return;
+
     if (!isMouseMoved) {
       console.error("Please, set the direction of the WayPoint");
       messageTopic.publish(
@@ -196,51 +266,24 @@ const navigator = (ros) => {
           data: "Please, set the direction of the WayPoint",
         }),
       );
+      // Reset press state to avoid getting stuck
+      isMousePressed = false;
+      isMouseMoved = false;
       return;
     }
 
     isMousePressed = false;
     isMouseMoved = false;
 
-    let pointColor = {};
-    /* Logic for different point types */
-    /*
-    if (window.NAV2D.pointType === "navigate") {
-      pointColor = {
-        r: 255,
-        g: 0,
-        b: 0,
-        a: 1,
-      };
-    } else if (window.NAV2D.pointType === "home") {
-      pointColor = {
-        r: 124,
-        g: 252,
-        b: 0,
-        a: 1,
-      };
-    } else if (window.NAV2D.pointType === "charge") {
-      pointColor = {
-        r: 186,
-        g: 85,
-        b: 211,
-        a: 1,
-      };
-    } else {
-      console.error("Point type was not selected");
-      messageTopic.publish(
-        new window.ROSLIB.Message({ data: "Point type was not selected" }),
-      );
+    // Default color (kept from original)
+    const pointColor = { r: 255, g: 0, b: 0, a: 1 };
+
+    const goalMarkerItem = createCanvasPoint(15, pointColor);
+
+    if (!orientationMarker) {
+      console.warn("orientationMarker missing on mouse up");
       return;
     }
-    */
-    pointColor = {
-      r: 255,
-      g: 0,
-      b: 0,
-      a: 1,
-    };
-    const goalMarkerItem = createCanvasPoint(15, pointColor);
 
     goalMarkerItem.x = orientationMarker.x;
     goalMarkerItem.y = orientationMarker.y;
@@ -256,7 +299,7 @@ const navigator = (ros) => {
     const goalPosVec3 = new window.ROSLIB.Vector3(goalPos);
     const xDelta = goalPosVec3.x - positionVectorItem.x;
     const yDelta = goalPosVec3.y - positionVectorItem.y;
-    let thetaRadians = calculateThetaRadians(xDelta, yDelta);
+    const thetaRadians = calculateThetaRadians(xDelta, yDelta);
 
     const qz = Math.sin(-thetaRadians / 2.0);
     const qw = Math.cos(-thetaRadians / 2.0);
@@ -272,14 +315,19 @@ const navigator = (ros) => {
       position: positionVectorItem,
       orientation,
     });
+
     window.NAV2D.finishedPointItem = pose;
-    canvas.removeChild(orientationMarker);
+
+    try {
+      canvas.removeChild(orientationMarker);
+    } catch (e) {
+      // ignore
+    }
+    orientationMarker = null;
   };
 
   const handleCanvasEvent = (event, mouseEventType) => {
-    if (!window.NAV2D.arePointsSettable) {
-      return;
-    }
+    if (!window.NAV2D.arePointsSettable) return;
 
     switch (mouseEventType) {
       case "down":
@@ -290,6 +338,8 @@ const navigator = (ros) => {
         break;
       case "up":
         handleMouseUp(event);
+        break;
+      default:
         break;
     }
   };
@@ -310,11 +360,7 @@ const navigator = (ros) => {
 };
 
 const createSubscribeTopic = (ros, name, messageType, callback) => {
-  const topicObject = {
-    ros,
-    name,
-    messageType,
-  };
+  const topicObject = { ros, name, messageType };
 
   if (name === "/odom") {
     topicObject.throttle_rate = 1;
@@ -351,7 +397,12 @@ const createCanvasPoint = (size, color) => {
 
 window.NAV2D.sendPointToRobot = (ros, time) => {
   const pointDetails = window.NAV2D.finishedPointItem;
-  const { hours, minutes } = time;
+  if (!pointDetails) {
+    console.warn("sendPointToRobot called but finishedPointItem is null");
+    return;
+  }
+
+  const { hours, minutes } = time || {};
 
   const wayPoint = new window.ROSLIB.Topic({
     ros,
@@ -359,20 +410,9 @@ window.NAV2D.sendPointToRobot = (ros, time) => {
     messageType: "geometry_msgs/PoseWithCovarianceStamped",
   });
 
-  const sendDataArray = [
-    0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-  ];
-  /*
-  if (window.NAV2D.pointType === "navigate") {
-    sendDataArray[0] = 3;
-  } else if (window.NAV2D.pointType === "home") {
-    sendDataArray[0] = 1;
-  } else if (window.NAV2D.pointType === "charge") {
-    sendDataArray[0] = 2;
-  }
-  */
+  const sendDataArray = new Array(36).fill(0.0);
+
+  // Keep behavior from original: always "navigate" type = 3
   sendDataArray[0] = 3;
   sendDataArray[1] = Number(hours) || 0;
   sendDataArray[2] = Number(minutes) || 0;
@@ -396,8 +436,9 @@ window.NAV2D.sendPointToRobot = (ros, time) => {
   };
 
   const poseMessage = new window.ROSLIB.Message(messageObject);
-
   wayPoint.publish(poseMessage);
+
+  // Reset after publish
   window.NAV2D.finishedPointItem = null;
 };
 
@@ -416,7 +457,6 @@ const serializePoint = (point, canvas) => {
   );
   defaultPointItem.scaleX = 1.0 / canvas.scaleX;
   defaultPointItem.scaleY = 1.0 / canvas.scaleY;
-
 
   return defaultPointItem;
 };
