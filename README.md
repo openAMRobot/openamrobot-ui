@@ -1,22 +1,43 @@
-# OpenAMRobot UI
-
-This repository contains the OpenAMRobot UI (frontend + ROS2-side serving/integration).
-
-Documentation (start here):
-- docs/README.md
-- docs/00-repo-map.md
-
-Documentation images:
-- docs/assets/
-
-
 # OpenAMRobot UI (ROS 2 Jazzy)
 
-ACTIVE REPOSITORY
+This repository contains the user interface stack for OpenAMRobot.
+It combines a React-based frontend with ROS2 backend nodes and serves
+the UI directly from the robot.
 
-This is the main OpenAMRobot UI repository. All new development happens here.
+The project is structured to be beginner-friendly, modular, and
+self-contained.
 
-Legacy repositories (kept for reference only):
+---
+
+## High-level architecture
+
+- **Frontend**: React application (web/)
+- **Backend**: ROS2 Python nodes (ros2/)
+- **Communication**: rosbridge + roslibjs (WebSocket)
+- **Serving UI**: Flask (ROS2 backend)
+- **Automation**: helper scripts (scripts/)
+
+---
+
+## Main directories
+
+- `docs/` – documentation and architecture explanations
+- `scripts/` – canonical build and launch scripts
+- `web/` – React frontend UI
+- `ros2/` – ROS2 backend packages
+- `.github/` – GitHub automation and CI
+
+---
+
+## Where to start
+
+1. `docs/00-repo-map.md` – repository structure overview
+2. `docs/README.md` – setup and run instructions
+3. `web/README.md` – frontend development
+4. `ros2/openamr_ui_package/README.md` – ROS2 backend overview
+
+
+**Legacy repositories (kept for reference only):**
 - OpenAMRobot_UI_package (legacy UI package repository)
 - OpenAMRobot_UI_dev (legacy early UI development sandbox)
 
