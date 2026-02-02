@@ -35,17 +35,26 @@ ROS2 UI backend (ros2/)
         v
 Navigation / Robot systems 
 ```
-
 ---
 
 ## Main directories
-
+```
 - `docs/` – documentation and architecture explanations
 - `scripts/` – canonical build and launch scripts
 - `web/` – React frontend UI
 - `ros2/` – ROS2 backend packages
 - `.github/` – GitHub automation and CI
-
+.
+├── README.md
+├── docs/
+├── scripts/
+├── web/
+├── ros2/
+├── .github/
+├── compile_ui.bash
+├── install_openamr_deps.bash
+└── launch.bash
+```
 ---
 
 ## Where to start
@@ -55,7 +64,18 @@ Navigation / Robot systems
 3. `web/README.md` – frontend development
 4. `ros2/openamr_ui_package/README.md` – ROS2 backend overview
 
+### Entry points
 
+**Frontend:**
+```
+web/src/index.js
+web/src/app/App.jsx
+```
+**Backend:**
+```
+ros2/openamr_ui_package/openamr_ui_package/flask_app.py
+ros2/openamr_ui_package/openamr_ui_package/folders_handler.py
+```
 **Legacy repositories (kept for reference only):**
 - OpenAMRobot_UI_package (legacy UI package repository)
 - OpenAMRobot_UI_dev (legacy early UI development sandbox)
