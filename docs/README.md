@@ -33,13 +33,13 @@ The frontend is built into static files and served by the ROS2 backend using Fla
 ## Top-level repository structure
 
 .
-├── docs/
-├── scripts/
-├── web/
-├── ros2/
-├── compile_ui.bash
-├── install_openamr_deps.bash
-└── launch.bash
+├── docs/    
+├── scripts/    
+├── web/    
+├── ros2/    
+├── compile_ui.bash    
+├── install_openamr_deps.bash    
+└── launch.bash    
 
 ---
 
@@ -78,18 +78,18 @@ exist for backward compatibility only.
 
 ### Frontend structure
 
-web/
-├── package.json
-├── public/
-└── src/
-├── index.js
-├── app/
-│ ├── App.jsx
-│ └── store/
-├── pages/
-├── components/
-├── stores/
-└── shared/
+web/    
+├── package.json    
+├── public/    
+└── src/    
+├── index.js    
+├── app/    
+│ ├── App.jsx    
+│ └── store/    
+├── pages/    
+├── components/    
+├── stores/    
+└── shared/    
 
 ### Frontend entry points
 
@@ -146,9 +146,9 @@ web/
 
 ### ROS2 packages
 
-ros2/
-├── openamr_ui_msgs/
-└── openamr_ui_package/
+ros2/    
+├── openamr_ui_msgs/    
+└── openamr_ui_package/    
 
 ---
 
@@ -182,16 +182,16 @@ These interfaces define structured communication for:
 
 ### Package structure
 
-openamr_ui_package/
-├── launch/
-├── maps/
-├── paths/
-├── param/
-└── openamr_ui_package/
-├── flask_app.py
-├── folders_handler.py
-├── waypoint_nav.py
-└── battery.py
+openamr_ui_package/    
+├── launch/    
+├── maps/    
+├── paths/    
+├── param/    
+└── openamr_ui_package/    
+├── flask_app.py    
+├── folders_handler.py    
+├── waypoint_nav.py    
+└── battery.py    
 
 ---
 
