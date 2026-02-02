@@ -1,34 +1,37 @@
 # Repository map
 
-This document explains the purpose of each top-level folder and the main entry scripts.
+This document explains the structure of the OpenAMRobot UI repository.
+Its purpose is to help **new contributors and beginners** quickly understand:
+- what lives where
+- which files are entrypoints
+- how frontend and ROS2 backend are connected
+- where to start reading the code
 
-## Top-level folders
+This is an orientation document, not an implementation guide.
 
-### ./.github/
-GitHub configuration (workflows, automation). Not required to run locally, but required for CI and repo health.
+--------------------------------------------------------------------
 
-### ./docs/
-Project documentation.
-- docs/assets/ contains images used in documentation.
+## Recommended reading order
 
-### ./ros2/
-ROS2 packages related to the UI (serving UI assets + UI messages/interfaces).
-ROS2 build artifacts must not be committed (build/, install/, log/).
+If you are new to the project, read documentation in the following order:
 
-### ./scripts/
-Helper scripts (bootstrap/build/run). These will be standardized in PR-02.
+1. `docs/00-repo-map.md` (this file – overall structure)
+2. `docs/README.md` (how to build and run the full system)
+3. `web/README.md` (frontend architecture and development)
+4. `ros2/openamr_ui_package/README.md` (ROS2 backend overview)
 
-### ./web/
-Frontend React application (the UI).
-Important: web/node_modules must never be committed.
+--------------------------------------------------------------------
 
-## Root scripts (legacy)
+## Top-level directory overview
 
-### ./compile_ui.bash
-Legacy build script. Expected to be corrected in PR-02 to match the actual folder layout (web/ + ros2/...).
-
-### ./install_openamr_deps.bash
-Legacy dependency installer. Expected to be reviewed in PR-02/PR-03 (Codespaces-first approach).
-
-### ./launch.bash
-Legacy launcher. Expected to be reviewed and likely replaced by standardized scripts in PR-02.
+```text
+.
+├── docs/          # Project documentation
+├── scripts/       # Canonical helper scripts (build, sync, run)
+├── web/           # React-based UI frontend
+├── ros2/          # ROS2 backend packages used by the UI
+├── .github/       # GitHub configuration (CI, automation)
+├── compile_ui.bash
+├── install_openamr_deps.bash
+├── launch.bash
+└── README.md
