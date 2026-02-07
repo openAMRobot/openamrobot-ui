@@ -4,54 +4,42 @@ from rclpy.node import Node
 from flask import Flask, send_from_directory
 
 # ---------------------------------------------------------------------
-# Professional P1: Serve built React app from:
-#   openamr_ui_package/static/app/
-#
-# React build layout (CRA):
-#   static/app/index.html
-#   static/app/static/js/main.<hash>.js
-#   static/app/static/css/main.<hash>.css
-#
-# Browser requests by default:
-#   /static/js/...
-#   /static/css/...
-#
-# So we explicitly map:
-#   URL /static/<...>  ->  filesystem static/app/static/<...>
+# Professional P1
+# - React build is deployed to: openamr_ui_package/static/app/
+# - Serve CRA hashed assets from: /static/*  -> static/app/static/*
+# - Serve ROS JS libs from:        /ros/*    -> static/app/ros/*
+# - Serve SPA routes from:         /<any>    -> static/app/index.html
 # ---------------------------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# openamr_ui_package/static/
+# Package static root
 PKG_STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-# openamr_ui_package/static/app/   (React build root)
+# React build root (contains index.html, static/, ros/)
 REACT_BUILD_DIR = os.path.join(PKG_STATIC_DIR, "app")
+REACT_STATIC_DIR = os.path.join(REACT_BUILD_DIR, "static")
+REACT_ROS_DIR = os.path.join(REACT_BUILD_DIR, "ros")
 
-# openamr_ui_package/static/app/static/   (hashed assets)
-REACT_ASSETS_DIR = os.path.join(REACT_BUILD_DIR, "static")
-
-# Create Flask app without using Flask's default static handling.
-# We'll provide our own /static route pointing at REACT_ASSETS_DIR.
-app = Flask(__name__)
+# Make Flask serve /static/* from the CRA build folder
+app = Flask(__name__, static_folder=REACT_STATIC_DIR, static_url_path="/static")
 
 
-@app.route("/static/<path:filename>")
-def react_assets(filename: str):
-    # Serves:
-    #   /static/js/...  -> REACT_ASSETS_DIR/js/...
-    #   /static/css/... -> REACT_ASSETS_DIR/css/...
-    return send_from_directory(REACT_ASSETS_DIR, filename)
+@app.route("/ros/<path:filename>")
+def serve_ros_libs(filename: str):
+    # Serve legacy ROS web libs placed under build/ros/
+    return send_from_directory(REACT_ROS_DIR, filename)
 
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
-def spa(path: str):
-    # Serve React index.html for SPA routes like:
-    #   /, /route, /control, /info, etc.
-    #
-    # If you later want to also serve non-static files from REACT_BUILD_DIR
-    # (like /asset-manifest.json), add explicit routes for them.
+def serve_spa(path: str):
+    # If someone requests a real file that exists in the build root (e.g., favicon.ico)
+    requested = os.path.join(REACT_BUILD_DIR, path)
+    if path and os.path.exists(requested) and os.path.isfile(requested):
+        return send_from_directory(REACT_BUILD_DIR, path)
+
+    # Otherwise return React index.html (SPA routing)
     return send_from_directory(REACT_BUILD_DIR, "index.html")
 
 
@@ -69,7 +57,6 @@ def main():
     host = node.get_parameter("appAddress").get_parameter_value().string_value
     port = node.get_parameter("portApp").get_parameter_value().integer_value
 
-    # Production note: Flask dev server is OK for now; for production use gunicorn/uvicorn.
     app.run(host=host, port=port, debug=False)
 
 
