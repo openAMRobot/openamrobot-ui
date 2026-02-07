@@ -3,20 +3,28 @@
 <package format="3">
   <name>openamr_ui_msgs</name>
   <version>0.0.0</version>
-  <description>Messages, Services and Actions for the OpenAMR UI</description>
+  <description>Messages, services and actions for the OpenAMR UI</description>
+
   <maintainer email="alex@botshare.ai">BotshareAI</maintainer>
   <license>MIT</license>
 
+  <!-- Build system -->
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <depend>action_msgs</depend>
+
+  <!-- Interface generation -->
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
-  <member_of_group>rosidl_interface_packages</member_of_group>
 
+  <!-- Common interface dependencies -->
+  <depend>action_msgs</depend>
+  <depend>builtin_interfaces</depend>
+  <depend>geometry_msgs</depend>
+
+  <!-- Tests -->
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-  <build_depend>geometry_msgs</build_depend>
-  <exec_depend>geometry_msgs</exec_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
 
   <export>
     <build_type>ament_cmake</build_type>

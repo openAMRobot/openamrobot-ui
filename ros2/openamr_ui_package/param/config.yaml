@@ -1,16 +1,3 @@
-flask_app:
-  ros__parameters:
-    appAddress: "127.0.0.1"
-    portApp: 5050
 
-camera:
-  ros__parameters:
-    address: "127.0.0.1"
-    port: 8090
-    input_topic: "/camera/color/image_raw/compressed"
-
-rosbridge_websocket:
-  ros__parameters:
-    address: "127.0.0.1"
-    port: 9090
-
+# Default configuration for openamr_ui_package
+# Add real parameters here if ui_launch.py expects them.
