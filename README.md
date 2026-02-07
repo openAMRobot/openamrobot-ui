@@ -120,6 +120,17 @@ chmod +x compile_ui.bash
 chmod +x launch.bash
 ./launch.bash
 ```
+Required for UI control (websocket bridge):    
+```bash
+sudo apt-get install -y ros-jazzy-rosbridge-server
+```
+Optional for camera streaming:    
+```bash
+sudo apt-get install -y ros-jazzy-web-video-server
+```
+Note:    
+
+If these packages are not installed, launch will print an instruction and start without those features.    
 
 **User interface**
 ----------------------------

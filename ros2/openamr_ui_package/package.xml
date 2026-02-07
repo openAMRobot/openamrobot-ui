@@ -7,25 +7,27 @@
   <maintainer email="tobbalya@gmail.com">darkadius</maintainer>
   <license>MIT</license>
 
+  <!-- Runtime dependencies -->
   <depend>rclpy</depend>
-  <depend>rclcpp</depend>
   <depend>std_msgs</depend>
-  <depend>rosidl_default_generators</depend>
   <depend>geometry_msgs</depend>
+  <depend>openamr_ui_msgs</depend>
 
-  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+  <!-- Python build tooling for ament_python -->
+  <buildtool_depend>ament_python</buildtool_depend>
+  <buildtool_depend>python3-setuptools</buildtool_depend>
 
+  <!-- Runtime Python deps -->
+  <exec_depend>python3-flask</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rosbridge_server</exec_depend>
+  <exec_depend>web_video_server</exec_depend>
+
+  <!-- Tests -->
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
-
-  <exec_depend>ros2launch</exec_depend>
-  <exec_depend>rosidl_default_runtime</exec_depend>
-  <exec_depend>openamr_ui_msgs</exec_depend>
-
-  <member_of_group>rosidl_interface_packages</member_of_group>
-
 
   <export>
     <build_type>ament_python</build_type>
