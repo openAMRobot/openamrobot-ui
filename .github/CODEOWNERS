@@ -1,0 +1,24 @@
+# Global owners
+* @BotshareAI
+
+# Frontend
+/web/ @BotshareAI
+
+# UI-specific ROS2 bridge/backend
+/ros2/openamr_ui_package/ @BotshareAI
+
+# Documentation
+/docs/ @BotshareAI
+
+# Scripts and tools
+/scripts/ @BotshareAI
+/tools/ @BotshareAI
+
+# Root governance files
+/README.md @BotshareAI
+/LICENSE @BotshareAI
+/CONTRIBUTING.md @BotshareAI
+/SECURITY.md @BotshareAI
+/NOTICE.md @BotshareAI
+/AUTHORS.md @BotshareAI
+/CHANGELOG.md @BotshareAI

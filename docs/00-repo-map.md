@@ -10,7 +10,34 @@ Its purpose is to help **new contributors and beginners** quickly understand:
 This is an orientation document, not an implementation guide.
 
 --------------------------------------------------------------------
+## Target Repository Structure
 
+The `openamrobot-ui` repository is the user interface and operator interface repository for the OpenAMRobot ecosystem.
+
+Target structure:
+
+```text
+openamrobot-ui/
+├── web/
+│   ├── public/
+│   ├── src/
+│   ├── package.json
+│   └── README.md
+│
+├── ros2/
+│   └── openamr_ui_package/
+│
+├── docs/
+├── scripts/
+├── tools/
+├── README.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── SECURITY.md
+├── NOTICE.md
+├── AUTHORS.md
+└── CHANGELOG.md
+--------------------------------------------------------------------
 ## Recommended reading order
 
 If you are new to the project, read documentation in the following order:
@@ -35,3 +62,4 @@ If you are new to the project, read documentation in the following order:
 ├── install_openamr_deps.bash
 ├── launch.bash
 └── README.md
+
