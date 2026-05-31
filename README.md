@@ -6,8 +6,8 @@ This repository contains the React browser dashboard, ROS 2 UI packages,
 custom UI messages, and helper scripts needed to build and run the UI. It is
 intended to live separately from the main robot or simulation workspace. The
 robot stack should start Nav2, localization, docking, Gazebo/RViz, sensors, and
-the map server. This workspace starts only the web UI, rosbridge, camera web
-streaming, and lightweight topic relays used by the browser.
+the map server. This workspace starts only the web UI, rosbridge, optional
+camera web streaming, and lightweight topic relays used by the browser.
 
 ## Beginner Overview
 
@@ -17,7 +17,7 @@ simulation:
 | Workspace | What It Does |
 | --- | --- |
 | Robot/simulation workspace, for example `~/openamr-platform-sw` | Starts the robot, Gazebo simulation, Nav2, localization, map server, docking, sensors, and robot topics |
-| This UI workspace, `~/openamrobot-ui` | Starts the browser UI, rosbridge, camera web server, and small relay nodes |
+| This UI workspace, `~/openamrobot-ui` | Starts the browser UI, rosbridge, optional camera web server, and small relay nodes |
 
 Start the robot or simulation first. Then start the UI. The UI does not replace
 Nav2, Gazebo, the map server, docking, or the robot bringup. It connects to
@@ -49,10 +49,11 @@ For most beginners, the safest order is:
 
 ## System Architecture
 
-The UI is a browser-based ROS 2 dashboard. The browser talks to ROS through
-`rosbridge_server`, while the UI package provides small relay/helper nodes for
-maps, AMCL pose, Nav2 status, waypoint routes, camera streaming, and map/route
-file handling.
+The UI is a browser-based ROS 2 dashboard. Flask serves the React app, the
+browser talks to ROS through `rosbridge_server`, and `web_video_server` exposes
+camera image topics as a browser-readable stream. The UI package provides small
+relay/helper nodes for maps, AMCL pose, Nav2 status, waypoint routes, and
+map/route file handling.
 
 High-level data flow:
 
@@ -75,13 +76,41 @@ ROS 2 UI backend nodes in ros2/
 Navigation, localization, docking, sensors, and robot systems
 ```
 
-![OpenAMR ROS 2 topic and node schematic](docs/assets/openamr_ros_topic_node_schematic.png)
+![OpenAMRobot UI architecture diagram](docs/assets/openamr_ros_topic_node_schematic.png)
+
+How to read the schematic:
+
+- **Frontend, React app:** `web/src/index.js` starts the React app.
+  `web/src/app/App.jsx` creates the ROS connection context and opens the
+  `rosbridge_server` WebSocket. The page components then use that shared ROS
+  connection to publish commands and subscribe to robot state.
+- **Bridge and web services:** `rosbridge_server` is the main communication
+  bridge between the browser and ROS 2. `rosapi` provides optional ROS graph
+  helper services, and `web_video_server` exposes ROS image topics as MJPEG
+  streams that the browser camera panels can display.
+- **UI backend package:** `openamr_ui_package` contains the Python nodes owned
+  by this workspace. `flask_app.py` serves the compiled React app. `map_relay.py`
+  republishes `/map` as `/ui/map` with browser-friendly QoS. `nav_relays.py`
+  republishes AMCL pose and selected Nav2/docking action statuses under `/ui/*`.
+  `folders_handler.py` manages map, route, waypoint, and active-context file
+  operations. `waypoint_nav.py` is an optional helper for following route CSVs
+  through Nav2.
+- **Workspace data:** `maps/` stores map YAML/PNG files, `paths/` stores route
+  CSV files, and `param/current_map_route.yaml` stores the active map/route
+  context used by the UI helper nodes.
+- **Custom UI messages:** `openamr_ui_msgs` is a separate ROS 2 package for UI
+  message definitions used by the backend helpers.
+- **External robot or simulation stack:** Nav2, AMCL, `map_server`, docking,
+  robot drivers, sensors, camera topics, battery/charger status, TF, odometry,
+  and motor control are provided by the robot or simulation workspace. This UI
+  connects to those topics and services; it does not own the robot stack.
 
 ## What This UI Provides
 
 - Browser dashboard served by Flask on port `5050`
 - ROS communication through `rosbridge_websocket` on port `9090`
-- Camera/image streaming through `web_video_server` on port `8080`
+- Camera/image streaming through `web_video_server` on port `8080` when that
+  service is installed and running
 - Map display through a `/map` to `/ui/map` QoS relay
 - AMCL pose and navigation/docking status relays under `/ui/*`
 - Manual robot control through `/cmd_vel`
@@ -383,21 +412,11 @@ The app has these main routes:
 | Control | `/control` | Manual driving, docking, robot control, status |
 | Info | `/info` | System/topic information |
 
-### UI Screenshots
-
-The main pages are shown below using a simulation map and camera feed.
-
-| Map | Route |
-| --- | --- |
-| ![OpenAMR UI map page with map layers, robot pose, camera feed, and waypoint controls](docs/assets/map.png) | ![OpenAMR UI route page with route planning and route management controls](docs/assets/route.png) |
-
-| Control | Info |
-| --- | --- |
-| ![OpenAMR UI control page with manual drive, stop, speed, health, lifecycle, and docking controls](docs/assets/control.png) | ![OpenAMR UI info page with camera feed, battery, charging station, and system health status](docs/assets/infp.png) |
-
-### Page Descriptions
+### Page Screenshots and Descriptions
 
 #### Map Page
+
+![OpenAMR UI map page with map layers, robot pose, camera feed, and waypoint controls](docs/assets/map.png)
 
 The Map page is the main situational-awareness page. Use it when you want to
 see where the robot is, inspect the current map, send a navigation goal, set the
@@ -414,7 +433,7 @@ waypoints, goal marker, laser scan, global costmap, local costmap, and trail.
 The layer controls let you turn map overlays on or off without restarting ROS.
 This is useful when debugging navigation: keep the map and robot visible for
 normal operation, then enable costmap, laser, path, goal, waypoint, or trail
-layers when you need more detail. The sliders control layer visibility so dense
+layers when you need more detail. The sliders control overlay opacity so dense
 debug overlays do not hide the map.
 
 The map interaction buttons control the way clicks on the map are interpreted.
@@ -434,6 +453,8 @@ camera area is blank, verify that `web_video_server` is running and that the
 selected image topic exists.
 
 #### Route Page
+
+![OpenAMR UI route page with route planning and route management controls](docs/assets/route.png)
 
 The Route page is used to create, select, edit, and manage reusable waypoint
 routes for the current map. It prepares named route files for route workflows
@@ -469,6 +490,8 @@ anything, confirm that the handler node is running and that messages are moving
 on `/nav_data_req`, `/nav_data_resp`, `/ui_operation`, and `/ui_message`.
 
 #### Control Page
+
+![OpenAMR UI control page with manual drive, stop, speed, health, lifecycle, and docking controls](docs/assets/control.png)
 
 The Control page is the operator page for driving and supervising the robot. It
 combines the map, manual drive controls, navigation state, safety stop, speed
@@ -507,6 +530,8 @@ docking behavior; the UI only exposes the controls and status.
 
 #### Info Page
 
+![OpenAMR UI info page with camera feed, battery, charging station, and system health status](docs/assets/infp.png)
+
 The Info page is the status and diagnostics page. Use it when you want a calm
 overview of camera, battery, charging, robot movement, localization, rosbridge,
 TF, and core navigation signals without the extra control surface of the Control
@@ -520,8 +545,9 @@ issue, a `web_video_server` issue, or a missing ROS image topic.
 The battery panel subscribes to `/battery_status` and displays the battery
 percentage when data is available. The charging-station panel subscribes to
 `/charge_station_connected` and shows whether the robot is connected to the
-charger. If no battery data appears, the UI can still run; it simply means the
-battery monitor topic is not publishing.
+charger. If no battery data appears, the UI can still run; it simply means no
+node is publishing the battery topic. The standard UI launch does not start
+`battery.py`.
 
 The velocity and position panels provide a lightweight telemetry summary. They
 show whether the UI is receiving robot motion and pose information, which helps
@@ -604,8 +630,8 @@ Common topics:
 | --- | --- |
 | `openamr_ui_package/flask` | Serves the React build |
 | `rosbridge_server/rosbridge_websocket` | WebSocket bridge for roslibjs |
-| `rosapi/rosapi_node` | ROS graph helper services |
-| `web_video_server/web_video_server` | Browser camera streaming |
+| `rosapi/rosapi_node` | Optional ROS graph helper services |
+| `web_video_server/web_video_server` | Optional browser camera streaming |
 | `openamr_ui_package/map_relay` | Relays `/map` to `/ui/map` |
 | `openamr_ui_package/nav_relay` | Relays AMCL/navigation/docking status topics |
 
@@ -615,7 +641,7 @@ if map/route file operations or waypoint route-following helpers are needed:
 | Node | Purpose |
 | --- | --- |
 | `openamr_ui_package/handler` | Map, group, route, and waypoint file operations |
-| `openamr_ui_package/nav` | Route-following helper using Nav2 Simple Commander |
+| `openamr_ui_package/nav` | Route-following helper using Nav2 `BasicNavigator` |
 
 ## Frontend Development
 
