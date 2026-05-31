@@ -11,77 +11,48 @@ const RobotLog = () => {
   const dispatch = useDispatch();
   const { logs } = useSelector(logsSelector);
 
-  const messageTopic = useRef(
-    new window.ROSLIB.Topic({
+  useEffect(() => {
+    if (!ros || !window.ROSLIB) return;
+    const messageTopic = new window.ROSLIB.Topic({
       ros,
       name: AppConfig.UI_MESSAGE_TOPIC,
       messageType: "std_msgs/String",
-    }),
-  );
-  useEffect(() => {
-    console.log("Logs component update");
-
-    const currentMessageTopic = messageTopic.current;
-    currentMessageTopic.subscribe(({ data }) => {
-      console.log("DATA LOGS", data);
-      console.log("OLD LOGS", logs);
+    });
+    messageTopic.subscribe(({ data }) => {
       const currentTime = moment().format("HH:mm:ss");
-      const message = `${currentTime}: ${data}`;
-      // const newMsgList = [message, ...logs];
-      dispatch(addSingleLog(message));
+      dispatch(addSingleLog(`${currentTime}: ${data}`));
     });
-    return () => currentMessageTopic.unsubscribe();
-  }, [dispatch]);
-
-  const Messages = () => {
-    if (logs.length === 0) {
-      return (
-        <>
-          <li className="flex h-full items-center justify-center text-center font-[RobotoMono] text-themeTextGray">
-            Console is empty
-          </li>
-        </>
-      );
-    }
-
-    const messageItems = logs.map((msgItem) => {
-      return <li key={Math.random()}>{msgItem}</li>;
-    });
-    return messageItems;
-  };
-
-  const onClearClick = () => {
-    dispatch(setLogs([]));
-  };
-
-  // eslint-disable-next-line no-unused-vars
-  const onAddNewMessage = () => {
-    const currentTime = moment().format("HH:mm:ss");
-    const message = `${currentTime}: ${currentTime}`;
-    const newMsgList = [message, ...logs];
-
-    dispatch(setLogs(newMsgList));
-  };
+    return () => messageTopic.unsubscribe();
+  }, [ros, dispatch]);
 
   return (
-    <article className="flex h-full w-full flex-col rounded-lg bg-white font-[RobotoMono]">
-      <header className="flex items-center justify-between rounded-t-lg bg-themeBlue px-4">
-        <h2 className="text-lg text-white xl:text-xl">Messages</h2>
+    <article className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-borderSubtle bg-bgCard font-[RobotoMono]">
+      <header className="flex items-center justify-between border-b border-borderSubtle bg-bgSurface px-4 py-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-themeBlue">
+          Messages
+        </h2>
         <button
-          className="my-2 rounded-lg bg-white px-[10px] py-[7px] text-lg text-themeDarkBlue hover:bg-themeLightGray active:bg-themeDarkBlue active:text-white xl:text-xl"
-          onClick={onClearClick}
+          className="rounded-lg border border-borderSubtle px-3 py-1 text-xs text-themeTextGray transition-colors hover:border-themeBlue hover:text-themeBlue"
+          onClick={() => dispatch(setLogs([]))}
         >
           Clear
         </button>
-        {/* <button
-          className="my-2 rounded-lg bg-white px-[10px] py-[7px] text-lg hover:bg-themeLightGray active:bg-themeTextGray active:text-white xl:text-xl"
-          onClick={onAddNewMessage}
-        >
-          Add
-        </button> */}
       </header>
-      <ul className="flex flex-1 flex-col-reverse overflow-y-auto rounded-b-lg border border-themeBlue px-4 py-3">
-        <Messages />
+      <ul className="flex flex-1 flex-col-reverse gap-0.5 overflow-y-auto px-3 py-2 text-xs text-themeTextGray">
+        {logs.length === 0 ? (
+          <li className="flex h-full items-center justify-center text-themeTextGray opacity-50">
+            No messages
+          </li>
+        ) : (
+          logs.map((msgItem, i) => (
+            <li
+              key={i}
+              className="border-b border-borderSubtle/30 py-0.5 last:border-0"
+            >
+              {msgItem}
+            </li>
+          ))
+        )}
       </ul>
     </article>
   );

@@ -1,56 +1,16 @@
-# =========================
-# Node / Frontend
-# =========================
-node_modules/
-web/node_modules/
-web/node_modules/.cache/
-web/.eslintcache
+build/
+install/
+log/
 
-# Frontend build output
-web/build/
-web/dist/
+ros2/build/
+ros2/install/
+ros2/log/
 
-# =========================
-# ROS2 / colcon
-# =========================
-**/build/
-**/install/
-**/log/
-
-# Generated UI copied into ROS package
-ros2/openamr_ui_package/www/
-
-# =========================
-# Python
-# =========================
-**/__pycache__/
-**/*.pyc
-
-# =========================
-# Editor / IDE
-# =========================
-.vscode/
-
-# Editor backups
-*.save
-*~
-
-# --- PR-01 hygiene ---
-# Node / React
 web/node_modules/
 web/build/
 
-# Python caches
-**/__pycache__/
+__pycache__/
 *.pyc
-
-# ROS2 build artifacts
-ros2/**/build/
-ros2/**/install/
-ros2/**/log/
-
-# Test caches
-.pytest_cache/
-
-# OS
+.vscode/
+**/.vscode/
 .DS_Store

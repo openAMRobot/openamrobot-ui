@@ -10,16 +10,12 @@ import "react-toastify/dist/ReactToastify.css";
 
 import { RosContext } from "../app/App";
 import { AppConfig } from "../shared/constants/index";
-import { testStructure } from "../shared/constants/testjson";
-
 import TimeModal from "../components/modal/TimeModal";
 import RouteModal from "../components/modal/RouteModal";
 import TextInputModal from "../components/modal/TextInputModal";
 
 import Map from "../components/Map";
-import Logs from "../components/Logs";
 import Button from "../shared/ui/Button";
-import { cos } from "three/examples/jsm/nodes/Nodes.js";
 
 const removeCsv = (data) => {
   if (Array.isArray(data)) {
@@ -92,7 +88,40 @@ const findMapArray = (structure, activeFiles) => {
   return [];
 };
 
+const downsamplePath = (poses, interval = 1.0) => {
+  if (poses.length === 0) return [];
+  const downsampled = [poses[0]];
+  let lastPos = poses[0].pose.position;
+
+  for (let i = 1; i < poses.length; i++) {
+    const currentPos = poses[i].pose.position;
+    const dx = currentPos.x - lastPos.x;
+    const dy = currentPos.y - lastPos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist >= interval) {
+      downsampled.push(poses[i]);
+      lastPos = currentPos;
+    }
+  }
+
+  if (
+    downsampled.length > 0 &&
+    downsampled[downsampled.length - 1] !== poses[poses.length - 1]
+  ) {
+    downsampled.push(poses[poses.length - 1]);
+  }
+
+  return downsampled;
+};
+
 const removePointFromCanvas = () => {
+  if (window.NAV2D?.clearGoalPose) {
+    window.NAV2D.clearGoalPose();
+    window.NAV2D.finishedPointItem = null;
+    return;
+  }
+
   const markerOnMap = window.NAV2D.orientatedPointItem;
   window.NAV2D.pointsArray = window.NAV2D.pointsArray.filter(
     (marker) => marker !== markerOnMap,
@@ -166,58 +195,14 @@ const RoutePage = () => {
   );
 
   const onMapClickHandler = useCallback(() => {
-    /**
-     * У нас при отжатии кнопки канвас генерирует window.NAV2D.orientatedPointItem, который нужен внутри sendPointToRobot, onMapClickHandler тоже срабатывает при отжатии кнопки и на момент вызова sendPointToRobot orientatedPointItem ещё не создан. Для решения проблемы сейчас и используется костыль из таймера.
-     */
-
     if (!window.NAV2D.arePointsSettable) return;
 
-    let timeObj = {
-      hours: latestHoursValue.current,
-      minutes: latestMinutesValue.current,
-    };
-
-    setTimeout(() => {
-      if (!timeObj.hours && !timeObj.minutes) {
-        toast.warn("Enter hours and minutes");
-        removePointFromCanvas();
-        return;
-      }
-
-      if (timeObj.hours < 0 || timeObj.hours > 23) {
-        toast.warn("Hours can't be less then 0 and more then 23");
-        removePointFromCanvas();
-        return;
-      }
-
-      if (timeObj.minutes < 0 || timeObj.minutes > 59) {
-        toast.warn("Minutes can't be less then 0 and more then 59");
-        removePointFromCanvas();
-        return;
-      }
-
-      window.NAV2D.sendPointToRobot(ros, timeObj);
-    }, 0);
-  }, [ros]);
-
-  // eslint-disable-next-line no-unused-vars
-  const getMockedData = () => {
-    const serializedTestArray = removeCsv(testStructure.structure);
-    const serializedTestArrayWithSpaces =
-      replaceUnderscoresInKeysAndValues(serializedTestArray);
-    const testActiveFileWithSpaces = replaceUnderscoresInKeysAndValues(
-      testStructure.active_files,
-    );
-
-    setFilesData(serializedTestArrayWithSpaces);
-    setSelectedFile(testActiveFileWithSpaces);
-  };
+    // Open the time configuration modal upon placing a waypoint
+    setOpenTimeModal(true);
+  }, []);
 
   useEffect(() => {
     window.NAV2D.ClearMap();
-    onOperationTopicPublish("clear_route");
-
-    getMockedData();
 
     const currentFilesResponseTopic = filesResonseTopic.current;
     const currentMap = childRef.current;
@@ -257,7 +242,7 @@ const RoutePage = () => {
       currentFilesResponseTopic.unsubscribe();
       window.NAV2D.arePointsSettable = false;
 
-      const mapElement = currentMap.getMapRef();
+      const mapElement = currentMap ? currentMap.getMapRef() : null;
       if (mapElement) {
         mapElement.removeEventListener("mouseup", onMapClickHandler);
       }
@@ -286,7 +271,7 @@ const RoutePage = () => {
           },
           preActions: () => window.NAV2D.ClearMap(),
           postActions: () =>
-            setFilesData({
+            setSelectedFile({
               group: selectedFile.group,
               map: selectedFile.map,
               route: data,
@@ -424,9 +409,146 @@ const RoutePage = () => {
   };
 
   const onPlanRouteClick = () => {
-    toast.warn("Comming soon...");
+    if (!ros) {
+      toast.error("ROS connection is offline!");
+      return;
+    }
+
+    if (!pointsSettable) {
+      toast.warn(
+        "Please click 'Edit' or 'Create' first to enable path planning!",
+      );
+      return;
+    }
+
+    const startPose = window.NAV2D.currentPose;
+    if (!startPose) {
+      toast.error(
+        "Waiting for robot pose (TF map -> base_link or /amcl_pose) to start planning...",
+      );
+      return;
+    }
+
+    toast.info(
+      "Click and drag on the map to set the Goal pose for automatic path planning.",
+    );
+
+    const originalPoseCallback = window.NAV2D._poseCallback;
+    window.NAV2D._poseCallback = (goalPose) => {
+      // Restore original callback
+      window.NAV2D._poseCallback = originalPoseCallback;
+
+      // Remove the goal marker we just placed temporarily
+      removePointFromCanvas();
+
+      toast.info("Requesting path from Nav2 planner...");
+      const nav2Client = new window.ROSLIB.Service({
+        ros,
+        name: "/compute_path_to_pose",
+        serviceType: "nav2_msgs/srv/ComputePathToPose",
+      });
+
+      const request = new window.ROSLIB.ServiceRequest({
+        pose: {
+          header: {
+            frame_id: "map",
+            stamp: { secs: 0, nsecs: 0 },
+          },
+          pose: {
+            position: {
+              x: goalPose.position.x,
+              y: goalPose.position.y,
+              z: 0.0,
+            },
+            orientation: {
+              z: goalPose.orientation.z,
+              w: goalPose.orientation.w,
+            },
+          },
+        },
+        start: {
+          header: {
+            frame_id: "map",
+            stamp: { secs: 0, nsecs: 0 },
+          },
+          pose: {
+            position: {
+              x: startPose.position.x,
+              y: startPose.position.y,
+              z: 0.0,
+            },
+            orientation: {
+              z: startPose.orientation.z,
+              w: startPose.orientation.w,
+            },
+          },
+        },
+        planner_id: "",
+        use_start: true,
+      });
+
+      nav2Client.callService(
+        request,
+        (result) => {
+          if (
+            result &&
+            result.path &&
+            Array.isArray(result.path.poses) &&
+            result.path.poses.length > 0
+          ) {
+            const poses = result.path.poses;
+            toast.success(
+              `Successfully planned path with ${poses.length} points!`,
+            );
+
+            const downsampled = downsamplePath(poses, 1.0);
+
+            const wayPointTopic = new window.ROSLIB.Topic({
+              ros,
+              name: "/new_way_point",
+              messageType: "geometry_msgs/PoseWithCovarianceStamped",
+            });
+
+            downsampled.forEach((wp) => {
+              const sendDataArray = new Array(36).fill(0.0);
+              sendDataArray[0] = 3; // "navigate" type
+
+              const messageObject = {
+                header: { frame_id: "map" },
+                pose: {
+                  pose: {
+                    position: {
+                      x: wp.pose.position.x,
+                      y: wp.pose.position.y,
+                      z: 0.0,
+                    },
+                    orientation: {
+                      z: wp.pose.orientation.z,
+                      w: wp.pose.orientation.w,
+                    },
+                  },
+                  covariance: sendDataArray,
+                },
+              };
+
+              wayPointTopic.publish(new window.ROSLIB.Message(messageObject));
+            });
+          } else {
+            toast.error(
+              "Nav2 failed to plan a path: empty or invalid response.",
+            );
+          }
+        },
+        (error) => {
+          console.error("Nav2 planning service error:", error);
+          toast.error(
+            "Failed to contact Nav2 planning service. Is Nav2 running?",
+          );
+        },
+      );
+    };
   };
-  
+
   const onSaveRouteClick = () => {
     if (!pointsSettable) return;
 
@@ -640,10 +762,7 @@ const RoutePage = () => {
                   </Button>
                 </div>
                 <div className="w-full flex-1">
-                  <Button
-                    size="small"
-                    onBtnClick={onPlanRouteClick}
-                  >
+                  <Button size="small" onBtnClick={onPlanRouteClick}>
                     <span className="iconMap" />
                     <span className="mx-auto">Plan</span>
                   </Button>
@@ -683,10 +802,6 @@ const RoutePage = () => {
                   </Button>
                 </div>
               </div>
-            </div>
-
-            <div className="h-full max-h-[200px] min-h-[200px] w-full flex-grow">
-              <Logs />
             </div>
           </section>
         </div>

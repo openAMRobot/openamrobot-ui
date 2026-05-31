@@ -1,169 +1,139 @@
-/* eslint-disable no-unused-vars */
 import React, { useRef, useContext, useState, useEffect } from "react";
 
 import Camera from "../components/Camera";
-import Logs from "../components/Logs";
-import CircularProgress from "../components/CircularProgressBar";
-
 import RobotState from "../components/RobotState";
+import SystemHealth from "../components/SystemHealth";
 import { RosContext } from "../app/App";
 import { AppConfig } from "../shared/constants/index";
 
 const InfoPage = () => {
   const ros = useContext(RosContext);
-  const [sensorsData, setSensorsData] = useState("");
-  const [batteryData, setBatteryData] = useState("");
-  const [charge, setCharge] = useState(false);
+  const [batteryPct, setBatteryPct] = useState(null);
+  const [charging, setCharging] = useState(false);
 
-  const sensorsTopic = useRef(
-    new window.ROSLIB.Topic({
-      ros,
-      name: AppConfig.SENSORS_TOPIC,
-      messageType: "std_msgs/String",
-    }),
-  );
+  const batteryTopic = useRef(null);
+  const chargeTopic = useRef(null);
 
-  const batteryTopic = useRef(
-    new window.ROSLIB.Topic({
+  useEffect(() => {
+    if (!ros || !window.ROSLIB) return;
+
+    batteryTopic.current = new window.ROSLIB.Topic({
       ros,
       name: AppConfig.BATTERY_TOPIC,
-      messageType: "sensor_msgs/BatteryState",
-    }),
-  );
+      messageType: "std_msgs/Float32",
+    });
 
-  const chargeTopic = useRef(
-    new window.ROSLIB.Topic({
+    chargeTopic.current = new window.ROSLIB.Topic({
       ros,
       name: AppConfig.CHARGE_STATION_CONNECTED,
       messageType: "std_msgs/Bool",
-    }),
-  );
-
-  useEffect(() => {
-    sensorsTopic.current.subscribe(({ data }) => {
-      setSensorsData(data);
     });
 
-    batteryTopic.current.subscribe((data) => {
-      const batteryData = data.percentage;
-      setBatteryData(batteryData);
+    // battery.py publishes percentage as a plain float (0–100)
+    batteryTopic.current.subscribe(({ data }) => {
+      setBatteryPct(Math.round(data));
     });
 
     chargeTopic.current.subscribe(({ data }) => {
-      setCharge(data);
+      setCharging(data);
     });
-  }, []);
+
+    return () => {
+      batteryTopic.current?.unsubscribe();
+      chargeTopic.current?.unsubscribe();
+    };
+  }, [ros]);
+
+  const batteryColor =
+    batteryPct === null
+      ? "bg-themeTextGray"
+      : batteryPct > 60
+      ? "bg-statusGreen"
+      : batteryPct > 25
+      ? "bg-statusYellow"
+      : "bg-statusRed";
 
   return (
-    <div className="items-stratch relative flex min-h-[70vh] flex-col gap-[30px] pt-[30px] xl:flex-row xl:gap-[7%]">
-      <section className="color-white flex w-full flex-col items-start justify-center gap-[30px] xl:w-3/5">
-        <h3 className="w-full text-center font-[RobotoMono] text-3xl font-bold text-themeBlue">
-          Camera
+    <div className="sectionHeight flex flex-col gap-5 pb-4 pt-5 xl:flex-row xl:gap-6">
+      {/* Left: Camera + Robot state */}
+      <section className="flex w-full flex-col gap-4 xl:w-3/5">
+        <h3 className="font-[RobotoMono] text-lg font-semibold uppercase tracking-wider text-themeBlue">
+          Camera Feed
         </h3>
-        <div className="h-[450px] w-full">
+        <div className="h-[380px] w-full xl:h-[420px]">
           <Camera />
         </div>
-        <div className="mt-auto w-full">
-          <RobotState />
-        </div>
+        <RobotState />
       </section>
 
-      <section className="color-white flex w-full flex-col items-center justify-center gap-[30px] xl:w-2/5">
-        <h3 className="w-full text-center font-[RobotoMono] text-3xl font-bold text-themeBlue">
-          Information
+      {/* Right: Status panels */}
+      <section className="flex w-full flex-col gap-4 xl:w-2/5">
+        <h3 className="font-[RobotoMono] text-lg font-semibold uppercase tracking-wider text-themeBlue">
+          System Status
         </h3>
 
-        <div className="grid grid-cols-4 grid-rows-2 gap-x-[30px] gap-y-2 2xl:gap-x-[60px]">
-          <CircularProgress
-            sensorsData={sensorsData}
-            sensorName="batt1"
-            color="##ff7a00"
-            text="Battery 1, %"
-            units="%"
-            minValue={0}
-            maxValue={100}
-          />
-          <CircularProgress
-            sensorsData={sensorsData}
-            sensorName="batt2"
-            color="#00e1ff"
-            text="Battery 2, %"
-            units="%"
-            minValue={0}
-            maxValue={100}
-          />
-          <CircularProgress
-            sensorsData={sensorsData}
-            sensorName="sens3"
-            color="#00ffb0"
-            text="Sensor 3"
-            units=""
-            minValue={0}
-            maxValue={100}
-          />
-          <CircularProgress
-            sensorsData={sensorsData}
-            sensorName="sens4"
-            color="#c5cc02"
-            text="Sensor 4"
-            units=""
-            minValue={0}
-            maxValue={100}
-          />
-          <CircularProgress
-            sensorsData={sensorsData}
-            sensorName="sens5"
-            color="#d96cff"
-            text="Sensor 5"
-            units=""
-            minValue={0}
-            maxValue={100}
-          />
-          <CircularProgress
-            sensorsData={sensorsData}
-            sensorName="sens6"
-            color="#FFC0CB"
-            text="Sensor 6"
-            units=""
-            minValue={0}
-            maxValue={100}
-          />
-          <CircularProgress
-            sensorsData={sensorsData}
-            sensorName="temp1"
-            color="#00a3ff"
-            text="Temp 1, ℃"
-            units="℃"
-            minValue={0}
-            maxValue={40}
-          />
-          <CircularProgress
-            sensorsData={sensorsData}
-            sensorName="temp2"
-            color="#ff48ed"
-            text="Temp 2, ℃"
-            units="℃"
-            minValue={0}
-            maxValue={40}
-          />
+        {/* Battery */}
+        <div className="rounded-xl border border-borderSubtle bg-bgCard p-4 font-[RobotoMono]">
+          <p className="mb-3 text-xs uppercase tracking-wider text-themeTextGray">
+            Battery
+          </p>
+          {batteryPct !== null ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-textWhiteHover">{batteryPct}%</span>
+                <span
+                  className={`text-xs ${
+                    batteryPct > 60
+                      ? "text-statusGreen"
+                      : batteryPct > 25
+                      ? "text-statusYellow"
+                      : "text-statusRed"
+                  }`}
+                >
+                  {batteryPct > 60
+                    ? "Good"
+                    : batteryPct > 25
+                    ? "Low"
+                    : "Critical"}
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-bgSurface">
+                <div
+                  className={`h-full rounded-full transition-all ${batteryColor}`}
+                  style={{ width: `${batteryPct}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-themeTextGray opacity-50">
+              No battery data
+            </p>
+          )}
         </div>
 
-        <h3 className="w-full text-center font-[RobotoMono] text-2xl font-bold ">
-          {charge && (
-            <span className="text-themeDarkBlue">
-              Connected to the charging station
+        {/* Charging status */}
+        <div className="rounded-xl border border-borderSubtle bg-bgCard p-4 font-[RobotoMono]">
+          <p className="mb-2 text-xs uppercase tracking-wider text-themeTextGray">
+            Charging Station
+          </p>
+          <div className="flex items-center gap-2">
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${
+                charging ? "bg-statusGreen" : "bg-themeTextGray"
+              }`}
+            />
+            <span
+              className={`text-sm ${
+                charging ? "text-statusGreen" : "text-themeTextGray"
+              }`}
+            >
+              {charging ? "Connected" : "Not connected"}
             </span>
-          )}
-          {!charge && (
-            <span className="text-white">
-              Not connected to the charging station
-            </span>
-          )}
-        </h3>
-
-        <div className="mt-auto h-[240px] w-full">
-          <Logs />
+          </div>
         </div>
+
+        {/* System health */}
+        <SystemHealth />
       </section>
     </div>
   );

@@ -5,16 +5,29 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        themeLightGray: "#F5F5F5",
-        themeMediumGray: "#C3C3C3",
-        themeTextGray: "#696969",
+        // Light control-room theme
+        bgBase: "#f4f8fb",
+        bgCard: "#ffffff",
+        bgSurface: "#eaf1f7",
+        borderSubtle: "#c9d8e6",
 
-        themeBlue: "#22b7fc",
-        themeMediumBlue: "#1c97d4",
-        themeDarkBlue: "#197fb4",
+        // Existing semantic names mapped to light-friendly variants
+        themeLightGray: "#eaf1f7",
+        themeMediumGray: "#d7e3ee",
+        themeTextGray: "#64748b",
 
-        textWhiteHover: "#d1d5db",
-        textWhiteActive: "#6b7280",
+        themeBlue: "#087ea4",
+        themeMediumBlue: "#0e9fbc",
+        themeDarkBlue: "#075985",
+
+        textWhiteHover: "#172033",
+        textWhiteActive: "#334155",
+
+        // Status colors
+        statusGreen: "#16a34a",
+        statusRed: "#dc2626",
+        statusYellow: "#d97706",
+        statusBlue: "#2563eb",
       },
     },
   },

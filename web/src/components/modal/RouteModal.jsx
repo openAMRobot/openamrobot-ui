@@ -16,7 +16,7 @@ const RouteModal = ({ routesList, headerText, modalHandler }) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 top-0 z-[100] flex items-start justify-center bg-black bg-opacity-80">
       <section className="relative top-[5vh] flex max-h-[90vh] w-1/2 min-w-[400px] flex-col items-center justify-center gap-3 rounded-[30px] bg-white p-8 font-[RobotoMono] xl:w-1/3">
-        <h2 className="bg-themeMediumBlue text-white w-full rounded-lg p-7 text-center text-3xl">
+        <h2 className="w-full rounded-lg bg-themeMediumBlue p-7 text-center text-3xl text-white">
           {headerText}
         </h2>
 
@@ -29,7 +29,7 @@ const RouteModal = ({ routesList, headerText, modalHandler }) => {
               {routesList.map((route, index) => (
                 <li
                   key={index}
-                  className={`hover:text-themeMediumBlue cursor-pointer ${
+                  className={`cursor-pointer hover:text-themeMediumBlue ${
                     selectedRoute === route
                       ? "text-themeDarkBlue"
                       : "text-black"

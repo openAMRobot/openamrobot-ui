@@ -22,16 +22,17 @@ const MapButton = ({ direction, type, onBtnClick }) => {
     }
   }
 
-  if (type === "plus") typeClass = "iconPlus";
-  if (type === "minus") typeClass = "iconMinus";
+  if (type === "zoom" && direction === "plus") typeClass = "iconPlus";
+  if (type === "zoom" && direction === "minus") typeClass = "iconMinus";
 
   return (
     <button
-      className="mapButton active:bg-themeDarkBlue flex h-[40px] w-[40px] items-center justify-center rounded-lg bg-white font-[RobotoMono] hover:bg-themeLightGray xl:h-[52px] xl:w-[52px]"
+      className="flex h-[44px] w-[44px] items-center justify-center rounded-lg border border-borderSubtle bg-bgCard text-themeBlue shadow-sm shadow-slate-200 transition-colors hover:border-themeBlue hover:bg-themeBlue hover:text-white active:bg-themeDarkBlue xl:h-[48px] xl:w-[48px]"
       onClick={onBtnClick}
     >
       <span className={`${typeClass} ${rotateClass}`} />
     </button>
   );
 };
+
 export default MapButton;
