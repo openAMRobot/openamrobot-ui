@@ -1,428 +1,382 @@
-import React, { useContext, useState, useRef, useEffect } from "react";
+import React, {
+  useContext,
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { AppConfig } from "../shared/constants/index";
-import { testStructure } from "../shared/constants/testjson";
-
 import { RosContext } from "../app/App";
+import { AppConfig } from "../shared/constants";
 
 import Map from "../components/Map";
 import Camera from "../components/Camera";
-import Logs from "../components/Logs";
 import Joystick from "../components/Joystick";
-import FilesModal from "../components/modal/FilesModal";
-import Button from "../shared/ui/Button";
+import NavStatus from "../components/NavStatus";
+import MapLayers from "../components/MapLayers";
+import SystemAlerts from "../components/SystemAlerts";
 
-function replaceUnderscoresInKeysAndValues(obj) {
-  if (Array.isArray(obj)) {
-    return obj.map((item) => replaceUnderscoresInKeysAndValues(item));
-  } else if (typeof obj === "object" && obj !== null) {
-    const newObj = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        const newKey = key.replace(/_/g, " ");
-        newObj[newKey] = replaceUnderscoresInKeysAndValues(obj[key]);
-      }
-    }
-    return newObj;
-  } else if (typeof obj === "string") {
-    return obj.replace(/_/g, " ");
-  }
-  return obj;
-}
-
-const processObjectStrings = (obj) => {
-  if (typeof obj === "object" && obj !== null) {
-    const result = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        result[key] = processObjectStrings(obj[key]);
-      }
-    }
-    return result;
-  } else if (typeof obj === "string") {
-    return obj.trim().replace(/\s/g, "_");
-  }
-  return obj;
-};
-
-const removeCsv = (data) => {
-  if (Array.isArray(data)) {
-    return data.map((item) => {
-      if (typeof item === "string") {
-        return item.replace(".csv", "");
-      }
-      return removeCsv(item);
-    });
-  } else if (typeof data === "object" && data !== null) {
-    const result = {};
-    for (const key in data) {
-      result[key] = removeCsv(data[key]);
-    }
-    return result;
-  }
-  return data;
-};
+const INITIAL_POSE_COV = [
+  0.25, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0685,
+];
 
 const MapPage = () => {
   const ros = useContext(RosContext);
-  const [openModal, setOpenModal] = useState(false);
-  const [filesData, setFilesData] = useState([]);
-  const [selectedFile, setSelectedFile] = useState({ group: "", map: "" });
-  const [inEditMode, setIsEditMode] = useState(false);
+  const mapRef = useRef(null);
 
-  const modalKey = useRef(null);
-  const filesModalType = useRef(null);
-  const isFilesModalWithInput = useRef(null);
-  const filesModalHeader = useRef(null);
-  const filesModalPlaceholder = useRef(null);
-
-  /* TOPICS */
-  const filesReqTopic = useRef(
-    new window.ROSLIB.Topic({
-      ros,
-      name: "/nav_data_req",
-      messageType: "std_msgs/Empty",
-    }),
-  );
-
-  const filesResonseTopic = useRef(
-    new window.ROSLIB.Topic({
-      ros,
-      name: "/nav_data_resp",
-      messageType: "std_msgs/String",
-    }),
-  );
-
-  const uiOperationTopic = useRef(
-    new window.ROSLIB.Topic({
-      ros,
-      name: AppConfig.UI_OPERATION_TOPIC,
-      messageType: "std_msgs/String",
-    }),
-  );
-
-  // eslint-disable-next-line no-unused-vars
-  const getMockedData = () => {
-    const serializedTestArray = removeCsv(testStructure.structure);
-    const serializedTestArrayWithSpaces =
-      replaceUnderscoresInKeysAndValues(serializedTestArray);
-    const testActiveFileWithSpaces = replaceUnderscoresInKeysAndValues(
-      testStructure.active_files,
-    );
-
-    setFilesData(serializedTestArrayWithSpaces);
-    setSelectedFile(testActiveFileWithSpaces);
+  // mode: null | 'goal' | 'pose' | 'waypoint'
+  const [mode, setModeState] = useState(null);
+  const modeRef = useRef(null);
+  const setMode = (m) => {
+    modeRef.current = m;
+    setModeState(m);
   };
+
+  const [waypointQueue, setWaypointQueueState] = useState([]);
+  const waypointQueueRef = useRef([]);
+  const setWaypointQueue = (updater) => {
+    const next =
+      typeof updater === "function"
+        ? updater(waypointQueueRef.current)
+        : updater;
+    waypointQueueRef.current = next;
+    setWaypointQueueState(next);
+  };
+
+  const [queueExecuting, setQueueExecuting] = useState(false);
+  const queueExecutingRef = useRef(false);
+  const queueIdxRef = useRef(0);
+
+  const goalPoseTopic = useRef(null);
+  const initialPoseTopic = useRef(null);
+  const cancelClient = useRef(null);
+  const pendingInitialPoseRef = useRef(false);
 
   useEffect(() => {
-    getMockedData();
+    if (!ros || !window.ROSLIB) return;
 
-    const currentFilesResponseTopic = filesResonseTopic.current;
-
-    currentFilesResponseTopic.subscribe((data) => {
-      const response = data.data;
-      const responseObject = JSON.parse(response);
-      const serializedArray = removeCsv(responseObject.structure);
-      const arrayWithSpaces =
-        replaceUnderscoresInKeysAndValues(serializedArray);
-      const activeFilesWithSpacec = replaceUnderscoresInKeysAndValues(
-        responseObject.active_files,
-      );
-
-      setFilesData(arrayWithSpaces);
-      setSelectedFile(activeFilesWithSpacec);
+    goalPoseTopic.current = new window.ROSLIB.Topic({
+      ros,
+      name: AppConfig.GOAL_POSE_TOPIC,
+      messageType: "geometry_msgs/PoseStamped",
     });
 
-    filesReqTopic.current.publish();
+    initialPoseTopic.current = new window.ROSLIB.Topic({
+      ros,
+      name: AppConfig.INITIAL_POSE_TOPIC,
+      messageType: "geometry_msgs/PoseWithCovarianceStamped",
+    });
 
-    return () => currentFilesResponseTopic.unsubscribe();
+    cancelClient.current = new window.ROSLIB.Service({
+      ros,
+      name: "/navigate_to_pose/_action/cancel_goal",
+      serviceType: "action_msgs/CancelGoal",
+    });
+
+    const amclTopic = new window.ROSLIB.Topic({
+      ros,
+      name: AppConfig.AMCL_POSE_TOPIC,
+      messageType: "geometry_msgs/PoseWithCovarianceStamped",
+    });
+    amclTopic.subscribe(() => {
+      if (!pendingInitialPoseRef.current) return;
+      pendingInitialPoseRef.current = false;
+      toast.success("Localization updated from AMCL");
+    });
+
+    return () => amclTopic.unsubscribe();
+  }, [ros]);
+
+  // Nav status: advance waypoint queue on Succeeded
+  useEffect(() => {
+    if (!ros || !window.ROSLIB) return;
+
+    const statusTopic = new window.ROSLIB.Topic({
+      ros,
+      name: AppConfig.NAV_STATUS_TOPIC,
+      messageType: "action_msgs/GoalStatusArray",
+    });
+
+    statusTopic.subscribe((msg) => {
+      if (!queueExecutingRef.current) return;
+      if (!msg.status_list?.length) return;
+      const latest = msg.status_list[msg.status_list.length - 1];
+
+      if (latest.status === 4) {
+        const next = queueIdxRef.current + 1;
+        if (next < waypointQueueRef.current.length) {
+          queueIdxRef.current = next;
+          publishGoal(waypointQueueRef.current[next]);
+          toast.info(
+            `Waypoint ${next + 1} / ${waypointQueueRef.current.length}`,
+          );
+        } else {
+          queueExecutingRef.current = false;
+          setQueueExecuting(false);
+          toast.success("All waypoints complete!");
+        }
+      } else if (latest.status === 5 || latest.status === 6) {
+        queueExecutingRef.current = false;
+        setQueueExecuting(false);
+        toast.warn("Queue stopped: goal was canceled or failed");
+      }
+    });
+
+    return () => statusTopic.unsubscribe();
+  }, [ros]);
+
+  const publishGoal = (pose) => {
+    if (!goalPoseTopic.current) return;
+    goalPoseTopic.current.publish(
+      new window.ROSLIB.Message({
+        header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
+        pose: {
+          position: { x: pose.position.x, y: pose.position.y, z: 0 },
+          orientation: {
+            x: 0,
+            y: 0,
+            z: pose.orientation.z,
+            w: pose.orientation.w,
+          },
+        },
+      }),
+    );
+    window.NAV2D?.setGoalPose?.(pose);
+  };
+
+  // Install the direct NAV2D callback — fires synchronously from stagemouseup,
+  // no DOM bubbling or setTimeout needed.
+  const installCallback = useCallback(() => {
+    if (!window.NAV2D) return;
+    window.NAV2D._poseCallback = (pose) => {
+      const m = modeRef.current;
+      if (m === "goal") {
+        publishGoal(pose);
+        toast.success(
+          `Goal: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(
+            2,
+          )})`,
+        );
+      } else if (m === "pose") {
+        if (!initialPoseTopic.current) return;
+        initialPoseTopic.current.publish(
+          new window.ROSLIB.Message({
+            header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
+            pose: {
+              pose: {
+                position: { x: pose.position.x, y: pose.position.y, z: 0 },
+                orientation: {
+                  x: 0,
+                  y: 0,
+                  z: pose.orientation.z,
+                  w: pose.orientation.w,
+                },
+              },
+              covariance: INITIAL_POSE_COV,
+            },
+          }),
+        );
+        pendingInitialPoseRef.current = true;
+        if (window.NAV2D?.clearTrail) window.NAV2D.clearTrail();
+        window.NAV2D?.clearGoalPose?.();
+        toast.success(
+          `Initial pose set: (${pose.position.x.toFixed(
+            2,
+          )}, ${pose.position.y.toFixed(2)})`,
+        );
+        deactivateMode();
+      } else if (m === "waypoint") {
+        window.NAV2D?.clearGoalPose?.();
+        const idx = waypointQueueRef.current.length;
+        setWaypointQueue((prev) => [...prev, pose]);
+        toast.info(`Waypoint ${idx + 1} added`);
+      }
+    };
   }, []);
 
-  /* BUTTON HANDLERS */
+  const activateMode = useCallback(
+    (m) => {
+      if (!window.NAV2D) return;
+      window.NAV2D.arePointsSettable = true;
+      installCallback();
+      setMode(m);
+    },
+    [installCallback],
+  );
 
-  const onNewMapClick = () => {
-    uiOperationTopic.current.publish(
-      new window.ROSLIB.Message({ data: "build_map" }),
-    );
-    setIsEditMode(true);
-  };
-
-  const onSaveMapClick = () => {
-    modalKey.current = "SaveMap";
-    filesModalType.current = "selectGroup";
-    isFilesModalWithInput.current = true;
-    filesModalHeader.current = "Select group for saving the map";
-    filesModalPlaceholder.current = "Enter map name...";
-    setOpenModal(true);
-  };
-
-  const onEditMapClick = () => {
-    modalKey.current = "EditMap";
-    setOpenModal(true);
-  };
-
-  const onCreateGroupClick = () => {
-    modalKey.current = "CreateGroup";
-    filesModalType.current = "selectGroup";
-    isFilesModalWithInput.current = true;
-    filesModalHeader.current = "Create group";
-    filesModalPlaceholder.current = "Enter new group name...";
-    setOpenModal(true);
-  };
-
-  const onChangeMapClick = () => {
-    modalKey.current = "ChangeMap";
-    filesModalType.current = "selectMap";
-    isFilesModalWithInput.current = false;
-    filesModalHeader.current = "Choose map:";
-    setOpenModal(true);
-  };
-
-  const onRenameMapClick = () => {
-    modalKey.current = "RenameMap";
-    filesModalType.current = "selectMap";
-    isFilesModalWithInput.current = true;
-    filesModalHeader.current = "Choose map you want to rename";
-    filesModalPlaceholder.current = "Enter map new name...";
-    setOpenModal(true);
-  };
-
-  const onDeleteMapClick = () => {
-    modalKey.current = "DeleteMap";
-    filesModalType.current = "selectMap";
-    isFilesModalWithInput.current = false;
-    filesModalHeader.current = "Choose map you want to delete";
-    setOpenModal(true);
-  };
-
-  const onDeleteGroupClick = () => {
-    modalKey.current = "DeleteGroup";
-    filesModalType.current = "selectGroup";
-    isFilesModalWithInput.current = false;
-    filesModalHeader.current = "Choose group you want to delete";
-    setOpenModal(true);
-  };
-
-  /* FORM SUBMIT HANDLER */
-  const onFormSubmitHandler = (data) => {
-    setOpenModal(false);
-    let isBreaked = false;
-
-    if (data) {
-      const operationsConfig = {
-        SaveMap: {
-          path: "save_map",
-          data: { group: data.group, map: data.inputValue },
-          preActions: () => {
-            if (!data.group || !data.inputValue) {
-              isBreaked = true;
-              toast.warn("You need to select group and provide map name");
-              return;
-            }
-
-            if (data.inputValue.toString().includes("_")) {
-              isBreaked = true;
-              toast.warn("Symbol '_' is forbidden");
-              return;
-            }
-          },
-        },
-        EditMap:{
-          preActions: () => {toast.warn("draw tools not implemented yet");}
-        },
-        CreateGroup: {
-          path: "create_group",
-          data: { group: data.inputValue },
-          preActions: () => {
-            if (!data.inputValue) {
-              isBreaked = true;
-              toast.warn("You need to provide group name");
-              return;
-            }
-
-            if (data.inputValue.toString().includes("_")) {
-              isBreaked = true;
-              toast.warn("Symbol '_' is forbidden");
-              return;
-            }
-          },
-        },
-        ChangeMap: {
-          path: "change_map",
-          data: { group: data.group, map: data.map },
-        },
-        RenameMap: {
-          path: "rename_map",
-          data: {
-            group: data.group,
-            map_old: data.map,
-            map_new: data.inputValue,
-          },
-          preActions: () => {
-            if (!data.map || !data.inputValue) {
-              isBreaked = true;
-              toast.warn("You need to choose map and provide map new name");
-              return;
-            }
-
-            if (data.inputValue.toString().includes("_")) {
-              isBreaked = true;
-              toast.warn("Symbol '_' is forbidden");
-              return;
-            }
-          },
-        },
-        DeleteMap: {
-          path: "delete_map",
-          data: { group: data.group, map: data.map },
-        },
-        DeleteGroup: {
-          path: "delete_group",
-          data: { group: data.group },
-        },
-      };
-
-      const currentOperation = operationsConfig[modalKey.current];
-
-      if (currentOperation) {
-        currentOperation.preActions && currentOperation.preActions();
-        if (isBreaked) return;
-        const objectWithoutSpaces = processObjectStrings(currentOperation.data);
-
-        const stringifiedObjToSend = JSON.stringify(objectWithoutSpaces);
-        const messageToSend = `${currentOperation.path}/${stringifiedObjToSend}`;
-        uiOperationTopic.current.publish(
-          new window.ROSLIB.Message({ data: messageToSend }),
-        );
-
-        currentOperation.postActions && currentOperation.postActions();
-      }
-      setIsEditMode(false);
+  const deactivateMode = useCallback(() => {
+    if (window.NAV2D) {
+      window.NAV2D.arePointsSettable = false;
+      window.NAV2D._poseCallback = null;
     }
+    setMode(null);
+  }, []);
 
-    modalKey.current = null;
-    filesModalType.current = null;
-    isFilesModalWithInput.current = null;
-    filesModalHeader.current = null;
-    filesModalPlaceholder.current = null;
+  // Re-install callback whenever mode changes so the closure always has the right mode
+  useEffect(() => {
+    if (modeRef.current !== null) installCallback();
+  }, [mode, installCallback]);
+
+  const cancelGoal = useCallback(() => {
+    if (!cancelClient.current) return;
+    cancelClient.current.callService(
+      new window.ROSLIB.ServiceRequest({
+        goal_info: {
+          goal_id: { uuid: new Array(16).fill(0) },
+          stamp: { sec: 0, nanosec: 0 },
+        },
+      }),
+      () => toast.info("Navigation canceled"),
+      (err) => console.warn("Cancel failed:", err),
+    );
+  }, []);
+
+  const executeQueue = useCallback(() => {
+    if (!waypointQueueRef.current.length) return;
+    queueIdxRef.current = 0;
+    queueExecutingRef.current = true;
+    setQueueExecuting(true);
+    publishGoal(waypointQueueRef.current[0]);
+    toast.info(`Executing ${waypointQueueRef.current.length} waypoints`);
+  }, []);
+
+  const stopQueue = useCallback(() => {
+    queueExecutingRef.current = false;
+    setQueueExecuting(false);
+    cancelGoal();
+  }, [cancelGoal]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (window.NAV2D) {
+        window.NAV2D.arePointsSettable = false;
+        window.NAV2D._poseCallback = null;
+      }
+    };
+  }, []);
+
+  const modeBtn = (label, shortLabel, m, activeLabel, shortActiveLabel) => {
+    const active = mode === m;
+    return (
+      <button
+        onClick={() => (active ? deactivateMode() : activateMode(m))}
+        className={`flex-1 rounded-xl border px-2 py-3 font-[RobotoMono] text-[10px] font-semibold transition-colors sm:px-3 sm:text-sm ${
+          active
+            ? "border-themeBlue bg-themeBlue text-white"
+            : "border-borderSubtle bg-bgCard text-themeBlue hover:border-themeBlue"
+        }`}
+      >
+        <span className="sm:hidden">{active ? shortActiveLabel : shortLabel}</span>
+        <span className="hidden sm:inline">{active ? activeLabel : label}</span>
+      </button>
+    );
   };
 
   return (
     <>
-      <ToastContainer />
+      <ToastContainer
+        position="bottom-right"
+        theme="light"
+        toastStyle={{ backgroundColor: "#ffffff", border: "1px solid #c9d8e6" }}
+      />
 
-      {openModal && (
-        <FilesModal
-          filesList={filesData}
-          headerText={filesModalHeader.current}
-          mode={filesModalType.current}
-          hasInput={isFilesModalWithInput.current}
-          inputPlaceholder={filesModalPlaceholder.current}
-          modalHandler={onFormSubmitHandler}
-        />
-      )}
-      <div className="sectionHeight flex flex-col gap-7 pt-[30px]">
-        <h2 className="w-full text-center font-[RobotoMono] text-3xl font-bold text-themeBlue">
-          Group:{" "}
-          <span className="text-themeDarkBlue">{selectedFile.group} </span>
-          Map: <span className="text-themeDarkBlue">{selectedFile.map}</span>
-        </h2>
-        <section className="color-white flex w-full gap-[8%]">
-          <div className="h-[300px] w-1/2 xl:h-[486px] ">
-            <Map />
+      <div className="flex h-[calc(100vh-72px)] min-h-0 flex-col gap-2 overflow-y-auto py-2 xl:overflow-hidden">
+        <SystemAlerts />
+        <NavStatus onCancelGoal={cancelGoal} />
+        <MapLayers />
+
+        {/* Map + Camera */}
+        <section className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row">
+          <div className="min-h-[300px] w-full xl:h-full xl:min-h-0 xl:w-[58%]">
+            <Map ref={mapRef} />
           </div>
-          <div className="h-[300px] w-1/2 xl:h-[486px]">
+          <div className="min-h-[220px] w-full xl:h-full xl:min-h-0 xl:w-[42%]">
             <Camera />
           </div>
         </section>
 
-        <section className="mt-6 flex w-full justify-between gap-10 xl:mt-0">
-          <div className="flex h-full w-1/2 min-w-[400px] max-w-[700px] items-center justify-between gap-4">
-            <div className="mr-auto flex w-full flex-col gap-2">
-              <div className="flex w-full flex-col items-center justify-center gap-2 md:flex-row">
-                <Button
-                  size="small"
-                  onBtnClick={onChangeMapClick}
-                  type={inEditMode ? "disabled" : ""}
-                >
-                  <span className="iconMap" />
-                  <span className="mx-auto">Change</span>
-                </Button>
-
-                <Button
-                  size="small"
-                  onBtnClick={onEditMapClick}
-                  type={inEditMode ? "disabled" : ""}
-                >
-                  <span className="iconMap" />
-                  <span className="mx-auto">Edit</span>
-                </Button>
-
-                <Button
-                  size="small"
-                  onBtnClick={onSaveMapClick}
-                  type={inEditMode ? "" : "disabled"}
-                  disabled={true}
-                >
-                  <span className="iconMap" />
-                  <span className="mx-auto">Save</span>
-                </Button>
-              </div>
-
-              <div className="flex w-full flex-col items-center justify-center gap-2 md:flex-row">
-                <Button
-                  size="small"
-                  onBtnClick={onNewMapClick}
-                  type={inEditMode ? "disabled" : ""}
-                  disabled={false}
-                >
-                  <span className="iconMap" />
-                  <span className="mx-auto"> Create </span>
-                </Button>
-
-                <Button
-                  size="small"
-                  onBtnClick={onRenameMapClick}
-                  type={inEditMode ? "disabled" : ""}
-                >
-                  <span className="iconMap" />
-                  <span className="mx-auto">Rename</span>
-                </Button>
-
-                <Button
-                  size="small"
-                  onBtnClick={onDeleteMapClick}
-                  type={inEditMode ? "disabled" : ""}
-                >
-                  <span className="iconMap" />
-                  <span className="mx-auto">Delete</span>
-                </Button>
-              </div>
-
-              <div className="flex w-full flex-col items-center justify-center gap-2 md:flex-row">
-                <Button size="small" onBtnClick={onCreateGroupClick}>
-                  <span className="iconGroup" />
-                  <span className="mx-auto">Create</span>
-                </Button>
-
-                <Button
-                  size="small"
-                  onBtnClick={onDeleteGroupClick}
-                  type={inEditMode ? "disabled" : ""}
-                >
-                  <span className="iconGroup" />
-                  <span className="mx-auto">Delete</span>
-                </Button>
-              </div>
-            </div>
+        {/* Controls row */}
+        <section className="flex w-full shrink-0 items-stretch gap-3 xl:h-[112px]">
+          {/* Joystick */}
+          <div className="flex w-[110px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-borderSubtle bg-bgCard p-2 sm:w-[124px] 2xl:w-[136px]">
+            <p className="font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
+              Manual
+            </p>
+            <Joystick compact />
           </div>
 
-          <Joystick />
+          {/* Mode buttons + queue */}
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="flex gap-2">
+              {modeBtn("○ Goal Mode", "Goal", "goal", "● Goal Mode ON", "● Goal")}
+              {modeBtn("⊕ Set Pose", "Pose", "pose", "● Click to Set Pose", "● Pose")}
+              {modeBtn("＋ Add Waypoint", "Waypoint", "waypoint", "● Adding Waypoints", "● Adding")}
+            </div>
 
-          <div className="max-h-[180px] w-1/3 max-w-[700px] flex-grow">
-            <Logs />
+            <div className="rounded-xl border border-borderSubtle bg-bgCard px-3 py-1">
+              <p className="font-[RobotoMono] text-xs leading-5 text-themeTextGray">
+                {mode === "goal" &&
+                  "Click map to navigate. Drag before releasing to set heading."}
+                {mode === "pose" &&
+                  "Click map to set AMCL initial pose. Drag to set heading. One-shot."}
+                {mode === "waypoint" &&
+                  "Each click adds a waypoint. Drag to set heading. Execute all below."}
+                {!mode && "Select a mode above to interact with the map."}
+              </p>
+            </div>
+
+            {waypointQueue.length > 0 && (
+              <div className="rounded-xl border border-borderSubtle bg-bgCard p-3 font-[RobotoMono]">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-wider text-themeTextGray">
+                    Waypoint Queue ({waypointQueue.length})
+                  </p>
+                  <button
+                    onClick={() => {
+                      setWaypointQueue([]);
+                      stopQueue();
+                    }}
+                    className="text-xs text-statusRed hover:underline"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {waypointQueue.map((wp, i) => (
+                    <span
+                      key={i}
+                      className={`rounded border px-2 py-0.5 text-xs ${
+                        queueExecuting && i === queueIdxRef.current
+                          ? "border-themeBlue bg-themeBlue/20 text-themeBlue"
+                          : "border-borderSubtle text-themeTextGray"
+                      }`}
+                    >
+                      {i + 1}: ({wp.position.x.toFixed(1)},{" "}
+                      {wp.position.y.toFixed(1)})
+                    </span>
+                  ))}
+                </div>
+                {queueExecuting ? (
+                  <button
+                    onClick={stopQueue}
+                    className="w-full rounded-lg border border-statusRed bg-bgCard py-1.5 text-xs font-semibold text-statusRed transition-colors hover:bg-statusRed hover:text-white"
+                  >
+                    Stop Queue
+                  </button>
+                ) : (
+                  <button
+                    onClick={executeQueue}
+                    className="w-full rounded-lg border border-themeBlue bg-themeBlue/10 py-1.5 text-xs font-semibold text-themeBlue transition-colors hover:bg-themeBlue hover:text-white"
+                  >
+                    Execute Queue
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </section>
       </div>

@@ -41,7 +41,7 @@ const TimeModal = ({ modalHandler }) => {
       <ToastContainer />
 
       <section className="relative top-[5vh] flex max-h-[90vh] w-1/2 min-w-[400px] flex-col items-center justify-center gap-3 rounded-[30px] bg-white p-8 font-[RobotoMono] xl:w-1/3">
-        <h2 className="bg-themeMediumBlue w-full rounded-lg p-7 text-center text-3xl">
+        <h2 className="w-full rounded-lg bg-themeMediumBlue p-7 text-center text-3xl">
           Enter the time
         </h2>
 

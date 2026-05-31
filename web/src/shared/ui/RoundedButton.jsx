@@ -1,22 +1,28 @@
 import React from "react";
 
 const RoundedButton = ({ type, children, onBtnClick }) => {
-  let buttonColors = "";
+  let cls = "";
   switch (type) {
     case "success":
-      buttonColors = "bg-[#17A700] hover:bg-[#117600] active:bg-[#0D6000]";
+      cls =
+        "bg-statusGreen hover:bg-green-500 active:bg-green-600 shadow-lg shadow-green-200";
       break;
     case "danger":
-      buttonColors = "bg-[#CD3100] hover:bg-[#A02700] active:bg-[#741500]";
+      cls =
+        "bg-statusRed hover:bg-red-500 active:bg-red-600 shadow-lg shadow-red-200";
       break;
+    default:
+      cls = "bg-themeBlue hover:bg-themeMediumBlue active:bg-themeDarkBlue";
   }
+
   return (
     <button
-      className={`${buttonColors} flex h-[120px] w-[120px] items-center justify-center rounded-full font-[RobotoMono] text-[40px] text-white lg:h-[140px] lg:w-[140px] 2xl:h-[180px] 2xl:w-[180px]`}
+      className={`${cls} flex h-[110px] w-[110px] items-center justify-center rounded-full font-[RobotoMono] text-[28px] font-bold text-white transition-colors lg:h-[130px] lg:w-[130px] 2xl:h-[160px] 2xl:w-[160px]`}
       onClick={onBtnClick}
     >
       {children}
     </button>
   );
 };
+
 export default RoundedButton;

@@ -78,9 +78,17 @@ const Map = forwardRef((props, ref) => {
     if (!mapUpdateTopicRef.current) {
       mapUpdateTopicRef.current = new window.ROSLIB.Topic({
         ros,
-        name: "/map",
+        name: AppConfig.MAP_TOPIC,
         messageType: "nav_msgs/OccupancyGrid",
       });
+    }
+
+    // Publish to request waypoints as soon as ROS connection is active
+    if (
+      mapTopicRef.current &&
+      typeof mapTopicRef.current.publish === "function"
+    ) {
+      mapTopicRef.current.publish();
     }
   }, [ros]);
 
@@ -136,10 +144,14 @@ const Map = forwardRef((props, ref) => {
 
     viewerRef.current = viewer;
     nav2d.canvas = viewer;
+
+    if (window.createjs?.Touch) {
+      window.createjs.Touch.enable(viewer.scene);
+    }
   }, []);
 
   /**
-   * Subscribe to "/map" updates only after the topic exists.
+   * Subscribe to relayed map updates only after the topic exists.
    */
   useEffect(() => {
     const topic = mapUpdateTopicRef.current;
@@ -157,15 +169,10 @@ const Map = forwardRef((props, ref) => {
   }, [mapUpdateTopicRef.current]);
 
   /**
-   * On mount: create canvas and request data.
+   * On mount: create canvas container.
    */
   useEffect(() => {
     createCanvasContainer();
-
-    const mapTopic = mapTopicRef.current;
-    if (mapTopic && typeof mapTopic.publish === "function") {
-      mapTopic.publish();
-    }
   }, [createCanvasContainer]);
 
   /**
@@ -207,6 +214,16 @@ const Map = forwardRef((props, ref) => {
         clearInterval(initRetryIntervalRef.current);
         initRetryIntervalRef.current = null;
       }
+      // Allow navigator() to re-run when Map remounts (e.g. after page navigation)
+      if (window.NAV2D) {
+        window.NAV2D.mapInited = false;
+        if (window.NAV2D.scanTopic) {
+          try {
+            window.NAV2D.scanTopic.unsubscribe();
+          } catch (e) {}
+          window.NAV2D.scanTopic = null;
+        }
+      }
     };
   }, [ros, createCanvasContainer]);
 
@@ -235,7 +252,7 @@ const Map = forwardRef((props, ref) => {
   return (
     <div
       ref={mapContainer}
-      className="flex h-full w-full items-start justify-center"
+      className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl border border-borderSubtle bg-bgCard p-2 shadow-sm shadow-slate-200/80"
     >
       <div
         className="relative"
@@ -252,7 +269,7 @@ const Map = forwardRef((props, ref) => {
           />
         </div>
 
-        <div className="absolute bottom-8 left-8 grid grid-cols-3 grid-rows-2 justify-items-center gap-1">
+        <div className="absolute bottom-4 left-4 grid grid-cols-3 grid-rows-2 justify-items-center gap-1 rounded-xl border border-borderSubtle bg-white/85 p-1.5 shadow-lg shadow-slate-300/50 backdrop-blur">
           <div />
           <MapButton
             type={"arrow"}

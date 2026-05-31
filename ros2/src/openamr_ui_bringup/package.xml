@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>openamr_ui_bringup</name>
+  <version>0.0.0</version>
+  <description>Bringup wrapper for the standalone OpenAMR UI workspace.</description>
+  <maintainer email="raj@example.com">Raj</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>openamr_ui_package</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
