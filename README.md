@@ -54,6 +54,27 @@ The UI is a browser-based ROS 2 dashboard. The browser talks to ROS through
 maps, AMCL pose, Nav2 status, waypoint routes, camera streaming, and map/route
 file handling.
 
+High-level data flow:
+
+```text
+Browser or touchscreen
+        |
+        v
+React UI in web/
+        |
+        v
+roslibjs over WebSocket
+        |
+        v
+rosbridge_server
+        |
+        v
+ROS 2 UI backend nodes in ros2/
+        |
+        v
+Navigation, localization, docking, sensors, and robot systems
+```
+
 ![OpenAMR ROS 2 topic and node schematic](docs/assets/openamr_ros_topic_node_schematic.png)
 
 ## What This UI Provides
@@ -65,7 +86,7 @@ file handling.
 - AMCL pose and navigation/docking status relays under `/ui/*`
 - Manual robot control through `/cmd_vel`
 - Goal pose, initial pose, route, map, waypoint, docking, and status controls
-- Map and route file management through the UI helper nodes
+- Map and route file management when the optional UI helper nodes are running
 
 ## Repository Layout
 
@@ -102,6 +123,17 @@ ros2/log/
 This top-level README is the source of truth for installing, building, running,
 and troubleshooting the UI workspace. Folder-level README files are intentionally
 short and only describe local package or directory details.
+
+Good starting points:
+
+| File or Directory | Use It For |
+| --- | --- |
+| `README.md` | Full workspace setup, launch, usage, and troubleshooting |
+| `web/README.md` | React frontend development notes |
+| `scripts/README.md` | Helper script details |
+| `ros2/src/openamr_ui_package/README.md` | ROS 2 UI package overview |
+| `ros2/src/openamr_ui_package/launch/README.md` | Launch file notes |
+| `ros2/src/openamr_ui_package/param/README.md` | Configuration details |
 
 ## Main Components
 
@@ -143,7 +175,12 @@ sudo apt install -y \
   npm \
   ros-jazzy-rosbridge-server \
   ros-jazzy-rosapi \
-  ros-jazzy-web-video-server
+  ros-jazzy-web-video-server \
+  ros-jazzy-nav2-msgs \
+  ros-jazzy-nav2-simple-commander \
+  python3-flask \
+  python3-yaml \
+  python3-serial
 ```
 
 The ROS package also uses normal ROS interfaces such as `rclpy`, `std_msgs`,
@@ -207,7 +244,7 @@ Then start this UI workspace in another terminal:
 cd ~/openamrobot-ui/ros2
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-ros2 launch openamr_ui_bringup ui.launch.py use_sim_time:=true
+ros2 launch openamr_ui_bringup ui.launch.py
 ```
 
 Open the UI:
@@ -241,7 +278,7 @@ ros2 launch openamrobot_docking bringup_sim.launch.py gazebo_gui:=false use_rviz
 cd ~/openamrobot-ui/ros2
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-ros2 launch openamr_ui_bringup ui.launch.py use_sim_time:=true
+ros2 launch openamr_ui_bringup ui.launch.py
 ```
 
 Then open:
@@ -274,7 +311,7 @@ ros2 launch openamrobot_docking bringup_sim.launch.py
 cd ~/openamrobot-ui/ros2
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-ros2 launch openamr_ui_bringup ui.launch.py use_sim_time:=true
+ros2 launch openamr_ui_bringup ui.launch.py
 ```
 
 The old `headless:=true` / `headless:=false` arguments and the former
@@ -286,13 +323,13 @@ setup.
 Recommended UI-only launch:
 
 ```bash
-ros2 launch openamr_ui_bringup ui.launch.py use_sim_time:=true
+ros2 launch openamr_ui_bringup ui.launch.py
 ```
 
 Direct package launch for the web services and relays:
 
 ```bash
-ros2 launch openamr_ui_package new_ui_launch.py use_sim_time:=true
+ros2 launch openamr_ui_package new_ui_launch.py
 ```
 
 Helper script equivalent:
@@ -301,8 +338,9 @@ Helper script equivalent:
 bash scripts/run_ui_backend.sh
 ```
 
-Use `use_sim_time:=true` with simulation. Use `use_sim_time:=false` or omit it
-when running against a physical robot that uses wall time.
+The UI launch mainly starts web, bridge, camera, and relay nodes. The robot or
+simulation workspace owns Nav2, localization, and the map server, so configure
+simulation time there when needed.
 
 ## Ports and URLs
 
@@ -345,13 +383,166 @@ The app has these main routes:
 | Control | `/control` | Manual driving, docking, robot control, status |
 | Info | `/info` | System/topic information |
 
+### UI Screenshots
+
+The main pages are shown below using a simulation map and camera feed.
+
+| Map | Route |
+| --- | --- |
+| ![OpenAMR UI map page with map layers, robot pose, camera feed, and waypoint controls](docs/assets/map.png) | ![OpenAMR UI route page with route planning and route management controls](docs/assets/route.png) |
+
+| Control | Info |
+| --- | --- |
+| ![OpenAMR UI control page with manual drive, stop, speed, health, lifecycle, and docking controls](docs/assets/control.png) | ![OpenAMR UI info page with camera feed, battery, charging station, and system health status](docs/assets/infp.png) |
+
+### Page Descriptions
+
+#### Map Page
+
+The Map page is the main situational-awareness page. Use it when you want to
+see where the robot is, inspect the current map, send a navigation goal, set the
+initial localization pose, build a temporary waypoint queue, or watch the camera
+feed beside the map.
+
+The central map panel displays the occupancy grid received from `/ui/map`. Free
+space, walls, and unknown areas are rendered from the map data published by the
+robot or simulation stack and relayed by `map_relay`. The blue robot marker
+shows the current robot pose from odometry, TF, and AMCL-related updates. When
+navigation data is available, the page can also show the planned path, route
+waypoints, goal marker, laser scan, global costmap, local costmap, and trail.
+
+The layer controls let you turn map overlays on or off without restarting ROS.
+This is useful when debugging navigation: keep the map and robot visible for
+normal operation, then enable costmap, laser, path, goal, waypoint, or trail
+layers when you need more detail. The sliders control layer visibility so dense
+debug overlays do not hide the map.
+
+The map interaction buttons control the way clicks on the map are interpreted.
+`Goal Mode` publishes a navigation goal to `/goal_pose`; click the map and drag
+before releasing to set the goal heading. `Set Pose` publishes an initial pose
+to `/initialpose`, which is useful after localization is reset or the robot pose
+is wrong. `Add Waypoint` builds a temporary queue on the Map page; `Execute
+Queue` sends each queued waypoint as a `/goal_pose` goal and advances when the
+Nav2 status reports success. The zoom and pan buttons in the map corner are
+local browser controls, so they help you inspect the map even if the robot is
+not moving.
+
+The camera panel uses `web_video_server` on port `8080`. It can show the live
+robot or simulation camera stream, select the configured image topic, adjust the
+stream mode, stop/start the stream, and open the camera in a larger view. If the
+camera area is blank, verify that `web_video_server` is running and that the
+selected image topic exists.
+
+#### Route Page
+
+The Route page is used to create, select, edit, and manage reusable waypoint
+routes for the current map. It prepares named route files for route workflows
+and helper nodes instead of sending a one-time goal from the Map page.
+
+The map area shows the same operating environment as the Map page, but the
+controls are focused on route editing. A route is a saved list of waypoint
+poses. Each waypoint stores position and heading, so the robot can approach the
+point in the intended orientation. Route data is stored under
+`ros2/src/openamr_ui_package/paths/` and is exchanged with the helper nodes
+through topics such as `/nav_data_req`, `/nav_data_resp`, `/ui_operation`,
+`/new_way_point`, `/WP_req`, and `/WayPoints_topic`.
+
+`Create` starts a new route. While creating or editing, place waypoints on the
+map to define the path. `Edit` loads the current route for changes, and pressing
+it again cancels edit mode. `Change` opens the route selector for the current
+map. `Plan` asks Nav2's `/compute_path_to_pose` service for a path from the
+current robot pose to a clicked goal, downsamples that path, and publishes the
+resulting points to `/new_way_point`. `Save` writes the route so it can be
+selected again later. `Rename` changes the route name, `Delete` removes a route,
+and `Clear` removes the currently displayed route points from the editor so you
+can start the shape again.
+
+The route header shows the current group, map, and route context when that data
+is available. This matters because routes belong to maps: a route drawn for one
+map may not be valid on a different floor, building, or simulation world. Keep
+the active map and route aligned before saving or using the saved waypoints with
+the helper nodes.
+
+Route file operations require the optional helper nodes from
+`openamr_ui_package/launch/physnode_launch.py`. If route buttons do not update
+anything, confirm that the handler node is running and that messages are moving
+on `/nav_data_req`, `/nav_data_resp`, `/ui_operation`, and `/ui_message`.
+
+#### Control Page
+
+The Control page is the operator page for driving and supervising the robot. It
+combines the map, manual drive controls, navigation state, safety stop, speed
+limit, robot telemetry, layer toggles, lifecycle controls, health checks, and
+docking controls in one screen. Unlike the Map and Info pages, it does not show
+the camera feed; it prioritizes drive and status controls.
+
+Manual driving publishes velocity commands on `/cmd_vel`. The joystick controls
+linear and angular motion, while the max-speed slider limits the command range
+used by the UI. The large `STOP` button immediately sends zero velocity and
+cancels the active Nav2 goal through the navigation cancel action. Use it when
+manual control or an active goal should stop right away.
+
+The embedded map remains useful while operating. `Goal Mode` can send a goal
+pose, `Set Pose` can correct the initial localization estimate, and `Go Home`
+sends the robot back toward the default home pose. The navigation status banner
+and path notice help show whether Nav2 has an active goal, a planned path, or an
+unknown/idle state.
+
+The velocity and position panels summarize live robot feedback. Velocity comes
+from odometry, while position is shown from the UI's AMCL/pose tracking. These
+numbers are helpful when confirming whether commands are actually reaching the
+robot and whether localization is stable.
+
+The health and lifecycle panels are quick diagnostics. Health indicators show
+whether important streams such as TF, odometry, AMCL, map, laser, costmap, and
+plan data are online. Lifecycle controls can configure, activate, deactivate,
+clean up, or inspect lifecycle-managed navigation nodes when those services are
+available. If a lifecycle row is offline or unknown, check that the matching
+Nav2 node is running in the robot or simulation workspace.
+
+The docking area publishes dock and undock trigger messages and reports status
+from `/dock_trigger_status`. After an undock finishes, the UI can also publish a
+standby goal on `/goal_pose`. Docking depends on the robot stack providing the
+docking behavior; the UI only exposes the controls and status.
+
+#### Info Page
+
+The Info page is the status and diagnostics page. Use it when you want a calm
+overview of camera, battery, charging, robot movement, localization, rosbridge,
+TF, and core navigation signals without the extra control surface of the Control
+page.
+
+The camera feed mirrors the camera component used elsewhere in the UI. It lets
+you confirm that image streaming works independently from map rendering or
+manual driving. This is useful when checking whether a blank camera view is a UI
+issue, a `web_video_server` issue, or a missing ROS image topic.
+
+The battery panel subscribes to `/battery_status` and displays the battery
+percentage when data is available. The charging-station panel subscribes to
+`/charge_station_connected` and shows whether the robot is connected to the
+charger. If no battery data appears, the UI can still run; it simply means the
+battery monitor topic is not publishing.
+
+The velocity and position panels provide a lightweight telemetry summary. They
+show whether the UI is receiving robot motion and pose information, which helps
+separate frontend connection problems from navigation problems. If velocity
+updates but pose is stale, inspect localization and TF. If neither updates,
+check rosbridge, odometry, and the robot/simulation bringup.
+
+The system-health panel is the fastest place to inspect ROS connectivity from
+the browser. It reports rosbridge connection state, selected TF links such as
+`map->odom`, `odom->base_link`, and `base_link->lidar_link`, plus key streams
+such as laser scan, localization, map, global costmap, plan, and Nav2. Online
+items show the UI is receiving recent messages; offline items point to missing
+publishers, stopped nodes, or topic-name mismatches.
+
 Typical operating flow:
 
 1. Start the robot or simulation stack.
 2. Start the UI launch from this repository.
 3. Open `/control` or `/`.
 4. Confirm the ROS connection indicator shows connected.
-5. Use manual control, map goal setting, route following, docking controls, and
+5. Use manual control, map goal setting, route management, docking controls, and
    status panels as needed.
 6. Use the route page to create, edit, save, rename, delete, and select routes
    when the optional helper nodes from `physnode_launch.py` are running.
@@ -365,11 +556,14 @@ Ctrl+Shift+R
 
 ## Important ROS Topics
 
-The frontend topic names are defined in:
+Most shared frontend topic names are defined in:
 
 ```text
 web/src/shared/constants/index.js
 ```
+
+Some route-editor and docking topics are defined directly in the page or
+component that uses them.
 
 Common topics:
 
@@ -385,14 +579,20 @@ Common topics:
 | `/tf`, `/tf_static` | UI subscribes | Robot/map transforms |
 | `/ui/amcl_pose` | UI subscribes | Relayed AMCL pose |
 | `/ui/navigate_to_pose/status` | UI subscribes | Relayed Nav2 goal status |
-| `/ui/dock_robot/status` | UI subscribes | Relayed dock action status |
-| `/ui/undock_robot/status` | UI subscribes | Relayed undock action status |
 | `/goal_pose` | UI publishes | Navigation goal |
 | `/initialpose` | UI publishes | Initial localization pose |
 | `/ui_operation` | UI publishes | Map/route/navigation commands |
 | `/ui_message` | UI subscribes | Messages from UI helper nodes |
+| `/nav_data_req` | UI publishes | Request map/group/route file data |
+| `/nav_data_resp` | UI subscribes | Map/group/route file data response |
+| `/new_way_point` | UI publishes | Route waypoint pose added from the route editor |
 | `/WP_req` | UI publishes | Request waypoint data |
 | `/WayPoints_topic` | UI subscribes | Route waypoint array |
+| `/dock_trigger` | UI publishes | Docking request trigger |
+| `/undock_robot` | UI publishes | Undocking request trigger |
+| `/dock_trigger_status` | UI subscribes | Docking state string |
+| `/ui/dock_robot/status` | Relay publishes | Relayed dock action status for browser-compatible consumers |
+| `/ui/undock_robot/status` | Relay publishes | Relayed undock action status for browser-compatible consumers |
 | `/battery_status` | UI subscribes | Battery status |
 | `/charge_station_connected` | UI subscribes | Charger connection status |
 
@@ -537,7 +737,7 @@ cd ~/openamrobot-ui/ros2
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install --packages-select openamr_ui_package
 source install/setup.bash
-ros2 launch openamr_ui_bringup ui.launch.py use_sim_time:=true
+ros2 launch openamr_ui_bringup ui.launch.py
 ```
 
 For Python or launch file changes:
@@ -547,7 +747,7 @@ cd ~/openamrobot-ui/ros2
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
-ros2 launch openamr_ui_bringup ui.launch.py use_sim_time:=true
+ros2 launch openamr_ui_bringup ui.launch.py
 ```
 
 For message changes:
