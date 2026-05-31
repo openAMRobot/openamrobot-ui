@@ -1,62 +1,51 @@
+# Web Frontend
 
-### Project Overview
----------
+This folder contains the React browser dashboard for OpenAMR robot control,
+status, maps, routes, docking, and camera views.
 
-This React-based application provides functionality to control and management of autonomous mobile robots (AMRs)- its primary focus is on providing a user-friendly experience for effective AMR management.
+The top-level `../README.md` is the source of truth for full workspace setup,
+ROS launch commands, ports, and troubleshooting.
 
-### Prerequisites
+## Development
 
-*   **Node.js:** Version 18 or higher (use ```sudo apt install nodejs``` to install)
-    
-*   **npm:** (or yarn) Package manager (use ```sudo apt install npm``` to install)
-    
-*   **React Developer Tools:** Recommended for development and debugging (follow this [tutorial](https://react.dev/learn/react-developer-tools) to install)
-    
+Install dependencies and run the React development server:
 
-### Installation
-If you want to start modifying the UI, use ```npm install``` to be assured that every depandancy was downloaded
+```bash
+npm install
+npm run dev
+```
 
-### Development
+The dev server runs at:
 
-#### Running the application locally
+```text
+http://localhost:3000
+```
 
-To start the development server:
+The frontend can render without ROS, but live robot data and controls require
+rosbridge to be running and reachable. When using the dev server, update
+`ROSBRIDGE_SERVER_IP` in `src/shared/constants/index.js` if the robot is not at
+the default address.
 
-    npm run dev  
+## Production Build
 
-This will launch the application in development mode (note that this wont give the full UI as it misses the ROS2 topics). You can access it at http://localhost:3000 (or a different port if specified). The browser will automatically reload when changes are made.
+From the repository root, use the canonical scripts:
 
-#### Building for production
+```bash
+bash scripts/build_frontend.sh
+bash scripts/sync_frontend_to_ros.sh
+```
 
-To create an optimized build for production:
+`build_frontend.sh` creates `web/build/`. `sync_frontend_to_ros.sh` copies that
+build into the ROS package static app directory so Flask can serve it.
 
-    npm run build  
+## Structure
 
-This will generate a build folder containing the production-ready version of your application. Use ```./compile_ui.bash``` in the main folder to copy it's components in **openamr_ui_package** for accurate testing
-
-### Project Structure
-
-*   **build:** builded files, do not modify
-
-*   **src:** Contains the source code of the application.
-    
-    *   **app:** Settings for entire project, configs, providers etc. Top app layer.
-    
-    *   **assets:** assets such as images, fonts, etc
-    
-    *   **components:** most lower-level logic items of the app
-        
-    *   **layouts:** website layout layer that wrap pages for reusing components such as header, footer etc.
-        
-    *   **pages:** pages layer, each of them have their own route, link several components into a coherent logical unit
-        
-    *   **shared:** entities that can be used on any level of the app: styles, jsons, constants etc
-        
-    *   **stores:** entities and logic that lives during all website lifecycle and the bus that transfers data between components and pages of the application
-        
-*   **public:** public resources like libraries, etc. Files that placed to build directory without any conversion or minification
-  
-    *   **ros:** Contains the libraries to communicate with the ROS2 nodes
-    
-*   **package.json:** Project dependencies and scripts
-    
+- `public/ros/`: browser ROS libraries copied into the production build.
+- `src/app/`: top-level React app setup, providers, and global styles.
+- `src/assets/`: images, icons, and fonts.
+- `src/components/`: shared UI and robot-control components.
+- `src/layouts/`: page layout components.
+- `src/pages/`: route-level pages.
+- `src/shared/`: constants, styles, and reusable UI primitives.
+- `src/stores/`: Redux store setup.
+- `package.json`: frontend dependencies and npm scripts.

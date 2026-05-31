@@ -11,9 +11,11 @@ import withProviders from "./providers";
 import Routes from "../pages";
 
 export const RosContext = createContext(null);
+export const RosStatusContext = createContext("disconnected");
 
 const App = () => {
   const [ros] = useState(new window.ROSLIB.Ros());
+  const [status, setStatus] = useState("disconnected");
 
   const tryToConnect = useCallback(async () => {
     const currentIP = window.location.hostname;
@@ -28,25 +30,46 @@ const App = () => {
     }
   }, [ros]);
 
-  const checkConnectionStatus = useCallback(() => {
-    ros.on("connection", () => {
-      console.log("Connection Successful");
-    });
-
-    ros.on("close", () => {
-      console.log("Connection failed, reloading...");
-      tryToConnect();
-    });
-  }, [ros, tryToConnect]);
-
   useEffect(() => {
+    let reconnectTimeout = null;
+
+    const handleConnect = () => {
+      setStatus("connected");
+    };
+
+    const handleClose = () => {
+      setStatus("disconnected");
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      reconnectTimeout = setTimeout(tryToConnect, AppConfig.RECONNECTION_TIME);
+    };
+
+    const handleError = () => {
+      setStatus("error");
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      reconnectTimeout = setTimeout(tryToConnect, AppConfig.RECONNECTION_TIME);
+    };
+
+    ros.on("connection", handleConnect);
+    ros.on("close", handleClose);
+    ros.on("error", handleError);
+
     tryToConnect();
-    checkConnectionStatus();
-  }, [checkConnectionStatus, tryToConnect]);
+
+    return () => {
+      ros.off("connection", handleConnect);
+      ros.off("close", handleClose);
+      ros.off("error", handleError);
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+    };
+  }, [ros, tryToConnect]);
 
   return (
     <RosContext.Provider value={ros}>
-      <Routes />
+      <RosStatusContext.Provider value={status}>
+        <Routes />
+      </RosStatusContext.Provider>
     </RosContext.Provider>
   );
 };

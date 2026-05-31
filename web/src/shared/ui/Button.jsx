@@ -1,37 +1,37 @@
 import React from "react";
 
 const Button = ({ children, onBtnClick, type }) => {
-  let buttonTypesClasses = "";
+  let cls = "";
   switch (type) {
-    case "gray":
-      buttonTypesClasses =
-        "hover:bg-themeMediumGray active:bg-themeTextGray active:text-white bg-themeLightGray text-black";
+    case "disabled":
+      cls =
+        "opacity-30 cursor-not-allowed border border-borderSubtle text-themeTextGray bg-bgSurface";
+      break;
+    case "danger":
+      cls =
+        "bg-statusRed hover:bg-red-600 active:bg-red-700 text-white border border-statusRed";
+      break;
+    case "success":
+      cls =
+        "bg-statusGreen hover:bg-green-500 active:bg-green-600 text-white border border-statusGreen";
       break;
     case "orange":
-      buttonTypesClasses =
-        "text-white bg-themeMediumBlue hover:bg-themeDarkBlue text-black";
-      break;
-    case "disabled":
-      buttonTypesClasses =
-        "border border-themeBlue opacity-40 disabled cursor-auto bg-white text-themeDarkBlue";
+      cls =
+        "bg-themeMediumBlue hover:bg-themeDarkBlue text-white border border-themeMediumBlue";
       break;
     default:
-      buttonTypesClasses =
-        "border border-themeBlue hover:bg-themeLightGray active:bg-themeDarkBlue active:text-white bg-white text-themeDarkBlue";
+      cls =
+        "border border-themeBlue text-themeBlue hover:bg-themeBlue hover:text-white active:bg-themeDarkBlue active:text-white bg-transparent transition-colors";
   }
-
-  // const buttonSize =
-  //   size === "small"
-  //     ? "px-3 2xl:px-[15px] py-2 2xl:py-[12px] "
-  //     : "px-4 py-3 2xl:p-[20px]";
 
   return (
     <button
-      className={`px-3 py-2 ${buttonTypesClasses} functionalButton flex w-full items-center justify-center gap-2 rounded-lg font-[RobotoMono] text-lg`}
+      className={`px-3 py-2 ${cls} flex w-full items-center justify-center gap-2 rounded-lg font-[RobotoMono] text-base`}
       onClick={type !== "disabled" ? onBtnClick : () => {}}
     >
       {children}
     </button>
   );
 };
+
 export default Button;

@@ -1,554 +1,840 @@
-# OpenAMRobot UI (ROS 2 Jazzy)
+# OpenAMRobot UI
 
-This repository contains the user interface stack for OpenAMRobot.
-It combines a React-based frontend with ROS2 backend nodes and serves
-the UI directly from the robot.
+Standalone ROS 2 web UI workspace for OpenAMR autonomous mobile robots.
 
-The project is structured to be beginner-friendly, modular, and
-self-contained.
+This repository contains the React browser dashboard, ROS 2 UI packages,
+custom UI messages, and helper scripts needed to build and run the UI. It is
+intended to live separately from the main robot or simulation workspace. The
+robot stack should start Nav2, localization, docking, Gazebo/RViz, sensors, and
+the map server. This workspace starts only the web UI, rosbridge, optional
+camera web streaming, and lightweight topic relays used by the browser.
 
----
+## Beginner Overview
 
-## High-level architecture
+There are two different workspaces involved when using the UI with a robot or
+simulation:
 
-- **Frontend**: React application (web/)
-- **Backend**: ROS2 Python nodes (ros2/)
-- **Communication**: rosbridge + roslibjs (WebSocket)
-- **Serving UI**: Flask (ROS2 backend)
-- **Automation**: helper scripts (scripts/)
+| Workspace | What It Does |
+| --- | --- |
+| Robot/simulation workspace, for example `~/openamr-platform-sw` | Starts the robot, Gazebo simulation, Nav2, localization, map server, docking, sensors, and robot topics |
+| This UI workspace, `~/openamrobot-ui` | Starts the browser UI, rosbridge, optional camera web server, and small relay nodes |
 
-```
-Browser / Touchscreen
+Start the robot or simulation first. Then start the UI. The UI does not replace
+Nav2, Gazebo, the map server, docking, or the robot bringup. It connects to
+those running ROS topics and services.
+
+Important words:
+
+| Term | Meaning |
+| --- | --- |
+| ROS 2 | Robot middleware used to connect nodes, topics, services, and actions |
+| Node | A running ROS process, such as Flask, rosbridge, Nav2, or a relay |
+| Topic | A named stream of messages, such as `/cmd_vel`, `/odom`, or `/map` |
+| Launch file | A Python file that starts multiple ROS nodes together |
+| Gazebo | The simulator that shows and runs the robot in a virtual world |
+| Headless | Simulation runs without the Gazebo graphical window |
+| Gazebo GUI | The visible Gazebo window is opened |
+| RViz | ROS visualization/debugging tool for maps, TF, costmaps, and Nav2 |
+| rosbridge | WebSocket bridge that lets the browser talk to ROS |
+| Flask | Python web server that serves the React UI |
+| React | JavaScript frontend used by the browser dashboard |
+
+For most beginners, the safest order is:
+
+1. Build this UI workspace.
+2. Start the robot or simulation workspace.
+3. Start the UI launch from this workspace.
+4. Open the browser at `http://127.0.0.1:5050/control`.
+5. Confirm the UI says ROS is connected before driving or sending goals.
+
+## System Architecture
+
+The UI is a browser-based ROS 2 dashboard. Flask serves the React app, the
+browser talks to ROS through `rosbridge_server`, and `web_video_server` exposes
+camera image topics as a browser-readable stream. The UI package provides small
+relay/helper nodes for maps, AMCL pose, Nav2 status, waypoint routes, and
+map/route file handling.
+
+High-level data flow:
+
+```text
+Browser or touchscreen
         |
         v
-React UI (web/)
+React UI in web/
         |
         v
-roslibjs (WebSocket)
+roslibjs over WebSocket
         |
         v
 rosbridge_server
         |
         v
-ROS2 UI backend (ros2/)
+ROS 2 UI backend nodes in ros2/
         |
         v
-Navigation / Robot systems 
+Navigation, localization, docking, sensors, and robot systems
 ```
----
 
-## Main directories
+![OpenAMRobot UI architecture diagram](docs/assets/openamr_ros_topic_node_schematic.png)
+
+How to read the schematic:
+
+- **Frontend, React app:** `web/src/index.js` starts the React app.
+  `web/src/app/App.jsx` creates the ROS connection context and opens the
+  `rosbridge_server` WebSocket. The page components then use that shared ROS
+  connection to publish commands and subscribe to robot state.
+- **Bridge and web services:** `rosbridge_server` is the main communication
+  bridge between the browser and ROS 2. `rosapi` provides optional ROS graph
+  helper services, and `web_video_server` exposes ROS image topics as MJPEG
+  streams that the browser camera panels can display.
+- **UI backend package:** `openamr_ui_package` contains the Python nodes owned
+  by this workspace. `flask_app.py` serves the compiled React app. `map_relay.py`
+  republishes `/map` as `/ui/map` with browser-friendly QoS. `nav_relays.py`
+  republishes AMCL pose and selected Nav2/docking action statuses under `/ui/*`.
+  `folders_handler.py` manages map, route, waypoint, and active-context file
+  operations. `waypoint_nav.py` is an optional helper for following route CSVs
+  through Nav2.
+- **Workspace data:** `maps/` stores map YAML/PNG files, `paths/` stores route
+  CSV files, and `param/current_map_route.yaml` stores the active map/route
+  context used by the UI helper nodes.
+- **Custom UI messages:** `openamr_ui_msgs` is a separate ROS 2 package for UI
+  message definitions used by the backend helpers.
+- **External robot or simulation stack:** Nav2, AMCL, `map_server`, docking,
+  robot drivers, sensors, camera topics, battery/charger status, TF, odometry,
+  and motor control are provided by the robot or simulation workspace. This UI
+  connects to those topics and services; it does not own the robot stack.
+
+## What This UI Provides
+
+- Browser dashboard served by Flask on port `5050`
+- ROS communication through `rosbridge_websocket` on port `9090`
+- Camera/image streaming through `web_video_server` on port `8080` when that
+  service is installed and running
+- Map display through a `/map` to `/ui/map` QoS relay
+- AMCL pose and navigation/docking status relays under `/ui/*`
+- Manual robot control through `/cmd_vel`
+- Goal pose, initial pose, route, map, waypoint, docking, and status controls
+- Map and route file management when the optional UI helper nodes are running
+
+## Repository Layout
+
+```text
+openamrobot-ui/
+  README.md
+  scripts/
+    build_frontend.sh          # Install web deps and build React
+    sync_frontend_to_ros.sh    # Copy React build into ROS package static/app
+    build_ros.sh               # Build ros2/ with colcon
+    run_ui_backend.sh          # Run the recommended UI launch
+  web/
+    package.json               # React scripts and dependencies
+    public/ros/                # roslibjs, ros2d, nav2d browser libraries
+    src/                       # React app source
+  ros2/
+    src/openamr_ui_msgs/       # Custom UI messages
+    src/openamr_ui_package/    # Main ROS 2 UI package
+    src/openamr_ui_bringup/    # Small launch wrapper
 ```
-- `docs/` – documentation and architecture explanations
-- `scripts/` – canonical build and launch scripts
-- `web/` – React frontend UI
-- `ros2/` – ROS2 backend packages
-- `.github/` – GitHub automation and CI
-.
-├── README.md
-├── docs/
-├── scripts/
-├── web/
-├── ros2/
-├── .github/
-├── compile_ui.bash
-├── install_openamr_deps.bash
-└── launch.bash
+
+Generated folders are intentionally ignored:
+
+```text
+web/node_modules/
+web/build/
+ros2/build/
+ros2/install/
+ros2/log/
 ```
----
 
-## Where to start
+## Documentation Layout
 
-1. `docs/00-repo-map.md` – repository structure overview
-2. `docs/README.md` – setup and run instructions
-3. `web/README.md` – frontend development
-4. `ros2/openamr_ui_package/README.md` – ROS2 backend overview
+This top-level README is the source of truth for installing, building, running,
+and troubleshooting the UI workspace. Folder-level README files are intentionally
+short and only describe local package or directory details.
 
-### Entry points
+Good starting points:
 
-**Frontend:**
+| File or Directory | Use It For |
+| --- | --- |
+| `README.md` | Full workspace setup, launch, usage, and troubleshooting |
+| `web/README.md` | React frontend development notes |
+| `scripts/README.md` | Helper script details |
+| `ros2/src/openamr_ui_package/README.md` | ROS 2 UI package overview |
+| `ros2/src/openamr_ui_package/launch/README.md` | Launch file notes |
+| `ros2/src/openamr_ui_package/param/README.md` | Configuration details |
+
+## Main Components
+
+| Component | Purpose |
+| --- | --- |
+| `web/` | React frontend source for the browser UI |
+| `openamr_ui_msgs` | Custom message package used by the UI |
+| `openamr_ui_package` | Flask server, relays, map/route handlers, waypoint navigation helpers |
+| `openamr_ui_bringup` | Recommended UI-only launch wrapper |
+| `scripts/` | Canonical build and sync commands |
+
+The compiled React app is copied into:
+
+```text
+ros2/src/openamr_ui_package/openamr_ui_package/static/app/
 ```
-web/src/index.js
-web/src/app/App.jsx
-```
-**Backend:**
-```
-ros2/openamr_ui_package/openamr_ui_package/flask_app.py
-ros2/openamr_ui_package/openamr_ui_package/folders_handler.py
-```
-**Legacy repositories (kept for reference only):**
-- OpenAMRobot_UI_package (legacy UI package repository)
-- OpenAMRobot_UI_dev (legacy early UI development sandbox)
 
-For legacy code or history, use the legacy repos above.
-For any new work (issues, PRs, development), use this repository.
+During `colcon build`, that static app is installed into the package share
+directory and served by `openamr_ui_package.flask_app`.
 
-**IMPORTANT**
-----------------------------
-This branch is still a WIP. As such, certain functions such as navigation and route following remain untested. We apologize for the inconveniance and are grateful for your trust and patience.
+## Prerequisites
 
-# Quick Start (ROS2 Jazzy)
+Recommended environment:
 
-Prerequisites:
-- Ubuntu 22.04
-- ROS2 Jazzy installed
-- Node.js & npm
-- colcon workspace setup
+- Ubuntu with ROS 2 Jazzy
+- Python 3
+- `colcon`
+- Node.js 18 or newer
+- npm
+- A running OpenAMR robot or simulation stack for full UI functionality
 
-**Steps:**
+Install common system dependencies:
 
-## Clone repo
 ```bash
-git clone https://github.com/openAMRobot/openamrobot-ui.git
-cd openamrobot-ui
+sudo apt update
+sudo apt install -y \
+  python3-colcon-common-extensions \
+  nodejs \
+  npm \
+  ros-jazzy-rosbridge-server \
+  ros-jazzy-rosapi \
+  ros-jazzy-web-video-server \
+  ros-jazzy-nav2-msgs \
+  ros-jazzy-nav2-simple-commander \
+  python3-flask \
+  python3-yaml \
+  python3-serial
 ```
 
-## Install dependencies
+The ROS package also uses normal ROS interfaces such as `rclpy`, `std_msgs`,
+`geometry_msgs`, `nav_msgs`, `action_msgs`, and Nav2-related packages available
+from a complete ROS/Nav2 installation.
+
+## First-Time Installation
+
+Clone or place this repository at:
+
 ```bash
-chmod +x install_openamr_deps.bash
-./install_openamr_deps.bash
+cd ~
+git clone <repo-url> openamrobot-ui
+cd ~/openamrobot-ui
 ```
 
-## Build UI
+Build the frontend:
+
 ```bash
-chmod +x compile_ui.bash
-./compile_ui.bash
+bash scripts/build_frontend.sh
 ```
 
-## Launch
+Sync the frontend build into the ROS package:
+
 ```bash
-chmod +x launch.bash
-./launch.bash
+bash scripts/sync_frontend_to_ros.sh
 ```
-Required for UI control (websocket bridge):    
+
+Build the ROS 2 workspace:
+
 ```bash
-sudo apt-get install -y ros-jazzy-rosbridge-server
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
+source install/setup.bash
 ```
-Optional for camera streaming:    
+
+You can also use the helper script:
+
 ```bash
-sudo apt-get install -y ros-jazzy-web-video-server
+cd ~/openamrobot-ui
+source /opt/ros/jazzy/setup.bash
+bash scripts/build_ros.sh
+source ros2/install/setup.bash
 ```
-Note:    
 
-If these packages are not installed, launch will print an instruction and start without those features.    
+## Running the UI
 
-**User interface**
-----------------------------
+Start the robot or simulation stack first in its own terminal. For example,
+from the main OpenAMR platform workspace:
 
-**OpenAMRobot_UI** is an open-source user interface designed for the intuitive control and management of autonomous mobile robots (AMRs)- its primary focus is on providing a user-friendly experience for effective AMR management. It offers a simple and understandable interface that allows users to monitor telemetry, set up tasks, configure waypoints, and define paths. Built with ease of exploitation, implementation, editing, and redesigning in mind, OpenAMRobot_UI is optimized for seamless integration with platforms like Linorobot and similar systems and well-suited for use with the Robot Operating System (ROS2) Jazzy distribution.
-
-**Key functionalities:**
-
-**Map creation and editing:** OpenAMR\_UI facilitates the creation of detailed digital maps representing the operational environment of the AMR. These maps encompass information on walls, obstacles, and other relevant features. The software allows for:
-
-*   Constructing new maps from scratch
-    
-*   Organizing multiple maps into logical groups for efficient management
-    
-*   Changing current maps for managing navigation through different floors etc
-    
-
-**Route planning and management:** OpenAMR\_UI empowers users to define specific routes for the AMR to navigate within the created maps. These routes essentially function as pre-programmed instructions, dictating the AMR's movement and obstacle avoidance strategies. The software allows:
-
-*   The creation of multiple routes within a single map, catering to various tasks or objectives
-    
-*   Setting a specific task at each waypoint to execute it (in development)
-    
-
-**Robot control and monitoring:** with maps and routes established, OpenAMR\_UI offers comprehensive control over the AMR's operation. Users can:
-
-*   Initiate and terminate robot movement
-    
-*   Initiate executing different functions on the robot
-    
-*   Monitor sensors value at a user-friendly interface
-    
-*   Direct the AMR to follow pre-defined routes
-    
-*   Visualize the AMR's real-time location and progress on the map interface
-    
-
-**Advantages:**
-
-**User-centric design:** OpenAMR\_UI prioritizes usability, even for individuals with limited robotics expertise. The intuitive interface simplifies map creation, route planning, robot control and monitoring statistics.
-
-**Open-source accessibility:** As an open-source project, OpenAMR\_UI is freely available for use and modification. This grants users the flexibility to adapt it to their specific requirements and project goals.
-
-**ROS2 compatibility:** OpenAMR\_UI seamlessly integrates with ROS2 Jazzy, a widely adopted framework for robot development. This compatibility ensures its functionality with a broad spectrum of robots and sensor systems.
-
-**Architecture description**
-----------------------------
-
-OpenAMR\_UI's functionality relies on a robust architecture composed of interconnected ROS2 nodes, standard packages, and communication libraries. Let's delve deeper into each of these components
-
-![Architecture](docs/assets/UI_architecture.jpg "Architecture")
-
-**Core nodes:**
-
-**MapNode / Handler:** this node serves as the central hub for map and route management within OpenAMR\_UI. It shoulders several key responsibilities:
-
-*   **Map management:** saves and loads map data, ensuring the persistence of the robot's operational environment across sessions.
-    
-*   **Route management:** handles route creation, editing, and storage, allowing you to define various paths for the AMR.
-    
-*   **Navigation control:** launches the necessary ROS2 nodes responsible for robot navigation based on the defined routes.
-    
-*   **Mapping control:** MapNode can launch ROS2 nodes for map creation or updates, enabling you to modify the environment representation.
-    
-
-**WayPointNavNode / Nav:** this node acts as the brain of the robot's navigation. It takes center stage when the AMR is actively following a route:
-
-*   **Route execution:** once a route is selected, the WayPointNavNode meticulously executes the navigation commands, guiding the robot along the predefined waypoints.
-    
-*   **Advanced functions (Optional):** this node can run additional functionalities related to different robot’s actuators, mechanisms and sensors.
-    
-
-**UINode/ FLask:** this node serves as the user interface (UI) and the bridge between the human operator and the robot's inner workings. It comprises two essential elements:
-
-*   **UI Application:** this is the graphical interface you interact with, typically written on React framework. It allows you to visualize maps, create routes, control the robot, and access information.
-    
-*   **Flask Server:** operating behind the scenes, the Flask server facilitates communication between the UI and the ROS2 nodes. It utilizes libraries like roslib.js to exchange data in a standardized format, ensuring seamless interaction.
-    
-
-**Standard packages:**
-
-Our package uses next external packages:
-
-1.  **rosbridge\_server:** this ROS2 package acts as a translator, enabling communication between ROS2 and web technologies. It essentially bridges the gap between the robot's internal operations and the web-based UI.
-    
-2.  **web\_video\_server:** as the name suggests, this package facilitates video streaming. It allows you to view a live video feed from the robot's camera (if equipped) directly within the UI, providing valuable visual feedback on the robot's environment.
-    
-3.  **navigation\_package (linorobot includes it):** this core ROS2 package provides a comprehensive framework for robot navigation. It encompasses various functionalities, including:
-    
-    1.  **Localization (AMCL package):** estimating the robot's position within the environment.
-        
-    2.  **Path planning (move\_base package):** generating collision-free paths for the robot to follow to the goal.
-        
-    3.  **Movement control (move\_base package):** sending appropriate velocity commands to the robot's wheels or motors to execute the planned path.
-        
-4.  **gmapping\_package (linorobot includes it):** this ROS2 package offers a popular SLAM (Simultaneous Localization and Mapping) solution. It allows the robot to build a map of its environment in real-time while simultaneously keeping track of its location within that map. This map information is often crucial for navigation planning.
-    
-5.  **map\_server\_package (linorobot includes it):** this ROS2 package acts as a server that manages the map data used by the navigation stack. It essentially loads a map (created beforehand using tools or provided by gmapping) and makes it accessible to other ROS2 nodes that require it for navigation purposes.
-    
-
-**UI description**
-------------------
-
-### **Map page**
-
-![Architecture](docs/assets/map.png "Map")
-
-The Map page serves as your central hub for visualizing and managing your robot's operational environment. Here's a breakdown of what you can expect:
-
-**Visualizing the robot's World:**
-
-*   **Map display:** the page features a clear map representation of the environment your robot operates in.
-    
-*   **Robot location:** you'll see a blue triangle indicating the robot's current position on the map, helping you track its movements.
-    
-*   **Waypoint markers:** red triangles mark the waypoints you've defined for specific routes, providing a visual roadmap for the robot's planned path.
-    
-*   **Map buttons:** buttons dedicated to zooming in and out and navigating around the map are provided, allowing you to focus on specific areas of the environment. These buttons function independently of ROS2 topics, ensuring a user-friendly experience. 
-    
-
-**Managing maps and groups:** when you click on the buttons, UINode sends the **std\_msgs/String** message to the topic “**/ui\_operation**” and it will be parsed in other nodes of ui\_package
-
-*   **Group organization:** you can create and delete groups of maps, allowing you to categorize them for easier management (e.g., separate groups for different floors).
-    
-*   **Map creation and control:** the UI offers tools to create new maps from scratch, rename existing ones, and select the currently active map for the robot.
-    
-
-**Controlling the robot with joystick (Optional):**
-
-When you move the joystick, UINode sends the **geometry\_msgs/Twis** message to the topic “**/cmd\_vel**” and it will be parsed in other nodes that release the movement.
-    
-
-**Top bar information:**
-
-*   **Current group and map:** the top of the page typically displays the currently selected group and active map, giving you a clear context for your actions.
-    
-
-**Monitoring system messages:**
-
-*   **Messages section:** a dedicated section on the Map page can display informative messages from various processes involved in robot operation. This section receives and visualize all **std\_msgs/String** messages from topic “**ui\_messages**”
-    
-
-**Live video stream:**
-
-*   **Video stream section:** the Map page includes a live video stream from the robot's camera (if equipped). This visual aid provides a real-time perspective of the robot's surroundings, complementing the map view and enhancing your situational awareness. You can monitor the robot's progress along its route, identify obstacles in its path, and gain a better understanding of its environment.
-    
-
-### **Route page**
-
-![Architecture](docs/assets/route.png "Route")
-
-The Route page empowers you to define specific paths for your robot to navigate within the maps you've created. Here's how it helps you chart your AMR's course:
-
-**Route creation and management:**
-
-When you click on the buttons, UINode sends the **std\_msgs/String** message to the topic “**/ui\_operation**” and it will be parsed in other nodes of ui\_package
-
-*   **Create new routes:** design brand new routes by clicking and holding your mouse on the map at desired locations. These points become waypoints, dictating the robot's movement along the path.
-    
-*   **Waypoint details:** as you place each waypoint, the system automatically captures its coordinates and orientation. This ensures the robot follows a precise path.
-    
-*   **Saving your route:** once you've defined the waypoints for your route, click the "Save" button to solidify your plan. This makes the route available for selection and execution by the robot.
-    
-*   **Route management:** the Route page allows you to delete routes you no longer need, rename routes for easy identification, edit existing routes by adding, removing, or repositioning waypoints as required (use the "Clear" button to erase all waypoints from a route, essentially starting over).
-    
-*   **Selecting the active route:** the Route page enables you to choose which route the robot will follow for its next navigation task. This selected route becomes the active one, guiding the robot's movement.
-    
-
-**Monitoring system messages (same as at the Map page):**
-
-*   **Messages section:** a dedicated section on the Map page can display informative messages from various processes involved in robot operation. This section receives and visualize all **std\_msgs/String** messages from topic “**ui\_messages**”
-    
-
-**Top bar information:**
-
-*   **Current group, map and route:** the top of the page typically displays the currently selected group and active map, giving you a clear context for your actions. Also you can see the current route that will be used for navigation.
-    
-
-### **Control page**
-
-![Architecture](docs/assets/control.png "Control")
-
-The Control page serves as your mission control center, allowing you to send navigation commands and guide your robot's movements. When you click on the buttons, UINode sends the **std\_msgs/String** message to the topic “**/ui\_operation**” and it will be parsed in other nodes of ui\_package/ While it doesn't provide direct, physical control like a remote control car, it empowers you to strategically direct the robot's path:
-
-**Route navigation:**
-
-*   **Follow/Start:** This button initiates navigation along the currently selected route. The system retrieves all the waypoints defined for the route (from file or database) and sends them one by one to the robot's navigation system. The robot meticulously follows each waypoint in sequence, completing the planned path.
-    
-
-**Returning to home position:**
-
-*   **Home:** this button instructs the robot to return to its designated home position. The home point is typically set as the starting location used when building the map (often at coordinates \[0.0, 0.0\]). This functionality is helpful for bringing the robot back to a central location. In the future, we may use such a point, for example, to place a charging station there.
-    
-
-**Traversing the route:**
-
-*   **Previous point:** use this button to direct the robot back to the previous waypoint on its current route. This allows you to retrace its steps if needed. If the robot is already at the first waypoint, it will loop around and navigate to the last waypoint.
-    
-*   **Next point:** this button commands the robot to proceed to the next waypoint on its current route. This is useful for guiding it step-by-step along the planned path. If the robot is at the last waypoint, it will loop around and head to the first waypoint.
-    
-
-**Pausing the journey:**
-
-*   **Stop:** this button brings the robot's movement to a halt, interrupting navigation along a route or manual control. This allows you to stop its operation and regain control.
-    
-
-**Custom functionality (Optional):**
-
-*   **Other buttons:** the Control page includes additional buttons labeled "functionN\_value." These buttons, when pressed, transmit a specific string ("functionN\_value") to a designated ROS2 topic "/ui\_operation." This message can be intercepted and handled by custom functions you've programmed, enabling you to extend the robot's capabilities with unique actions.
-    
-
-**Monitoring system messages (same as at the Map page):**
-
-*   **Messages section:** a dedicated section on the Map page can display informative messages from various processes involved in robot operation. This section receives and visualize all **std\_msgs/String** messages from topic “**ui\_messages**”
-    
-
-### **Info page**
-
-![Architecture](docs/assets/info_warehouse.png "Info")
-
-The Info page acts as your information hub, providing a comprehensive overview of your robot's status and sensor data. Here's what you can expect:
-
-**Robot telemetry:**
-
-*   **Real-time stats:** gain valuable insights into the robot's current performance through live data displays. This includes:
-    
-    *   **Velocity:** monitor the robot's current speed, allowing you to assess its progress and adjust navigation commands if necessary.
-        
-    *   **Position:** the Info page has visually representation of robot's location on a map, complementing the data and offering a spatial understanding of its whereabouts.
-        
-
-**Sensor readings:**
-
-The Info page likely retrieves sensor data by subscribing to the ROS2 topic **std\_msgs/String "/sensors."** This topic acts as a central channel for sensor readings from various sources on the robot. The page utilizes circular bars to represent sensor values visually. These bars typically range from 0 to 100%, providing an easy-to-understand gauge for battery levels, temperatures, or other sensor data that can be interpreted as percentages.
-
-*   **Sensor values:** the page can display data from various sensors equipped on your robot. These readings can provide essential information about the robot's environment and its internal state. The specific sensors and data displayed will depend on your robot's configuration. Here are some examples:
-    
-    *   **Battery levels:** monitor the battery levels of your robot (e.g., "batt1\_value" or "batt2\_value" for multiple batteries), ensuring timely recharging to avoid disruptions.
-        
-    *   **Temperature:** keep an eye on temperature readings (e.g., "temp1\_value" or "temp2\_value" for multiple sensors) to identify any potential overheating issues.
-        
-    *   **Other sensors:** the page displays data from additional sensors labeled "sensN\_value" (where N = 3, 4, 5, 6). These sensors could include things like range sensors, bump sensors, or any custom sensors you've integrated.
-        
-
-**Live video stream (same as at the Map page):**
-
-*   **Camera view:** if your robot is equipped with a camera, the Info page integrates a live video stream. This visual aid offers a real-time perspective of the robot's surroundings, complementing the sensor data and providing valuable situational awareness. You can observe the robot's environment as it navigates, identify potential obstacles, and gain a better understanding of its interactions with the world around it.
-    
-
-**Monitoring system messages (same as at the Map page):**
-
-*   **Messages section:** a dedicated section on the Map page can display informative messages from various processes involved in robot operation. This section receives and visualize all **std\_msgs/String** messages from topic “**ui\_messages**”
-    
-
-## How to install
-
-### **Quick Install**
-
-Download the repository ```wget (link to the repo)```
-
-Open a terminal inside and execute the install program by typing 
+```bash
+cd ~/openamr-platform-sw
+source install/setup.bash
+ros2 launch openamrobot_docking bringup_sim.launch.py
 ```
-sudo chmod +x install_openamr_deps.bash
-sudo chmod +x compile_ui.bash
-sudo chmod +x launch.bash
-./install_openamr_deps.bash
+
+Then start this UI workspace in another terminal:
+
+```bash
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 launch openamr_ui_bringup ui.launch.py
 ```
-Move the folder inside the newly created ros2_ws/src folder
 
-Build the package: ```colcon build --symlink-install```
+Open the UI:
 
-### **Building from source**
+```text
+http://127.0.0.1:5050/control
+```
 
-**Needed dependencies**
+If you are running on a robot or another computer, replace `127.0.0.1` with the
+robot/computer IP address:
 
-**Essential ROS2 packages for robot navigation and mapping:**
+```text
+http://<robot-ip>:5050/control
+```
 
-Your autonomous mobile robot (AMR) project likely relies on a foundation of ROS2 (Robot Operating System) packages to handle vital tasks like mapping, localization, and navigation. This guide will ensure you have the necessary software components in place before exploring the OpenAMR\_UI package.
+## Simulation, Headless Mode, and Gazebo GUI
 
-**Required ROS2 packages:**
+For normal UI testing, launch the platform simulation headlessly from the main
+`openamr-platform-sw` workspace, then launch this UI workspace separately.
+This keeps the UI independent from the platform workspace.
 
-*   move\_base
-    
-*   AMCL (Adaptive Monte Carlo Localization)
-    
-*   gmapping (Grid Mapping)
-    
-*   ekf\_localization (Extended Kalman Filter Localization)
-    
-*   map\_server
-    
+```bash
+# Terminal 1: headless platform simulation
+cd ~/openamr-platform-sw
+source install/setup.bash
+ros2 launch openamrobot_docking bringup_sim.launch.py gazebo_gui:=false use_rviz:=false
+```
 
-All packages above are included in **linorobot2** guide.
+```bash
+# Terminal 2: web UI
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 launch openamr_ui_bringup ui.launch.py
+```
 
-*   rosbridge\_server
-    
-*   web\_video\_server
-    
+Then open:
 
-**Installation steps**
+```text
+http://127.0.0.1:5050/control
+```
 
-Prerequisites:
+This starts the recommended independent UI mode:
 
-**Python 3:** ensure you have Python 3 installed. 
+```text
+Gazebo GUI: off
+RViz: off
+UI: on, from the separate openamrobot-ui workspace
+```
 
-**pip**: pip is the package installer for Python. 
+Use Gazebo GUI mode only when you need to inspect the world, physics,
+collisions, sensor placement, or robot movement visually. In that case, run the
+simulation and UI separately:
 
-**Git**: Git is a version control system for code management. 
+```bash
+# Terminal 1: platform simulation with Gazebo GUI/RViz
+cd ~/openamr-platform-sw
+source install/setup.bash
+ros2 launch openamrobot_docking bringup_sim.launch.py
+```
 
-Installation Steps:
+```bash
+# Terminal 2: web UI
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 launch openamr_ui_bringup ui.launch.py
+```
 
-Install the dependencies
+The old `headless:=true` / `headless:=false` arguments and the former
+`use_ui:=true` platform shortcut are not used by the current independent UI
+setup.
 
-Install Flask (if not already installed):
+## Launch Options
 
-        pip3 install flask
+Recommended UI-only launch:
 
-Clone the UI package repository:
+```bash
+ros2 launch openamr_ui_bringup ui.launch.py
+```
 
-Replace link\_on\_ui\_package\_github with the actual URL of your UI package's GitHub repository. Navigate to your desired workspace directory using cd.
+Direct package launch for the web services and relays:
 
-        cd your_workspace/src
-        
-        git clone https://github.com/openAMRobot/OpenAMRobot_UI
+```bash
+ros2 launch openamr_ui_package new_ui_launch.py
+```
 
-Build the UI package (assuming it's a ROS2 package): 
+Helper script equivalent:
 
-Navigate to the root directory of your workspace (where the src folder is located).
+```bash
+bash scripts/run_ui_backend.sh
+```
 
-        cd ..
-        
-        colcon build --symlink-install
+The UI launch mainly starts web, bridge, camera, and relay nodes. The robot or
+simulation workspace owns Nav2, localization, and the map server, so configure
+simulation time there when needed.
 
-Executing **colcon build** start building your ROS2 packages, including the cloned UI package. This may take some time depending on the complexity of the packages.
-
-## User Guide
-
-### **Configure the UI package:**
-
-Locate the config.yaml file within the UI package's param directory (assuming the typical ROS2 package structure). You can usually find it at:
-
-        your_workspace/src/ui\_package/param/config.yaml
-
-Open config.yaml using a text editor.
-
-Edit the configuration parameters to match your specific needs:
-
-**appAdress**: set the desired IP address for your application (e.g., 0.0.0.0 for localhost access).
-
-**topics**: define the ROS2 topics that your UI package will subscribe to or publish from.
-
-**launches**: specify the launch files (.launch files) that control robot or run mapping launch. Refer to ROS2 documentation for guidance on configuring launches.
-
-Save your changes to config.yaml.
-
-![Architecture](docs/assets/config.png "Config")
-
-### **Run the UI package:**
-
-To run UI you need firstly run your base robot SW (navigation, localization etc) and then you must run the next launch:
-
-        ros2 launch openamr_ui_package ui_launch.py
-
-Alternatively, you can execute the special file: ```./launch.bash```
-
-This command runs the user interface at web page in the local network. You can find UI at the next address in any browser:
-
-        your_ip:your_port
-
-Where ip and port are configurable values. You can change them in the **config.yaml** file (check it above).
-
-![Ip](docs/assets/ip_connect.png "Ip_connect")
-
-### **Additional launches:**
-
-The ui_package can reload some nodes or even run launches, so in the launchesTemplate folder we placed templates for running navigation and mapping nodes. These launches used to run your navigation and mapping nodes. In the config.yaml file you can change these launches by clyrifying package and launch name. (check config.yaml screen above)
-
-![Launches](docs/assets/launch_struct.png "Launch")
-
-### **First use**
-
-You're brought to the map page. On it is displayed the welcome map as well as your AMR's camera feed
-
-Start by creating a folder for your maps. Click on the **create group** button and name the new folder
-
-Time to build a map, click on the **build map** button and drag the virtual joystick around to move your AMR, the Lidar will collect data and build the map by itself.
-
-Once you're done, click on **save map** , give it a name.
-
-The map is now done, go to the route page and click on **create route**. It's time to place waypoints: Hold click on a point of the map and drag the mouse in the chosen direction to place a waypoint with the desired position and orientation.
-
-Made a mistake? Don't worry, click on **clear route** to cancel the route and start anew
-
-Once you're done, click on **save route**, name it and go the **control page** to test it
-
-Click on **Follow**, the AMR should now follow the route while avoiding walls and objects.
-
-**Future development**
-----------------------
-
-### **Map functionality**
-
-**Enhance map editing capabilities:** implements pixel editing and zone drawing tools. **Improve map navigation:** Enable map rotation, dragging and zooming for better user experience (by mouse). **Automate map creation:** Develop automatic map building features, including search uncovered zones functionality. **Visualize map elements:** Allow users to customize the appearance of robot markers and points.
-
-### **Route planning and management**
-
-**Expand route options:** supports curve route drawing and automatic route generation between specified points.
-**Differentiate point types:** introduces various point types with customizable properties and execution behaviors.
-**Optimize route execution:** allows users to define specific actions for each point.
-**Enhance route manipulation:** enables dragging and editing of points on the route.
-
-### **System control and configuration**
-
-**Increase control flexibility:** provides camera control options if applicable.
-**Improve naming conventions:** allows users to rename functions and parameters for better organization. (in config file)
-
-### **Sensor management**
-
-**Enhance sensor customization:** enables renaming, unit specification, and setting minimum/maximum sensor values. (in config file)
-
-Addressing these limitations will offer a more comprehensive and user-friendly experience for map creation, route planning, system control, and sensor management.
+## Ports and URLs
+
+Defaults are configured in:
+
+```text
+ros2/src/openamr_ui_package/param/config.yaml
+```
+
+| Service | Default | Used For |
+| --- | --- | --- |
+| Flask app | `http://127.0.0.1:5050` | Serves the React UI |
+| Rosbridge | `ws://127.0.0.1:9090` | Browser to ROS WebSocket |
+| Web video server | `http://127.0.0.1:8080` | Camera/image streams |
+
+The React development server runs on:
+
+```text
+http://localhost:3000
+```
+
+When running through Flask, the frontend connects to rosbridge using the page
+hostname. When running through `localhost:3000`, it falls back to
+`ROSBRIDGE_SERVER_IP` in:
+
+```text
+web/src/shared/constants/index.js
+```
+
+Update that IP if your robot is not at the default `192.168.0.100`.
+
+## Using the Web UI
+
+The app has these main routes:
+
+| Page | URL | Purpose |
+| --- | --- | --- |
+| Map | `/` | Map view, robot pose, goals, map layers |
+| Route | `/route` | Route and waypoint management |
+| Control | `/control` | Manual driving, docking, robot control, status |
+| Info | `/info` | System/topic information |
+
+### Page Screenshots and Descriptions
+
+#### Map Page
+
+![OpenAMR UI map page with map layers, robot pose, camera feed, and waypoint controls](docs/assets/map.png)
+
+The Map page is the main situational-awareness page. Use it when you want to
+see where the robot is, inspect the current map, send a navigation goal, set the
+initial localization pose, build a temporary waypoint queue, or watch the camera
+feed beside the map.
+
+The central map panel displays the occupancy grid received from `/ui/map`. Free
+space, walls, and unknown areas are rendered from the map data published by the
+robot or simulation stack and relayed by `map_relay`. The blue robot marker
+shows the current robot pose from odometry, TF, and AMCL-related updates. When
+navigation data is available, the page can also show the planned path, route
+waypoints, goal marker, laser scan, global costmap, local costmap, and trail.
+
+The layer controls let you turn map overlays on or off without restarting ROS.
+This is useful when debugging navigation: keep the map and robot visible for
+normal operation, then enable costmap, laser, path, goal, waypoint, or trail
+layers when you need more detail. The sliders control overlay opacity so dense
+debug overlays do not hide the map.
+
+The map interaction buttons control the way clicks on the map are interpreted.
+`Goal Mode` publishes a navigation goal to `/goal_pose`; click the map and drag
+before releasing to set the goal heading. `Set Pose` publishes an initial pose
+to `/initialpose`, which is useful after localization is reset or the robot pose
+is wrong. `Add Waypoint` builds a temporary queue on the Map page; `Execute
+Queue` sends each queued waypoint as a `/goal_pose` goal and advances when the
+Nav2 status reports success. The zoom and pan buttons in the map corner are
+local browser controls, so they help you inspect the map even if the robot is
+not moving.
+
+The camera panel uses `web_video_server` on port `8080`. It can show the live
+robot or simulation camera stream, select the configured image topic, adjust the
+stream mode, stop/start the stream, and open the camera in a larger view. If the
+camera area is blank, verify that `web_video_server` is running and that the
+selected image topic exists.
+
+#### Route Page
+
+![OpenAMR UI route page with route planning and route management controls](docs/assets/route.png)
+
+The Route page is used to create, select, edit, and manage reusable waypoint
+routes for the current map. It prepares named route files for route workflows
+and helper nodes instead of sending a one-time goal from the Map page.
+
+The map area shows the same operating environment as the Map page, but the
+controls are focused on route editing. A route is a saved list of waypoint
+poses. Each waypoint stores position and heading, so the robot can approach the
+point in the intended orientation. Route data is stored under
+`ros2/src/openamr_ui_package/paths/` and is exchanged with the helper nodes
+through topics such as `/nav_data_req`, `/nav_data_resp`, `/ui_operation`,
+`/new_way_point`, `/WP_req`, and `/WayPoints_topic`.
+
+`Create` starts a new route. While creating or editing, place waypoints on the
+map to define the path. `Edit` loads the current route for changes, and pressing
+it again cancels edit mode. `Change` opens the route selector for the current
+map. `Plan` asks Nav2's `/compute_path_to_pose` service for a path from the
+current robot pose to a clicked goal, downsamples that path, and publishes the
+resulting points to `/new_way_point`. `Save` writes the route so it can be
+selected again later. `Rename` changes the route name, `Delete` removes a route,
+and `Clear` removes the currently displayed route points from the editor so you
+can start the shape again.
+
+The route header shows the current group, map, and route context when that data
+is available. This matters because routes belong to maps: a route drawn for one
+map may not be valid on a different floor, building, or simulation world. Keep
+the active map and route aligned before saving or using the saved waypoints with
+the helper nodes.
+
+Route file operations require the optional helper nodes from
+`openamr_ui_package/launch/physnode_launch.py`. If route buttons do not update
+anything, confirm that the handler node is running and that messages are moving
+on `/nav_data_req`, `/nav_data_resp`, `/ui_operation`, and `/ui_message`.
+
+#### Control Page
+
+![OpenAMR UI control page with manual drive, stop, speed, health, lifecycle, and docking controls](docs/assets/control.png)
+
+The Control page is the operator page for driving and supervising the robot. It
+combines the map, manual drive controls, navigation state, safety stop, speed
+limit, robot telemetry, layer toggles, lifecycle controls, health checks, and
+docking controls in one screen. Unlike the Map and Info pages, it does not show
+the camera feed; it prioritizes drive and status controls.
+
+Manual driving publishes velocity commands on `/cmd_vel`. The joystick controls
+linear and angular motion, while the max-speed slider limits the command range
+used by the UI. The large `STOP` button immediately sends zero velocity and
+cancels the active Nav2 goal through the navigation cancel action. Use it when
+manual control or an active goal should stop right away.
+
+The embedded map remains useful while operating. `Goal Mode` can send a goal
+pose, `Set Pose` can correct the initial localization estimate, and `Go Home`
+sends the robot back toward the default home pose. The navigation status banner
+and path notice help show whether Nav2 has an active goal, a planned path, or an
+unknown/idle state.
+
+The velocity and position panels summarize live robot feedback. Velocity comes
+from odometry, while position is shown from the UI's AMCL/pose tracking. These
+numbers are helpful when confirming whether commands are actually reaching the
+robot and whether localization is stable.
+
+The health and lifecycle panels are quick diagnostics. Health indicators show
+whether important streams such as TF, odometry, AMCL, map, laser, costmap, and
+plan data are online. Lifecycle controls can configure, activate, deactivate,
+clean up, or inspect lifecycle-managed navigation nodes when those services are
+available. If a lifecycle row is offline or unknown, check that the matching
+Nav2 node is running in the robot or simulation workspace.
+
+The docking area publishes dock and undock trigger messages and reports status
+from `/dock_trigger_status`. After an undock finishes, the UI can also publish a
+standby goal on `/goal_pose`. Docking depends on the robot stack providing the
+docking behavior; the UI only exposes the controls and status.
+
+#### Info Page
+
+![OpenAMR UI info page with camera feed, battery, charging station, and system health status](docs/assets/infp.png)
+
+The Info page is the status and diagnostics page. Use it when you want a calm
+overview of camera, battery, charging, robot movement, localization, rosbridge,
+TF, and core navigation signals without the extra control surface of the Control
+page.
+
+The camera feed mirrors the camera component used elsewhere in the UI. It lets
+you confirm that image streaming works independently from map rendering or
+manual driving. This is useful when checking whether a blank camera view is a UI
+issue, a `web_video_server` issue, or a missing ROS image topic.
+
+The battery panel subscribes to `/battery_status` and displays the battery
+percentage when data is available. The charging-station panel subscribes to
+`/charge_station_connected` and shows whether the robot is connected to the
+charger. If no battery data appears, the UI can still run; it simply means no
+node is publishing the battery topic. The standard UI launch does not start
+`battery.py`.
+
+The velocity and position panels provide a lightweight telemetry summary. They
+show whether the UI is receiving robot motion and pose information, which helps
+separate frontend connection problems from navigation problems. If velocity
+updates but pose is stale, inspect localization and TF. If neither updates,
+check rosbridge, odometry, and the robot/simulation bringup.
+
+The system-health panel is the fastest place to inspect ROS connectivity from
+the browser. It reports rosbridge connection state, selected TF links such as
+`map->odom`, `odom->base_link`, and `base_link->lidar_link`, plus key streams
+such as laser scan, localization, map, global costmap, plan, and Nav2. Online
+items show the UI is receiving recent messages; offline items point to missing
+publishers, stopped nodes, or topic-name mismatches.
+
+Typical operating flow:
+
+1. Start the robot or simulation stack.
+2. Start the UI launch from this repository.
+3. Open `/control` or `/`.
+4. Confirm the ROS connection indicator shows connected.
+5. Use manual control, map goal setting, route management, docking controls, and
+   status panels as needed.
+6. Use the route page to create, edit, save, rename, delete, and select routes
+   when the optional helper nodes from `physnode_launch.py` are running.
+7. Use map controls only when the Nav2 map server is available.
+
+Hard-refresh the browser after rebuilding frontend assets:
+
+```text
+Ctrl+Shift+R
+```
+
+## Important ROS Topics
+
+Most shared frontend topic names are defined in:
+
+```text
+web/src/shared/constants/index.js
+```
+
+Some route-editor and docking topics are defined directly in the page or
+component that uses them.
+
+Common topics:
+
+| Topic | Direction | Purpose |
+| --- | --- | --- |
+| `/cmd_vel` | UI publishes | Manual velocity commands |
+| `/odom` | UI subscribes | Robot pose and velocity |
+| `/ui/map` | UI subscribes | Browser-friendly occupancy grid relay |
+| `/global_costmap/costmap` | UI subscribes | Global costmap layer |
+| `/local_costmap/costmap` | UI subscribes | Local costmap layer |
+| `/scan_filtered` | UI subscribes | Laser scan layer |
+| `/plan` | UI subscribes | Planned path |
+| `/tf`, `/tf_static` | UI subscribes | Robot/map transforms |
+| `/ui/amcl_pose` | UI subscribes | Relayed AMCL pose |
+| `/ui/navigate_to_pose/status` | UI subscribes | Relayed Nav2 goal status |
+| `/goal_pose` | UI publishes | Navigation goal |
+| `/initialpose` | UI publishes | Initial localization pose |
+| `/ui_operation` | UI publishes | Map/route/navigation commands |
+| `/ui_message` | UI subscribes | Messages from UI helper nodes |
+| `/nav_data_req` | UI publishes | Request map/group/route file data |
+| `/nav_data_resp` | UI subscribes | Map/group/route file data response |
+| `/new_way_point` | UI publishes | Route waypoint pose added from the route editor |
+| `/WP_req` | UI publishes | Request waypoint data |
+| `/WayPoints_topic` | UI subscribes | Route waypoint array |
+| `/dock_trigger` | UI publishes | Docking request trigger |
+| `/undock_robot` | UI publishes | Undocking request trigger |
+| `/dock_trigger_status` | UI subscribes | Docking state string |
+| `/ui/dock_robot/status` | Relay publishes | Relayed dock action status for browser-compatible consumers |
+| `/ui/undock_robot/status` | Relay publishes | Relayed undock action status for browser-compatible consumers |
+| `/battery_status` | UI subscribes | Battery status |
+| `/charge_station_connected` | UI subscribes | Charger connection status |
+
+## What the UI Launch Starts
+
+`openamr_ui_package/launch/new_ui_launch.py` starts:
+
+| Node | Purpose |
+| --- | --- |
+| `openamr_ui_package/flask` | Serves the React build |
+| `rosbridge_server/rosbridge_websocket` | WebSocket bridge for roslibjs |
+| `rosapi/rosapi_node` | Optional ROS graph helper services |
+| `web_video_server/web_video_server` | Optional browser camera streaming |
+| `openamr_ui_package/map_relay` | Relays `/map` to `/ui/map` |
+| `openamr_ui_package/nav_relay` | Relays AMCL/navigation/docking status topics |
+
+Additional helper nodes are available in `openamr_ui_package/launch/physnode_launch.py`
+if map/route file operations or waypoint route-following helpers are needed:
+
+| Node | Purpose |
+| --- | --- |
+| `openamr_ui_package/handler` | Map, group, route, and waypoint file operations |
+| `openamr_ui_package/nav` | Route-following helper using Nav2 `BasicNavigator` |
+
+## Frontend Development
+
+Run the React dev server:
+
+```bash
+cd ~/openamrobot-ui/web
+npm install
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+The frontend can render without ROS, but live robot data and controls require
+rosbridge to be running and reachable.
+
+Build production assets:
+
+```bash
+cd ~/openamrobot-ui
+bash scripts/build_frontend.sh
+bash scripts/sync_frontend_to_ros.sh
+```
+
+Rebuild the ROS package after syncing:
+
+```bash
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select openamr_ui_package
+source install/setup.bash
+```
+
+Run frontend linting:
+
+```bash
+cd ~/openamrobot-ui/web
+npm run lint
+```
+
+Run frontend tests:
+
+```bash
+cd ~/openamrobot-ui/web
+npm test
+```
+
+## ROS Development
+
+Build all ROS packages:
+
+```bash
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+```
+
+Build selected packages:
+
+```bash
+colcon build --symlink-install --packages-select openamr_ui_msgs openamr_ui_package openamr_ui_bringup
+```
+
+Run package tests:
+
+```bash
+colcon test --packages-select openamr_ui_package openamr_ui_msgs
+colcon test-result --verbose
+```
+
+After changing message definitions in `openamr_ui_msgs`, rebuild and source the
+workspace again before running any nodes:
+
+```bash
+colcon build --symlink-install --packages-select openamr_ui_msgs openamr_ui_package
+source install/setup.bash
+```
+
+## Map and Route Files
+
+Maps are stored under:
+
+```text
+ros2/src/openamr_ui_package/maps/
+```
+
+Routes are stored under:
+
+```text
+ros2/src/openamr_ui_package/paths/
+```
+
+The active map and route are tracked in:
+
+```text
+ros2/src/openamr_ui_package/param/current_map_route.yaml
+```
+
+Route CSV files contain waypoint pose data used by the route UI and waypoint
+navigation helper. The UI helper node can create groups, save routes, edit
+routes, rename routes/maps/groups, delete routes/maps/groups, and request the
+current waypoint list.
+
+## Normal Development Workflow
+
+For frontend changes:
+
+```bash
+cd ~/openamrobot-ui
+bash scripts/build_frontend.sh
+bash scripts/sync_frontend_to_ros.sh
+
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select openamr_ui_package
+source install/setup.bash
+ros2 launch openamr_ui_bringup ui.launch.py
+```
+
+For Python or launch file changes:
+
+```bash
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch openamr_ui_bringup ui.launch.py
+```
+
+For message changes:
+
+```bash
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select openamr_ui_msgs openamr_ui_package
+source install/setup.bash
+```
+
+## Troubleshooting
+
+If the page opens but ROS status is disconnected:
+
+- Confirm `rosbridge_websocket` is running.
+- Confirm port `9090` is reachable from the browser machine.
+- If using the React dev server, update `ROSBRIDGE_SERVER_IP` in
+  `web/src/shared/constants/index.js`.
+- Check browser console WebSocket errors.
+
+If the page does not open:
+
+- Confirm the UI launch is still running.
+- Confirm Flask is listening on port `5050`.
+- Check `ros2/src/openamr_ui_package/param/config.yaml` for the configured host
+  and port.
+
+If the map is blank:
+
+- Confirm the robot/simulation stack is publishing `/map`.
+- Confirm `map_relay` is running.
+- Check that the frontend is subscribed to `/ui/map`.
+- Confirm the map server belongs to the main robot/Nav2 stack.
+
+If camera is missing:
+
+- Install `ros-jazzy-web-video-server`.
+- Confirm `web_video_server` is running on port `8080`.
+- Confirm the camera/image topic exists in ROS.
+
+If UI changes do not appear:
+
+- Rebuild the frontend.
+- Sync `web/build` into the ROS package.
+- Rebuild the ROS package.
+- Hard-refresh the browser with `Ctrl+Shift+R`.
+
+If `colcon` cannot find packages:
+
+- Source ROS first with `source /opt/ros/jazzy/setup.bash`.
+- Run commands from `~/openamrobot-ui/ros2`.
+- Rebuild and source `install/setup.bash`.
+
+## Notes
+
+- Do not run a second standalone map server from this UI workspace when the
+  main Nav2 stack already owns `/map_server`.
+- `map_server_launch.py` is a deprecated compatibility launch and is namespaced
+  under `ui_legacy` to avoid conflicting with the platform map server.
+- Keep heavy UI layers such as camera, laser, and costmaps off unless needed for
+  debugging, especially when simulation performance is tight.
+- The UI is most useful when the robot or simulation stack is already healthy;
+  use RViz and ROS CLI tools for deep Nav2, TF, or costmap debugging.
