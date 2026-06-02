@@ -361,6 +361,60 @@ Expected UI-side nodes include `flask`, `rosbridge_websocket`,
 `web_video_server`, `map_relay`, and `nav_relay`. Expected robot-side topics for
 basic map and motion display include `/map`, `/odom`, `/tf`, and `/tf_static`.
 
+## Blockly Robot Programming
+
+The UI includes a Blockly page for building simple robot programs by dragging
+blocks instead of writing code. Open it after the UI launch is running:
+
+```text
+http://127.0.0.1:5050/blocks
+```
+
+The Blockly page can build programs with actions such as:
+
+```text
+start robot program
+  navigate to x 1.5 y 0 yaw 0
+  wait until navigation complete timeout 60 seconds
+  dock robot
+```
+
+Common Blockly categories include:
+
+| Category    | Examples                                                                         |
+| ----------- | -------------------------------------------------------------------------------- |
+| Program     | start, repeat, log                                                               |
+| Navigation  | navigate to coordinates, navigate to named location, wait for navigation, patrol |
+| Motion      | wait, set speed, drive for time, rotate for time, stop movement, emergency stop  |
+| Docking     | dock, undock                                                                     |
+| Robot State | battery condition, set mode                                                      |
+
+The Blockly editor stores saved programs in browser local storage. The `Run`
+button requires ROSBridge to be connected. Direct motion blocks publish to
+`/cmd_vel`, navigation blocks publish goal poses, and docking blocks publish the
+docking trigger topics.
+
+For installation details, full block reference, examples, safety notes, and
+troubleshooting, see:
+
+```text
+web/src/features/blocks/README.md
+```
+
+When changing Blockly code, rebuild and reinstall the frontend before testing
+through Flask:
+
+```bash
+cd ~/openamrobot-ui
+bash scripts/build_frontend.sh
+bash scripts/sync_frontend_to_ros.sh
+cd ros2
+colcon build --packages-select openamr_ui_package
+source install/setup.bash
+```
+
+Then restart the UI launch and hard refresh the browser with `Ctrl+Shift+R`.
+
 ## Simulation, Headless Mode, and Gazebo GUI
 
 For normal UI testing, launch the platform simulation headlessly from the main
