@@ -187,12 +187,31 @@ directory and served by `openamr_ui_package.flask_app`.
 
 Recommended environment:
 
-- Ubuntu with ROS 2 Jazzy
+- Ubuntu 24.04 with ROS 2 Jazzy
 - Python 3
 - `colcon`
 - Node.js 18 or newer
 - npm
 - A running OpenAMR robot or simulation stack for full UI functionality
+
+Before installing this UI workspace, ROS 2 Jazzy should already be installed and
+sourceable:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+ros2 pkg prefix rclpy
+```
+
+Check Node.js before building the frontend:
+
+```bash
+node --version
+npm --version
+```
+
+If `node --version` reports an older major version than 18, install a newer
+Node.js from your preferred Node.js package source before running the frontend
+build. Some Ubuntu `apt` sources may provide an older Node.js version.
 
 Install common system dependencies:
 
@@ -200,6 +219,7 @@ Install common system dependencies:
 sudo apt update
 sudo apt install -y \
   python3-colcon-common-extensions \
+  python3-rosdep \
   nodejs \
   npm \
   ros-jazzy-rosbridge-server \
@@ -216,13 +236,26 @@ The ROS package also uses normal ROS interfaces such as `rclpy`, `std_msgs`,
 `geometry_msgs`, `nav_msgs`, `action_msgs`, and Nav2-related packages available
 from a complete ROS/Nav2 installation.
 
+If `rosdep` is available, run it from the ROS workspace to install any missing
+package dependencies declared by the ROS packages:
+
+```bash
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+rosdep update
+rosdep install --from-paths src --ignore-src -r -y
+```
+
+If `rosdep` reports keys that cannot be resolved, install the matching ROS
+Jazzy or Python packages manually, then rerun the build.
+
 ## First-Time Installation
 
 Clone or place this repository at:
 
 ```bash
 cd ~
-git clone <repo-url> openamrobot-ui
+git clone https://github.com/openAMRobot/openamrobot-ui.git openamrobot-ui
 cd ~/openamrobot-ui
 ```
 
@@ -254,6 +287,15 @@ cd ~/openamrobot-ui
 source /opt/ros/jazzy/setup.bash
 bash scripts/build_ros.sh
 source ros2/install/setup.bash
+```
+
+After the build finishes, confirm the UI packages are visible:
+
+```bash
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 pkg list | grep openamr_ui
 ```
 
 ## Running the UI
@@ -288,6 +330,22 @@ robot/computer IP address:
 ```text
 http://<robot-ip>:5050/control
 ```
+
+Full UI functionality requires the robot or simulation workspace to already be
+publishing the expected ROS topics. This UI workspace starts the browser,
+rosbridge, camera web server, and browser-friendly relays; it does not start the
+full robot, Nav2, localization, map server, sensors, docking, or simulator.
+
+After launching the UI, these commands are useful quick checks:
+
+```bash
+ros2 node list | grep -E "flask|rosbridge|web_video|map_relay|nav_relay"
+ros2 topic list | grep -E "^/map$|^/ui/map$|^/odom$|^/tf$|^/tf_static$"
+```
+
+Expected UI-side nodes include `flask`, `rosbridge_websocket`,
+`web_video_server`, `map_relay`, and `nav_relay`. Expected robot-side topics for
+basic map and motion display include `/map`, `/odom`, `/tf`, and `/tf_static`.
 
 ## Simulation, Headless Mode, and Gazebo GUI
 
@@ -371,6 +429,17 @@ The UI launch mainly starts web, bridge, camera, and relay nodes. The robot or
 simulation workspace owns Nav2, localization, and the map server, so configure
 simulation time there when needed.
 
+Route and map file-management features need the optional helper launch:
+
+```bash
+ros2 launch openamr_ui_package physnode_launch.py
+```
+
+Run this only when you need UI actions that create, rename, delete, save, or
+load map and route files, or when you need the route-following helper. The
+normal dashboard, map display, manual driving, camera, and status panels use the
+recommended `openamr_ui_bringup ui.launch.py` launch.
+
 ## Ports and URLs
 
 Defaults are configured in:
@@ -384,6 +453,19 @@ ros2/src/openamr_ui_package/param/config.yaml
 | Flask app | `http://127.0.0.1:5050` | Serves the React UI |
 | Rosbridge | `ws://127.0.0.1:9090` | Browser to ROS WebSocket |
 | Web video server | `http://127.0.0.1:8080` | Camera/image streams |
+
+For access from another computer, tablet, or touchscreen on the same WiFi, make
+sure the browser device can reach the robot or UI computer on these ports:
+
+| Port | Protocol | Must Be Reachable For |
+| --- | --- | --- |
+| `5050` | HTTP | Opening the web UI |
+| `9090` | WebSocket | ROS status, topics, commands, map, and robot control |
+| `8080` | HTTP | Camera/image streaming |
+
+The WiFi/router must allow devices to talk to each other. Guest networks,
+client isolation, AP isolation, VPN routing, and local firewalls can block the
+UI even when both devices are connected to the same network.
 
 The React development server runs on:
 
@@ -400,6 +482,10 @@ web/src/shared/constants/index.js
 ```
 
 Update that IP if your robot is not at the default `192.168.0.100`.
+
+For reliable robot use across reboots or WiFi changes, reserve a stable IP for
+the robot or UI computer in the router DHCP settings, or update the dev-server
+fallback IP before running `npm run dev`.
 
 ## Using the Web UI
 
