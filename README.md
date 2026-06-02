@@ -414,7 +414,6 @@ source install/setup.bash
 ```
 
 Then restart the UI launch and hard refresh the browser with `Ctrl+Shift+R`.
-
 ## Simulation, Headless Mode, and Gazebo GUI
 
 For normal UI testing, launch the platform simulation headlessly from the main
@@ -530,6 +529,19 @@ sure the browser device can reach the robot or UI computer on these ports:
 | `5050` | HTTP      | Opening the web UI                                   |
 | `9090` | WebSocket | ROS status, topics, commands, map, and robot control |
 | `8080` | HTTP      | Camera/image streaming                               |
+
+The WiFi/router must allow devices to talk to each other. Guest networks,
+client isolation, AP isolation, VPN routing, and local firewalls can block the
+UI even when both devices are connected to the same network.
+
+For access from another computer, tablet, or touchscreen on the same WiFi, make
+sure the browser device can reach the robot or UI computer on these ports:
+
+| Port | Protocol | Must Be Reachable For |
+| --- | --- | --- |
+| `5050` | HTTP | Opening the web UI |
+| `9090` | WebSocket | ROS status, topics, commands, map, and robot control |
+| `8080` | HTTP | Camera/image streaming |
 
 The WiFi/router must allow devices to talk to each other. Guest networks,
 client isolation, AP isolation, VPN routing, and local firewalls can block the
