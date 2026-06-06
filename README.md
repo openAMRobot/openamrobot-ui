@@ -155,17 +155,27 @@ This top-level README is the source of truth for installing, building, running,
 and troubleshooting the UI workspace. Folder-level README files are intentionally
 short and only describe local package or directory details.
 
-Good starting points:
+README index:
 
-| File or Directory                              | Use It For                                                    |
-| ---------------------------------------------- | ------------------------------------------------------------- |
-| `README.md`                                    | Full workspace setup, launch, usage, and troubleshooting      |
-| `web/README.md`                                | React frontend development notes                              |
-| `web/src/features/blocks/README.md`            | Blockly setup, block reference, examples, and troubleshooting |
-| `scripts/README.md`                            | Helper script details                                         |
-| `ros2/src/openamr_ui_package/README.md`        | ROS 2 UI package overview                                     |
-| `ros2/src/openamr_ui_package/launch/README.md` | Launch file notes                                             |
-| `ros2/src/openamr_ui_package/param/README.md`  | Configuration details                                         |
+| README                                                                                                                                     | Use It For                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| [README.md](README.md)                                                                                                                     | Full workspace setup, launch, usage, and troubleshooting                              |
+| [web/README.md](web/README.md)                                                                                                             | React frontend development notes                                                      |
+| [web/src/features/blocks/README.md](web/src/features/blocks/README.md)                                                                     | Blockly setup, block reference, examples, execution, screenshots, and troubleshooting |
+| [scripts/README.md](scripts/README.md)                                                                                                     | Helper script details                                                                 |
+| [ros2/src/openamr_ui_package/README.md](ros2/src/openamr_ui_package/README.md)                                                             | ROS 2 UI package overview                                                             |
+| [ros2/src/openamr_ui_package/launch/README.md](ros2/src/openamr_ui_package/launch/README.md)                                               | Launch file notes                                                                     |
+| [ros2/src/openamr_ui_package/maps/README.md](ros2/src/openamr_ui_package/maps/README.md)                                                   | Map directory structure and usage                                                     |
+| [ros2/src/openamr_ui_package/paths/README.md](ros2/src/openamr_ui_package/paths/README.md)                                                 | Route/path directory structure and usage                                              |
+| [ros2/src/openamr_ui_package/param/README.md](ros2/src/openamr_ui_package/param/README.md)                                                 | Configuration details                                                                 |
+| [ros2/src/openamr_ui_package/resource/README.md](ros2/src/openamr_ui_package/resource/README.md)                                           | ROS package resource marker notes                                                     |
+| [ros2/src/openamr_ui_package/openamr_ui_package/README.md](ros2/src/openamr_ui_package/openamr_ui_package/README.md)                       | Python package modules and backend nodes                                              |
+| [ros2/src/openamr_ui_package/openamr_ui_package/static/README.md](ros2/src/openamr_ui_package/openamr_ui_package/static/README.md)         | Static frontend asset directory notes                                                 |
+| [ros2/src/openamr_ui_package/openamr_ui_package/templates/README.md](ros2/src/openamr_ui_package/openamr_ui_package/templates/README.md)   | Flask templates directory notes                                                       |
+| [ros2/src/openamr_ui_package/openamr_ui_package/submodules/README.md](ros2/src/openamr_ui_package/openamr_ui_package/submodules/README.md) | Optional backend submodule notes                                                      |
+
+Generated install copies under `install/` and build output folders are not
+listed here. Edit the source README files above instead.
 
 ## Main Components
 
