@@ -44,6 +44,8 @@ build into the ROS package static app directory so Flask can serve it.
 - `src/app/`: top-level React app setup, providers, and global styles.
 - `src/assets/`: images, icons, and fonts.
 - `src/components/`: shared UI and robot-control components.
+- `src/features/blocks/`: Blockly robot-programming blocks, toolbox, action
+  executor, and the dedicated Blockly guide.
 - `src/layouts/`: page layout components.
 - `src/pages/`: route-level pages.
 - `src/shared/`: constants, styles, and reusable UI primitives.

@@ -12,6 +12,7 @@ const NAV_LINKS = [
   { to: "/", label: "Map" },
   { to: "/route", label: "Route" },
   { to: "/control", label: "Control" },
+  { to: "/blocks", label: "Blocks" },
   { to: "/info", label: "Info" },
 ];
 
