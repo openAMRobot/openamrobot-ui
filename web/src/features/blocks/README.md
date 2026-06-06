@@ -41,11 +41,14 @@ toolbox. If your page looks different, compare it with the labels below.
 | Run and Stop      | Execution buttons in the right panel                                    | Run executes the Generated Plan; Stop sends an emergency stop command                                      |
 | Generated Plan    | Human-readable list of actions made from connected blocks               | Check this before pressing Run so you know what the robot will do                                          |
 
-In the screenshot, the workspace contains two visible groups:
+When building a program, you may see two kinds of block groups in the
+workspace:
 
-- A loose `start robot program` block on the left side of the workspace. It is
-  not connected to the main program chain, so it will not run.
-- A connected program near the center:
+- A loose `start robot program` block that is not connected to robot actions.
+  If the planner reads this empty start block, the Generated Plan can show
+  `0 steps`.
+- A connected program chain with actions below `start robot program`. This is
+  the kind of chain you should run.
 
 ```text
 start robot program
@@ -55,12 +58,11 @@ start robot program
   repeat 3 times wait 1 seconds
 ```
 
-The Generated Plan panel may show `0 steps` if the planner reads a top-level
-`start robot program` block that has no actions connected below it. To avoid
-confusion, keep only one `start robot program` block in the workspace when
-running a real robot.
+To avoid confusion, keep only one `start robot program` block in the workspace
+when running a real robot.
 
-The left sidebar in the screenshot shows the updated block categories:
+The category screenshots below show the updated Blockly toolbox. The left
+sidebar should contain:
 
 ```text
 Program
