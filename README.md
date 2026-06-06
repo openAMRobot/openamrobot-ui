@@ -14,10 +14,10 @@ camera web streaming, and lightweight topic relays used by the browser.
 There are two different workspaces involved when using the UI with a robot or
 simulation:
 
-| Workspace | What It Does |
-| --- | --- |
+| Workspace                                                       | What It Does                                                                                            |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Robot/simulation workspace, for example `~/openamr-platform-sw` | Starts the robot, Gazebo simulation, Nav2, localization, map server, docking, sensors, and robot topics |
-| This UI workspace, `~/openamrobot-ui` | Starts the browser UI, rosbridge, optional camera web server, and small relay nodes |
+| This UI workspace, `~/openamrobot-ui`                           | Starts the browser UI, rosbridge, optional camera web server, and small relay nodes                     |
 
 Start the robot or simulation first. Then start the UI. The UI does not replace
 Nav2, Gazebo, the map server, docking, or the robot bringup. It connects to
@@ -25,19 +25,19 @@ those running ROS topics and services.
 
 Important words:
 
-| Term | Meaning |
-| --- | --- |
-| ROS 2 | Robot middleware used to connect nodes, topics, services, and actions |
-| Node | A running ROS process, such as Flask, rosbridge, Nav2, or a relay |
-| Topic | A named stream of messages, such as `/cmd_vel`, `/odom`, or `/map` |
-| Launch file | A Python file that starts multiple ROS nodes together |
-| Gazebo | The simulator that shows and runs the robot in a virtual world |
-| Headless | Simulation runs without the Gazebo graphical window |
-| Gazebo GUI | The visible Gazebo window is opened |
-| RViz | ROS visualization/debugging tool for maps, TF, costmaps, and Nav2 |
-| rosbridge | WebSocket bridge that lets the browser talk to ROS |
-| Flask | Python web server that serves the React UI |
-| React | JavaScript frontend used by the browser dashboard |
+| Term        | Meaning                                                               |
+| ----------- | --------------------------------------------------------------------- |
+| ROS 2       | Robot middleware used to connect nodes, topics, services, and actions |
+| Node        | A running ROS process, such as Flask, rosbridge, Nav2, or a relay     |
+| Topic       | A named stream of messages, such as `/cmd_vel`, `/odom`, or `/map`    |
+| Launch file | A Python file that starts multiple ROS nodes together                 |
+| Gazebo      | The simulator that shows and runs the robot in a virtual world        |
+| Headless    | Simulation runs without the Gazebo graphical window                   |
+| Gazebo GUI  | The visible Gazebo window is opened                                   |
+| RViz        | ROS visualization/debugging tool for maps, TF, costmaps, and Nav2     |
+| rosbridge   | WebSocket bridge that lets the browser talk to ROS                    |
+| Flask       | Python web server that serves the React UI                            |
+| React       | JavaScript frontend used by the browser dashboard                     |
 
 For most beginners, the safest order is:
 
@@ -115,6 +115,8 @@ How to read the schematic:
 - AMCL pose and navigation/docking status relays under `/ui/*`
 - Manual robot control through `/cmd_vel`
 - Goal pose, initial pose, route, map, waypoint, docking, and status controls
+- Blockly visual robot programming at `/blocks` for building simple robot
+  action programs without writing code
 - Map and route file management when the optional UI helper nodes are running
 
 ## Repository Layout
@@ -130,7 +132,7 @@ openamrobot-ui/
   web/
     package.json               # React scripts and dependencies
     public/ros/                # roslibjs, ros2d, nav2d browser libraries
-    src/                       # React app source
+    src/                       # React app source, including Blockly features
   ros2/
     src/openamr_ui_msgs/       # Custom UI messages
     src/openamr_ui_package/    # Main ROS 2 UI package
@@ -155,24 +157,26 @@ short and only describe local package or directory details.
 
 Good starting points:
 
-| File or Directory | Use It For |
-| --- | --- |
-| `README.md` | Full workspace setup, launch, usage, and troubleshooting |
-| `web/README.md` | React frontend development notes |
-| `scripts/README.md` | Helper script details |
-| `ros2/src/openamr_ui_package/README.md` | ROS 2 UI package overview |
-| `ros2/src/openamr_ui_package/launch/README.md` | Launch file notes |
-| `ros2/src/openamr_ui_package/param/README.md` | Configuration details |
+| File or Directory                              | Use It For                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------- |
+| `README.md`                                    | Full workspace setup, launch, usage, and troubleshooting      |
+| `web/README.md`                                | React frontend development notes                              |
+| `web/src/features/blocks/README.md`            | Blockly setup, block reference, examples, and troubleshooting |
+| `scripts/README.md`                            | Helper script details                                         |
+| `ros2/src/openamr_ui_package/README.md`        | ROS 2 UI package overview                                     |
+| `ros2/src/openamr_ui_package/launch/README.md` | Launch file notes                                             |
+| `ros2/src/openamr_ui_package/param/README.md`  | Configuration details                                         |
 
 ## Main Components
 
-| Component | Purpose |
-| --- | --- |
-| `web/` | React frontend source for the browser UI |
-| `openamr_ui_msgs` | Custom message package used by the UI |
-| `openamr_ui_package` | Flask server, relays, map/route handlers, waypoint navigation helpers |
-| `openamr_ui_bringup` | Recommended UI-only launch wrapper |
-| `scripts/` | Canonical build and sync commands |
+| Component                  | Purpose                                                                                 |
+| -------------------------- | --------------------------------------------------------------------------------------- |
+| `web/`                     | React frontend source for the browser UI                                                |
+| `web/src/features/blocks/` | Blockly block definitions, toolbox categories, robot action executor, and Blockly guide |
+| `openamr_ui_msgs`          | Custom message package used by the UI                                                   |
+| `openamr_ui_package`       | Flask server, relays, map/route handlers, waypoint navigation helpers                   |
+| `openamr_ui_bringup`       | Recommended UI-only launch wrapper                                                      |
+| `scripts/`                 | Canonical build and sync commands                                                       |
 
 The compiled React app is copied into:
 
@@ -347,6 +351,60 @@ Expected UI-side nodes include `flask`, `rosbridge_websocket`,
 `web_video_server`, `map_relay`, and `nav_relay`. Expected robot-side topics for
 basic map and motion display include `/map`, `/odom`, `/tf`, and `/tf_static`.
 
+## Blockly Robot Programming
+
+The UI includes a Blockly page for building simple robot programs by dragging
+blocks instead of writing code. Open it after the UI launch is running:
+
+```text
+http://127.0.0.1:5050/blocks
+```
+
+The Blockly page can build programs with actions such as:
+
+```text
+start robot program
+  navigate to x 1.5 y 0 yaw 0
+  wait until navigation complete timeout 60 seconds
+  dock robot
+```
+
+Common Blockly categories include:
+
+| Category    | Examples                                                                         |
+| ----------- | -------------------------------------------------------------------------------- |
+| Program     | start, repeat, log                                                               |
+| Navigation  | navigate to coordinates, navigate to named location, wait for navigation, patrol |
+| Motion      | wait, set speed, drive for time, rotate for time, stop movement, emergency stop  |
+| Docking     | dock, undock                                                                     |
+| Robot State | battery condition, set mode                                                      |
+
+The Blockly editor stores saved programs in browser local storage. The `Run`
+button requires ROSBridge to be connected. Direct motion blocks publish to
+`/cmd_vel`, navigation blocks publish goal poses, and docking blocks publish the
+docking trigger topics.
+
+For installation details, full block reference, examples, safety notes, and
+troubleshooting, see:
+
+```text
+web/src/features/blocks/README.md
+```
+
+When changing Blockly code, rebuild and reinstall the frontend before testing
+through Flask:
+
+```bash
+cd ~/openamrobot-ui
+bash scripts/build_frontend.sh
+bash scripts/sync_frontend_to_ros.sh
+cd ros2
+colcon build --packages-select openamr_ui_package
+source install/setup.bash
+```
+
+Then restart the UI launch and hard refresh the browser with `Ctrl+Shift+R`.
+
 ## Simulation, Headless Mode, and Gazebo GUI
 
 For normal UI testing, launch the platform simulation headlessly from the main
@@ -448,20 +506,20 @@ Defaults are configured in:
 ros2/src/openamr_ui_package/param/config.yaml
 ```
 
-| Service | Default | Used For |
-| --- | --- | --- |
-| Flask app | `http://127.0.0.1:5050` | Serves the React UI |
-| Rosbridge | `ws://127.0.0.1:9090` | Browser to ROS WebSocket |
-| Web video server | `http://127.0.0.1:8080` | Camera/image streams |
+| Service          | Default                 | Used For                 |
+| ---------------- | ----------------------- | ------------------------ |
+| Flask app        | `http://127.0.0.1:5050` | Serves the React UI      |
+| Rosbridge        | `ws://127.0.0.1:9090`   | Browser to ROS WebSocket |
+| Web video server | `http://127.0.0.1:8080` | Camera/image streams     |
 
 For access from another computer, tablet, or touchscreen on the same WiFi, make
 sure the browser device can reach the robot or UI computer on these ports:
 
-| Port | Protocol | Must Be Reachable For |
-| --- | --- | --- |
-| `5050` | HTTP | Opening the web UI |
+| Port   | Protocol  | Must Be Reachable For                                |
+| ------ | --------- | ---------------------------------------------------- |
+| `5050` | HTTP      | Opening the web UI                                   |
 | `9090` | WebSocket | ROS status, topics, commands, map, and robot control |
-| `8080` | HTTP | Camera/image streaming |
+| `8080` | HTTP      | Camera/image streaming                               |
 
 The WiFi/router must allow devices to talk to each other. Guest networks,
 client isolation, AP isolation, VPN routing, and local firewalls can block the
@@ -491,12 +549,13 @@ fallback IP before running `npm run dev`.
 
 The app has these main routes:
 
-| Page | URL | Purpose |
-| --- | --- | --- |
-| Map | `/` | Map view, robot pose, goals, map layers |
-| Route | `/route` | Route and waypoint management |
+| Page    | URL        | Purpose                                        |
+| ------- | ---------- | ---------------------------------------------- |
+| Map     | `/`        | Map view, robot pose, goals, map layers        |
+| Route   | `/route`   | Route and waypoint management                  |
 | Control | `/control` | Manual driving, docking, robot control, status |
-| Info | `/info` | System/topic information |
+| Blocks  | `/blocks`  | Blockly visual robot programming               |
+| Info    | `/info`    | System/topic information                       |
 
 ### Page Screenshots and Descriptions
 
@@ -614,6 +673,37 @@ from `/dock_trigger_status`. After an undock finishes, the UI can also publish a
 standby goal on `/goal_pose`. Docking depends on the robot stack providing the
 docking behavior; the UI only exposes the controls and status.
 
+#### Blocks Page
+
+![OpenAMR UI Blockly Blocks page showing the Program category and robot-programming workspace](docs/assets/program.png)
+
+The Blocks page is the visual robot-programming page. It lets beginners build a
+robot program by dragging Blockly blocks instead of writing JavaScript or ROS
+code. The left toolbox groups blocks into `Program`, `Navigation`, `Motion`,
+`Docking`, and `Robot State`. The center workspace is where the blocks are
+assembled. The right panel shows ROSBridge connection status, Run/Stop buttons,
+and the Generated Plan created from the connected blocks.
+
+A Blockly program should start with `start robot program`. Robot actions must be
+connected below that start block to run. Loose blocks can remain on the
+workspace while you are experimenting, but they are not part of the generated
+robot plan unless they are connected under the start block that the planner
+reads. For real robot tests, keep one start block in the workspace to avoid
+confusion.
+
+Navigation blocks publish goal poses, motion blocks publish direct velocity
+commands such as `/cmd_vel`, docking blocks publish dock or undock triggers, and
+state blocks can use battery data or publish mode commands. Always check the
+Generated Plan before pressing `Run`; it is the best quick preview of what will
+be sent to the robot.
+
+For the full Blockly setup guide, block reference, examples, troubleshooting,
+and safety notes, see:
+
+```text
+web/src/features/blocks/README.md
+```
+
 #### Info Page
 
 ![OpenAMR UI info page with camera feed, battery, charging station, and system health status](docs/assets/infp.png)
@@ -679,55 +769,55 @@ component that uses them.
 
 Common topics:
 
-| Topic | Direction | Purpose |
-| --- | --- | --- |
-| `/cmd_vel` | UI publishes | Manual velocity commands |
-| `/odom` | UI subscribes | Robot pose and velocity |
-| `/ui/map` | UI subscribes | Browser-friendly occupancy grid relay |
-| `/global_costmap/costmap` | UI subscribes | Global costmap layer |
-| `/local_costmap/costmap` | UI subscribes | Local costmap layer |
-| `/scan_filtered` | UI subscribes | Laser scan layer |
-| `/plan` | UI subscribes | Planned path |
-| `/tf`, `/tf_static` | UI subscribes | Robot/map transforms |
-| `/ui/amcl_pose` | UI subscribes | Relayed AMCL pose |
-| `/ui/navigate_to_pose/status` | UI subscribes | Relayed Nav2 goal status |
-| `/goal_pose` | UI publishes | Navigation goal |
-| `/initialpose` | UI publishes | Initial localization pose |
-| `/ui_operation` | UI publishes | Map/route/navigation commands |
-| `/ui_message` | UI subscribes | Messages from UI helper nodes |
-| `/nav_data_req` | UI publishes | Request map/group/route file data |
-| `/nav_data_resp` | UI subscribes | Map/group/route file data response |
-| `/new_way_point` | UI publishes | Route waypoint pose added from the route editor |
-| `/WP_req` | UI publishes | Request waypoint data |
-| `/WayPoints_topic` | UI subscribes | Route waypoint array |
-| `/dock_trigger` | UI publishes | Docking request trigger |
-| `/undock_robot` | UI publishes | Undocking request trigger |
-| `/dock_trigger_status` | UI subscribes | Docking state string |
-| `/ui/dock_robot/status` | Relay publishes | Relayed dock action status for browser-compatible consumers |
-| `/ui/undock_robot/status` | Relay publishes | Relayed undock action status for browser-compatible consumers |
-| `/battery_status` | UI subscribes | Battery status |
-| `/charge_station_connected` | UI subscribes | Charger connection status |
+| Topic                         | Direction       | Purpose                                                       |
+| ----------------------------- | --------------- | ------------------------------------------------------------- |
+| `/cmd_vel`                    | UI publishes    | Manual velocity commands                                      |
+| `/odom`                       | UI subscribes   | Robot pose and velocity                                       |
+| `/ui/map`                     | UI subscribes   | Browser-friendly occupancy grid relay                         |
+| `/global_costmap/costmap`     | UI subscribes   | Global costmap layer                                          |
+| `/local_costmap/costmap`      | UI subscribes   | Local costmap layer                                           |
+| `/scan_filtered`              | UI subscribes   | Laser scan layer                                              |
+| `/plan`                       | UI subscribes   | Planned path                                                  |
+| `/tf`, `/tf_static`           | UI subscribes   | Robot/map transforms                                          |
+| `/ui/amcl_pose`               | UI subscribes   | Relayed AMCL pose                                             |
+| `/ui/navigate_to_pose/status` | UI subscribes   | Relayed Nav2 goal status                                      |
+| `/goal_pose`                  | UI publishes    | Navigation goal                                               |
+| `/initialpose`                | UI publishes    | Initial localization pose                                     |
+| `/ui_operation`               | UI publishes    | Map/route/navigation commands                                 |
+| `/ui_message`                 | UI subscribes   | Messages from UI helper nodes                                 |
+| `/nav_data_req`               | UI publishes    | Request map/group/route file data                             |
+| `/nav_data_resp`              | UI subscribes   | Map/group/route file data response                            |
+| `/new_way_point`              | UI publishes    | Route waypoint pose added from the route editor               |
+| `/WP_req`                     | UI publishes    | Request waypoint data                                         |
+| `/WayPoints_topic`            | UI subscribes   | Route waypoint array                                          |
+| `/dock_trigger`               | UI publishes    | Docking request trigger                                       |
+| `/undock_robot`               | UI publishes    | Undocking request trigger                                     |
+| `/dock_trigger_status`        | UI subscribes   | Docking state string                                          |
+| `/ui/dock_robot/status`       | Relay publishes | Relayed dock action status for browser-compatible consumers   |
+| `/ui/undock_robot/status`     | Relay publishes | Relayed undock action status for browser-compatible consumers |
+| `/battery_status`             | UI subscribes   | Battery status                                                |
+| `/charge_station_connected`   | UI subscribes   | Charger connection status                                     |
 
 ## What the UI Launch Starts
 
 `openamr_ui_package/launch/new_ui_launch.py` starts:
 
-| Node | Purpose |
-| --- | --- |
-| `openamr_ui_package/flask` | Serves the React build |
-| `rosbridge_server/rosbridge_websocket` | WebSocket bridge for roslibjs |
-| `rosapi/rosapi_node` | Optional ROS graph helper services |
-| `web_video_server/web_video_server` | Optional browser camera streaming |
-| `openamr_ui_package/map_relay` | Relays `/map` to `/ui/map` |
-| `openamr_ui_package/nav_relay` | Relays AMCL/navigation/docking status topics |
+| Node                                   | Purpose                                      |
+| -------------------------------------- | -------------------------------------------- |
+| `openamr_ui_package/flask`             | Serves the React build                       |
+| `rosbridge_server/rosbridge_websocket` | WebSocket bridge for roslibjs                |
+| `rosapi/rosapi_node`                   | Optional ROS graph helper services           |
+| `web_video_server/web_video_server`    | Optional browser camera streaming            |
+| `openamr_ui_package/map_relay`         | Relays `/map` to `/ui/map`                   |
+| `openamr_ui_package/nav_relay`         | Relays AMCL/navigation/docking status topics |
 
 Additional helper nodes are available in `openamr_ui_package/launch/physnode_launch.py`
 if map/route file operations or waypoint route-following helpers are needed:
 
-| Node | Purpose |
-| --- | --- |
-| `openamr_ui_package/handler` | Map, group, route, and waypoint file operations |
-| `openamr_ui_package/nav` | Route-following helper using Nav2 `BasicNavigator` |
+| Node                         | Purpose                                            |
+| ---------------------------- | -------------------------------------------------- |
+| `openamr_ui_package/handler` | Map, group, route, and waypoint file operations    |
+| `openamr_ui_package/nav`     | Route-following helper using Nav2 `BasicNavigator` |
 
 ## Frontend Development
 

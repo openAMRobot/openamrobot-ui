@@ -25,6 +25,15 @@ body {
   min-height: calc(100vh - 72px);
 }
 
+.blocklyMainBackground {
+  stroke: #d8e4ed;
+}
+
+.blocklyToolboxDiv,
+.blocklyFlyoutBackground {
+  background: #f8fbfd;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

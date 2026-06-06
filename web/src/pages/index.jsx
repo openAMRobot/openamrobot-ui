@@ -6,6 +6,7 @@ import MapPage from "./MapPage";
 import RoutePage from "./RoutePage";
 import ControlPage from "./ControlPage";
 import InfoPage from "./InfoPage";
+import BlocksPage from "./BlocksPage";
 import NotFoundPage from "./NotFoundPage";
 
 const Routing = () => (
@@ -14,6 +15,7 @@ const Routing = () => (
       <Route index element={<MapPage />} />
       <Route path="route" element={<RoutePage />} />
       <Route path="control" element={<ControlPage />} />
+      <Route path="blocks" element={<BlocksPage />} />
       <Route path="info" element={<InfoPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Route>
