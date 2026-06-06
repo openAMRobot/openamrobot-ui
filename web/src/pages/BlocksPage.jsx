@@ -85,6 +85,17 @@ const actionLabel = (action) => {
   }
 };
 
+const loadBlocklyState = (serializedState) => {
+  if (!serializedState) return defaultWorkspace;
+
+  try {
+    return JSON.parse(serializedState);
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return defaultWorkspace;
+  }
+};
+
 const BlocksPage = () => {
   const ros = useContext(RosContext);
   const rosStatus = useContext(RosStatusContext);
@@ -121,9 +132,8 @@ const BlocksPage = () => {
 
     workspaceRef.current = workspace;
 
-    const savedState = localStorage.getItem(STORAGE_KEY);
     Blockly.serialization.workspaces.load(
-      savedState ? JSON.parse(savedState) : defaultWorkspace,
+      loadBlocklyState(localStorage.getItem(STORAGE_KEY)),
       workspace,
     );
 
@@ -160,7 +170,7 @@ const BlocksPage = () => {
       return;
     }
     Blockly.serialization.workspaces.load(
-      JSON.parse(savedState),
+      loadBlocklyState(savedState),
       workspaceRef.current,
     );
     setPlan(workspaceToRobotPlan(workspaceRef.current));
