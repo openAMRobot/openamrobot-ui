@@ -1,0 +1,19 @@
+services:
+  openamr-ui:
+    build:
+      context: .
+      args:
+        ROS_DISTRO: ${ROS_DISTRO:-jazzy}
+    image: openamrobot-ui:latest
+    container_name: openamr-ui
+    network_mode: host
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      OPENAMR_REBUILD_ON_START: ${OPENAMR_REBUILD_ON_START:-0}
+    volumes:
+      - openamr_ui_data:/root/.openamr_ui
+    restart: unless-stopped
+
+volumes:
+  openamr_ui_data:
