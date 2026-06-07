@@ -227,6 +227,15 @@ machine. It installs the required Ubuntu, Node.js, npm, ROS 2 Jazzy, rosbridge,
 web video, Nav2 message, and Python packages inside a container, then builds
 the frontend and ROS 2 workspace during the image build.
 
+If Docker is not installed yet, use the official Docker instructions for your
+machine:
+
+| System                  | Recommended Guide                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| Ubuntu/Linux            | [Install Docker Engine on Ubuntu](https://docs.docker.com/engine/install/ubuntu/) |
+| Windows with WSL        | [Docker Desktop WSL 2 backend](https://docs.docker.com/desktop/features/wsl/)     |
+| macOS or Docker Desktop | [Install Docker Desktop](https://docs.docker.com/desktop/)                        |
+
 Check Docker first:
 
 ```bash
