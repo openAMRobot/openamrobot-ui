@@ -22,6 +22,20 @@ const twistMessage = ({ linear = 0, angular = 0 }) =>
     angular: { x: 0, y: 0, z: angular },
   });
 
+const assertSafeSpeed = ({ linear = 0, angular = 0 }) => {
+  if (Math.abs(linear) > AppConfig.MAX_LINEAR_SPEED) {
+    throw new Error(
+      `Linear speed ${linear} m/s exceeds the ${AppConfig.MAX_LINEAR_SPEED} m/s limit`,
+    );
+  }
+
+  if (Math.abs(angular) > AppConfig.MAX_ANGULAR_SPEED) {
+    throw new Error(
+      `Angular speed ${angular} rad/s exceeds the ${AppConfig.MAX_ANGULAR_SPEED} rad/s limit`,
+    );
+  }
+};
+
 export const createRobotActionClient = (ros) => {
   const goalPoseTopic = new window.ROSLIB.Topic({
     ros,
@@ -157,11 +171,13 @@ export const createRobotActionClient = (ros) => {
           await sleep(action.seconds * 1000);
           return;
         case "set_speed":
+          assertSafeSpeed(action);
           cmdVelTopic.publish(
             twistMessage({ linear: action.linear, angular: action.angular }),
           );
           return;
         case "drive_for":
+          assertSafeSpeed({ linear: action.linear });
           cmdVelTopic.publish(
             twistMessage({ linear: action.linear, angular: 0 }),
           );
@@ -169,6 +185,7 @@ export const createRobotActionClient = (ros) => {
           stopMovement();
           return;
         case "rotate_for":
+          assertSafeSpeed({ angular: action.angular });
           cmdVelTopic.publish(
             twistMessage({ linear: 0, angular: action.angular }),
           );
@@ -230,7 +247,7 @@ export const createRobotActionClient = (ros) => {
 export const executeRobotPlan = async (
   ros,
   plan,
-  { shouldStop, onStep } = {},
+  { shouldStop, onStep, onStepStart, onStepSuccess, onStepError } = {},
 ) => {
   if (!ros || !window.ROSLIB) {
     throw new Error("ROSBridge is not available");
@@ -240,8 +257,16 @@ export const executeRobotPlan = async (
 
   for (let index = 0; index < plan.length; index += 1) {
     if (shouldStop?.()) break;
-    onStep?.(index, plan[index]);
-    await client.runAction(plan[index], { shouldStop });
+    const action = plan[index];
+    onStep?.(index, action);
+    onStepStart?.(index, action);
+    try {
+      await client.runAction(action, { shouldStop });
+      onStepSuccess?.(index, action);
+    } catch (error) {
+      onStepError?.(index, action, error);
+      throw error;
+    }
   }
 
   return client;

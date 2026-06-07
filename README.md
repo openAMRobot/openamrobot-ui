@@ -41,7 +41,7 @@ Important words:
 
 For most beginners, the safest order is:
 
-1. Build this UI workspace.
+1. Choose one installation method: Docker Compose or manual install.
 2. Start the robot or simulation workspace.
 3. Start the UI launch from this workspace.
 4. Open the browser at `http://127.0.0.1:5050/control`.
@@ -123,11 +123,14 @@ How to read the schematic:
 
 ```text
 openamrobot-ui/
+  Dockerfile                  # Container image for the UI workspace
+  docker-compose.yml          # One-command Docker Compose launcher
   README.md
   scripts/
     build_frontend.sh          # Install web deps and build React
     sync_frontend_to_ros.sh    # Copy React build into ROS package static/app
     build_ros.sh               # Build ros2/ with colcon
+    container_entrypoint.sh    # Container startup script
     run_ui_backend.sh          # Run the recommended UI launch
   web/
     package.json               # React scripts and dependencies
@@ -187,6 +190,8 @@ listed here. Edit the source README files above instead.
 | `openamr_ui_package`       | Flask server, relays, map/route handlers, waypoint navigation helpers                   |
 | `openamr_ui_bringup`       | Recommended UI-only launch wrapper                                                      |
 | `scripts/`                 | Canonical build and sync commands                                                       |
+| `Dockerfile`               | Builds the React app, syncs it into the ROS package, and builds the ROS 2 workspace     |
+| `docker-compose.yml`       | Starts the compiled UI workspace with one Docker Compose command                        |
 
 The compiled React app is copied into:
 
@@ -197,7 +202,121 @@ ros2/src/openamr_ui_package/openamr_ui_package/static/app/
 During `colcon build`, that static app is installed into the package share
 directory and served by `openamr_ui_package.flask_app`.
 
-## Prerequisites
+## Installation Options
+
+Choose one installation method. Docker Compose and manual installation are
+alternatives, so do not run both UI instances at the same time on the same
+ports.
+
+| Method                        | Best For                                            | Main Command                |
+| ----------------------------- | --------------------------------------------------- | --------------------------- |
+| Option A: Docker Compose      | Beginners, clean machines, quick demos, WSL testing | `docker compose up --build` |
+| Option B: Manual Install      | Developers, robot computers, ROS debugging          | Build frontend, sync, build |
+| Robot or simulation workspace | Nav2, localization, docking, sensors, Gazebo/RViz   | Run separately              |
+
+Both installation methods start only this UI workspace. The robot or simulation
+stack must still run separately unless that stack is also containerized.
+
+## Option A: Docker Compose Install
+
+For Docker Compose, install only Docker Engine and the Docker Compose plugin.
+The container installs the UI build dependencies inside the image.
+
+Docker Compose is the easiest way to try the UI on a clean Linux or WSL
+machine. It installs the required Ubuntu, Node.js, npm, ROS 2 Jazzy, rosbridge,
+web video, Nav2 message, and Python packages inside a container, then builds
+the frontend and ROS 2 workspace during the image build.
+
+If Docker is not installed yet, use the official Docker instructions for your
+machine:
+
+| System                  | Recommended Guide                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| Ubuntu/Linux            | [Install Docker Engine on Ubuntu](https://docs.docker.com/engine/install/ubuntu/) |
+| Windows with WSL        | [Docker Desktop WSL 2 backend](https://docs.docker.com/desktop/features/wsl/)     |
+| macOS or Docker Desktop | [Install Docker Desktop](https://docs.docker.com/desktop/)                        |
+
+Check Docker first:
+
+```bash
+docker --version
+docker compose version
+```
+
+Clone or place this repository at:
+
+```bash
+cd ~
+git clone https://github.com/openAMRobot/openamrobot-ui.git openamrobot-ui
+cd ~/openamrobot-ui
+```
+
+Start the UI workspace from the repository root:
+
+```bash
+docker compose up --build
+```
+
+Open the UI:
+
+```text
+http://127.0.0.1:5050/control
+```
+
+Open Blockly:
+
+```text
+http://127.0.0.1:5050/blocks
+```
+
+The Compose service uses `network_mode: host`. This is recommended on Linux and
+WSL because ROS 2 discovery, rosbridge, and browser access work more reliably
+when the container shares the host network. With host networking, the UI listens
+on the normal ports:
+
+| Service          | URL or Port             |
+| ---------------- | ----------------------- |
+| Flask web UI     | `http://127.0.0.1:5050` |
+| ROSBridge        | `ws://127.0.0.1:9090`   |
+| Web video server | `http://127.0.0.1:8080` |
+
+Useful Docker Compose commands:
+
+```bash
+# Start and rebuild if Dockerfile or package dependencies changed
+docker compose up --build
+
+# Start in the background
+docker compose up -d
+
+# Show logs
+docker compose logs -f
+
+# Stop the UI container
+docker compose down
+
+# Rebuild frontend and ROS workspace again when the container starts
+OPENAMR_REBUILD_ON_START=1 docker compose up
+```
+
+If you are using Docker Desktop without working host networking, replace
+`network_mode: host` in `docker-compose.yml` with explicit port mappings:
+
+```yaml
+ports:
+  - "5050:5050"
+  - "9090:9090"
+  - "8080:8080"
+```
+
+This can open the browser UI, but ROS 2 discovery between the container and an
+external robot/simulation may still need extra Docker Desktop networking setup.
+For real robot testing on Linux or WSL, keep host networking.
+
+## Option B: Manual Install
+
+Use manual installation when you want to develop the frontend, edit ROS
+packages, debug `colcon` builds, or run directly on a robot computer.
 
 Recommended environment:
 
@@ -262,8 +381,6 @@ rosdep install --from-paths src --ignore-src -r -y
 
 If `rosdep` reports keys that cannot be resolved, install the matching ROS
 Jazzy or Python packages manually, then rerun the build.
-
-## First-Time Installation
 
 Clone or place this repository at:
 
@@ -360,6 +477,61 @@ ros2 topic list | grep -E "^/map$|^/ui/map$|^/odom$|^/tf$|^/tf_static$"
 Expected UI-side nodes include `flask`, `rosbridge_websocket`,
 `web_video_server`, `map_relay`, and `nav_relay`. Expected robot-side topics for
 basic map and motion display include `/map`, `/odom`, `/tf`, and `/tf_static`.
+
+## Blockly Robot Programming
+
+The UI includes a Blockly page for building simple robot programs by dragging
+blocks instead of writing code. Open it after the UI launch is running:
+
+```text
+http://127.0.0.1:5050/blocks
+```
+
+The Blockly page can build programs with actions such as:
+
+```text
+start robot program
+  navigate to x 1.5 y 0 yaw 0
+  wait until navigation complete timeout 60 seconds
+  dock robot
+```
+
+Common Blockly categories include:
+
+| Category    | Examples                                                                         |
+| ----------- | -------------------------------------------------------------------------------- |
+| Program     | start, repeat, log                                                               |
+| Navigation  | navigate to coordinates, navigate to named location, wait for navigation, patrol |
+| Motion      | wait, set speed, drive for time, rotate for time, stop movement, emergency stop  |
+| Docking     | dock, undock                                                                     |
+| Robot State | battery condition, set mode                                                      |
+
+The Blockly editor supports browser Save/Load, JSON Import/Export, backend
+saved programs, backend named locations, program templates, run history, and
+plan validation. The `Run` button requires ROSBridge to be connected. Direct
+motion blocks publish to `/cmd_vel`, navigation blocks publish goal poses, and
+docking blocks publish the docking trigger topics.
+
+For installation details, full block reference, examples, safety notes, and
+troubleshooting, see:
+
+```text
+web/src/features/blocks/README.md
+```
+
+When changing Blockly code, rebuild and reinstall the frontend before testing
+through Flask:
+
+```bash
+cd ~/openamrobot-ui
+bash scripts/build_frontend.sh
+bash scripts/sync_frontend_to_ros.sh
+cd ros2
+colcon build --packages-select openamr_ui_package
+source install/setup.bash
+```
+
+Then restart the UI launch and hard refresh the browser with `Ctrl+Shift+R`.
 
 ## Simulation, Headless Mode, and Gazebo GUI
 
@@ -484,11 +656,11 @@ UI even when both devices are connected to the same network.
 For access from another computer, tablet, or touchscreen on the same WiFi, make
 sure the browser device can reach the robot or UI computer on these ports:
 
-| Port | Protocol | Must Be Reachable For |
-| --- | --- | --- |
-| `5050` | HTTP | Opening the web UI |
+| Port   | Protocol  | Must Be Reachable For                                |
+| ------ | --------- | ---------------------------------------------------- |
+| `5050` | HTTP      | Opening the web UI                                   |
 | `9090` | WebSocket | ROS status, topics, commands, map, and robot control |
-| `8080` | HTTP | Camera/image streaming |
+| `8080` | HTTP      | Camera/image streaming                               |
 
 The WiFi/router must allow devices to talk to each other. Guest networks,
 client isolation, AP isolation, VPN routing, and local firewalls can block the
@@ -644,14 +816,21 @@ docking behavior; the UI only exposes the controls and status.
 
 #### Blocks Page
 
-![OpenAMR UI Blockly Blocks page showing the Program category and robot-programming workspace](docs/assets/program.png)
+![OpenAMR UI Blockly Blocks page with workspace, templates, history, backend programs, named locations, plan checks, and generated plan](docs/assets/completeuiimage.png)
 
 The Blocks page is the visual robot-programming page. It lets beginners build a
 robot program by dragging Blockly blocks instead of writing JavaScript or ROS
 code. The left toolbox groups blocks into `Program`, `Navigation`, `Motion`,
 `Docking`, and `Robot State`. The center workspace is where the blocks are
 assembled. The right panel shows ROSBridge connection status, Run/Stop buttons,
-and the Generated Plan created from the connected blocks.
+program templates, run history, backend saved programs, named locations, plan
+checks, and the Generated Plan created from the connected blocks.
+
+The top toolbar contains local program controls. `Save` and `Load` use browser
+storage, `Import` and `Export` move Blockly programs as JSON files, and `Reset`
+clears the workspace back to the starter program.
+
+![OpenAMR UI Blockly toolbar showing Save, Load, Import, Export, and Reset controls](docs/assets/saveloadimport.png)
 
 A Blockly program should start with `start robot program`. Robot actions must be
 connected below that start block to run. Loose blocks can remain on the
@@ -665,6 +844,11 @@ commands such as `/cmd_vel`, docking blocks publish dock or undock triggers, and
 state blocks can use battery data or publish mode commands. Always check the
 Generated Plan before pressing `Run`; it is the best quick preview of what will
 be sent to the robot.
+
+The Plan Checks panel reports safety and validation warnings before execution.
+The Generated Plan panel shows the exact step list built from connected blocks.
+
+![OpenAMR UI Blockly Plan Checks and Generated Plan panels](docs/assets/planchecksandgeneratedplan.png)
 
 For the full Blockly setup guide, block reference, examples, troubleshooting,
 and safety notes, see:
