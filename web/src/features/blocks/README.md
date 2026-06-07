@@ -21,25 +21,35 @@ start robot program
 The UI converts those blocks into a robot plan, then sends ROS commands through
 rosbridge when you press `Run`.
 
+![Complete Blockly page with workspace, program templates, run history, backend programs, named locations, plan checks, and generated plan](../../../../docs/assets/completeuiimage.png)
+
 ## Blockly Page Areas
 
 The category screenshots later in this guide show the expected updated Blockly
 toolbox. If your page looks different, compare it with the labels below.
 
-| Area              | What It Shows                                                           | How To Use It                                                                                              |
-| ----------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Top navigation    | The main UI pages: Map, Route, Control, Blocks, and Info                | Click `Blocks` to open the Blockly robot-programming page                                                  |
-| Page title        | `Blockly Robot Program` and a short description                         | Confirms you are on the correct page                                                                       |
-| Save, Load, Reset | Program storage buttons in the top right of the Blockly panel           | Save stores the current blocks in this browser, Load restores them, Reset returns to the default program   |
-| Left toolbox      | Block categories: Program, Navigation, Motion, Docking, and Robot State | Click a category, then drag blocks from the flyout into the workspace                                      |
-| Workspace         | The large dotted canvas in the center                                   | Drop blocks here and connect them below `start robot program`                                              |
-| Connected blocks  | The active program chain                                                | Only blocks connected under the main `start robot program` are converted into the Generated Plan           |
-| Loose blocks      | Blocks placed on the workspace but not connected to the start chain     | Useful while building, but they do not run until connected under `start robot program`                     |
-| Zoom controls     | Plus, minus, and center controls on the right edge of the workspace     | Zoom in/out or recenter the block workspace                                                                |
-| Trash can         | Delete area in the bottom-right of the workspace                        | Drag unwanted blocks to the trash, or select blocks and delete them                                        |
-| ROSBridge status  | Connection state in the right panel                                     | `connected` means the browser can talk to ROS through rosbridge; `disconnected` means Run will be disabled |
-| Run and Stop      | Execution buttons in the right panel                                    | Run executes the Generated Plan; Stop sends an emergency stop command                                      |
-| Generated Plan    | Human-readable list of actions made from connected blocks               | Check this before pressing Run so you know what the robot will do                                          |
+| Area                          | What It Shows                                                           | How To Use It                                                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Top navigation                | The main UI pages: Map, Route, Control, Blocks, and Info                | Click `Blocks` to open the Blockly robot-programming page                                                        |
+| Page title                    | `Blockly Robot Program` and a short description                         | Confirms you are on the correct page                                                                             |
+| Save/Load/Import/Export/Reset | Program storage buttons in the top right of the Blockly panel           | Save and Load use browser storage; Import and Export move Blockly JSON files; Reset restores the default program |
+| Left toolbox                  | Block categories: Program, Navigation, Motion, Docking, and Robot State | Click a category, then drag blocks from the flyout into the workspace                                            |
+| Workspace                     | The large dotted canvas in the center                                   | Drop blocks here and connect them below `start robot program`                                                    |
+| Connected blocks              | The active program chain                                                | Only blocks connected under the main `start robot program` are converted into the Generated Plan                 |
+| Loose blocks                  | Blocks placed on the workspace but not connected to the start chain     | Useful while building, but they do not run until connected under `start robot program`                           |
+| Zoom controls                 | Plus, minus, and center controls on the right edge of the workspace     | Zoom in/out or recenter the block workspace                                                                      |
+| Trash can                     | Delete area in the bottom-right of the workspace                        | Drag unwanted blocks to the trash, or select blocks and delete them                                              |
+| ROSBridge status              | Connection state in the right panel                                     | `connected` means the browser can talk to ROS through rosbridge; `disconnected` means Run will be disabled       |
+| Run and Stop                  | Execution buttons in the right panel                                    | Run executes the Generated Plan; Stop sends an emergency stop command                                            |
+| Program Templates             | Ready-made example programs in the right panel                          | Load a safe starter program, navigation example, docking sequence, patrol route, or low-battery routine          |
+| Run History                   | Recent run results in the right panel                                   | Review success, failed, and stopped runs with timing and step counts                                             |
+| Backend Programs              | Program name, saved-program dropdown, and Save/Load/Delete buttons      | Store Blockly programs on the Flask backend so they survive browser storage clearing                             |
+| Named Locations               | Location name, location dropdown, and `x`, `y`, `yaw` fields            | Manage backend locations used by the `navigate to location` block                                                |
+| Plan Checks                   | Validation warnings and speed-limit errors                              | Fix errors before Run; review warnings before sending commands to the robot                                      |
+| Generated Plan                | Human-readable list of actions made from connected blocks               | Check this before pressing Run so you know what the robot will do                                                |
+
+The right-side panels are collapsible. Close panels you are not using to keep
+the page compact.
 
 When building a program, you may see two kinds of block groups in the
 workspace:
@@ -90,14 +100,24 @@ web/src/pages/BlocksPage.jsx
 web/src/features/blocks/blockDefinitions.js
 web/src/features/blocks/toolbox.js
 web/src/features/blocks/robotActions.js
+web/src/features/blocks/backendPrograms.js
+web/src/features/blocks/backendLocations.js
+web/src/features/blocks/backendRunHistory.js
+web/src/features/blocks/planValidation.js
+web/src/features/blocks/programTemplates.js
 ```
 
-| File                  | Purpose                                                                                          |
-| --------------------- | ------------------------------------------------------------------------------------------------ |
-| `BlocksPage.jsx`      | Shows the Blockly workspace, Save/Load/Reset buttons, Run/Stop buttons, and Generated Plan panel |
-| `blockDefinitions.js` | Defines the custom OpenAMR blocks and converts blocks into plan actions                          |
-| `toolbox.js`          | Controls which block categories and blocks appear in the left sidebar                            |
-| `robotActions.js`     | Executes each generated action by publishing ROS messages or waiting for ROS status              |
+| File                   | Purpose                                                                                 |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| `BlocksPage.jsx`       | Shows the Blockly workspace, toolbar, sidebar panels, Run/Stop buttons, and plan status |
+| `blockDefinitions.js`  | Defines custom OpenAMR blocks and converts blocks into plan actions                     |
+| `toolbox.js`           | Controls which block categories and blocks appear in the left sidebar                   |
+| `robotActions.js`      | Executes each generated action by publishing ROS messages or waiting for ROS status     |
+| `backendPrograms.js`   | Calls the backend saved-program API                                                     |
+| `backendLocations.js`  | Calls the backend named-location API                                                    |
+| `backendRunHistory.js` | Calls the backend run-history API                                                       |
+| `planValidation.js`    | Builds Plan Checks warnings and speed-limit errors                                      |
+| `programTemplates.js`  | Defines ready-made Blockly starter programs                                             |
 
 ## Requirements
 
@@ -494,8 +514,8 @@ arrival.
 
 #### `navigate to location NAME`
 
-This sends a saved named location. The current options are defined in
-`OPEN_AMR_LOCATIONS` in `blockDefinitions.js`:
+This sends a saved named location. The current options come from the backend
+Named Locations list, with default fallback values from `blockDefinitions.js`:
 
 ```text
 Home
@@ -518,8 +538,8 @@ What happens:
 - A goal pose is published.
 - The program waits for navigation to finish.
 
-Before using named locations on a real robot, update their coordinates to match
-your map.
+Before using named locations on a real robot, save coordinates that match your
+map in the `Named Locations` panel.
 
 #### `wait until navigation complete timeout N seconds`
 
@@ -871,6 +891,12 @@ angular 0.3
 The `Run` button is disabled when ROSBridge is disconnected, when there are no
 generated steps, or when a program is already running.
 
+If the plan contains direct motion, docking, undocking, emergency stop, or
+validation warnings, the page asks for confirmation before running. Confirm only
+after checking that the robot area is clear.
+
+![Plan Checks and Generated Plan panels showing validation feedback and generated robot steps](../../../../docs/assets/planchecksandgeneratedplan.png)
+
 The `Stop` button calls the same emergency stop behavior used by the
 `emergency stop` block: it publishes zero velocity and cancels navigation.
 
@@ -927,10 +953,43 @@ angular 0.3
 
 ## Named Locations
 
-Named locations are defined in `blockDefinitions.js`:
+Named locations are loaded from the Flask backend when the Blocks page opens.
+The `navigate to location` dropdown uses the backend list, with built-in default
+locations as a fallback.
+
+The `Named Locations` panel in the right sidebar lets you manage locations:
+
+![Named Locations panel showing location name, saved locations, x, y, yaw, save, and delete controls](../../../../docs/assets/namedlocations.png)
+
+| Control       | Meaning                                               |
+| ------------- | ----------------------------------------------------- |
+| Location name | Name shown in the `navigate to location` block        |
+| Location list | Existing backend locations                            |
+| `x`           | Map x coordinate in meters                            |
+| `y`           | Map y coordinate in meters                            |
+| `yaw`         | Robot heading in radians                              |
+| Save Location | Saves or overwrites the location on the backend       |
+| Delete        | Deletes the selected backend location                 |
+| Refresh       | Reloads backend locations and updates generated plans |
+
+Backend locations are stored here:
+
+```text
+~/.openamr_ui/block_locations.json
+```
+
+Backend API endpoints:
+
+| Endpoint                      | Method   | Use                  |
+| ----------------------------- | -------- | -------------------- |
+| `/api/block-locations`        | `GET`    | List named locations |
+| `/api/block-locations/<name>` | `POST`   | Save or overwrite    |
+| `/api/block-locations/<name>` | `DELETE` | Delete one location  |
+
+Default fallback locations are defined in `blockDefinitions.js`:
 
 ```js
-export const OPEN_AMR_LOCATIONS = {
+export const DEFAULT_OPEN_AMR_LOCATIONS = {
   Home: { x: 0, y: 0, yaw: 0 },
   "Charging Station": { x: 0.5, y: 0, yaw: 0 },
   "Pickup Point": { x: 2, y: 1, yaw: 1.57 },
@@ -938,7 +997,13 @@ export const OPEN_AMR_LOCATIONS = {
 };
 ```
 
-Change these coordinates to match your real map. After editing them, rebuild and
+If a saved program references a named location that no longer exists, the
+Blocks page shows a Plan Checks error and disables Run until the location is
+restored or the block is changed.
+
+For normal use, update locations in the `Named Locations` panel so they are
+stored on the backend. Edit `DEFAULT_OPEN_AMR_LOCATIONS` only if you want to
+change the built-in fallback values; after editing source code, rebuild and
 restart the UI using the production update flow above.
 
 ## Example Programs
@@ -991,7 +1056,7 @@ start robot program
 ```
 
 Before using this on a real robot, confirm the charging station coordinates are
-correct in `OPEN_AMR_LOCATIONS`.
+correct in the backend `Named Locations` panel.
 
 ### 5. Undock And Move Away
 
@@ -1159,21 +1224,158 @@ Note: `/dock_trigger`, `/undock_robot`, and
 `/navigate_to_pose/_action/cancel_goal` are currently hardcoded in
 `robotActions.js`.
 
-## Save, Load, And Reset
+## Program Templates
 
-The Blockly page stores programs in browser local storage:
+The `Program Templates` panel in the right sidebar loads ready-made Blockly
+programs into the workspace. Templates are useful for first-time users, demos,
+and quick robot checks.
+
+![Program Templates panel showing template selection and Load Template button](../../../../docs/assets/programtemplate.png)
+
+Loading a template clears the current workspace and replaces it with the
+selected example. Save your current program first if you want to keep it.
+
+Available templates:
+
+| Template          | What It Builds                                                    | Best Use                        |
+| ----------------- | ----------------------------------------------------------------- | ------------------------------- |
+| Safe Motion Test  | Drives forward at `0.05 m/s` for one second, then stops           | First real-robot motion check   |
+| Navigate And Wait | Sends one `x`, `y`, `yaw` goal and waits for navigation to finish | Basic navigation test           |
+| Docking Sequence  | Navigates to `Charging Station`, waits, then runs `dock robot`    | Docking workflow test           |
+| Patrol Route      | Uses the patrol block to move between two points twice            | Repeated navigation demo        |
+| Low Battery Dock  | If battery is below 20%, logs a message, navigates to dock, docks | Conditional robot-state example |
+
+Recommended beginner flow:
+
+1. Load `Safe Motion Test`.
+2. Check `Generated Plan`.
+3. Confirm `Plan Checks` has no errors.
+4. Press `Run` only after ROSBridge is connected and the robot area is clear.
+5. Save the edited program through `Backend Programs` if you want to reuse it.
+
+Templates are defined in:
+
+```text
+web/src/features/blocks/programTemplates.js
+```
+
+To add a new template, add one item to `programTemplates` with a unique `id`, a
+display `name`, a short `description`, and a `createWorkspace` function that
+returns Blockly workspace JSON.
+
+## Run History
+
+The `Run History` panel records the result of each block program run. It helps
+you debug what happened after pressing `Run`.
+
+Each entry stores:
+
+- program or template name
+- run status: `success`, `failed`, or `stopped`
+- start and finish time
+- duration
+- completed steps and total steps
+- error message, if the run failed
+
+The panel shows the latest five entries. Use `Refresh` to reload history from
+the backend and `Clear` to delete the stored history.
+
+Run history is stored here:
+
+```text
+~/.openamr_ui/block_run_history.json
+```
+
+Backend API endpoints:
+
+| Endpoint                 | Method   | Use                     |
+| ------------------------ | -------- | ----------------------- |
+| `/api/block-run-history` | `GET`    | List recent run history |
+| `/api/block-run-history` | `POST`   | Save one run result     |
+| `/api/block-run-history` | `DELETE` | Clear run history       |
+
+Run History is not a replacement for ROS logs. Use it as a quick UI-level
+summary, then check ROS logs for deeper robot-side failures.
+
+## Save, Load, Delete, And Reset
+
+The Blockly page supports two kinds of storage:
+
+1. Backend saved programs, stored by the Flask UI server.
+2. Browser local storage, stored only in the current browser.
+
+Use backend saved programs for normal work. Use browser local storage as a
+quick temporary backup while editing.
+
+### Backend Saved Programs
+
+The `Backend Programs` panel is in the right sidebar on the Blocks page.
+
+![Backend Programs panel showing program name, saved program list, Save, Load, and Delete buttons](../../../../docs/assets/backendprogram.png)
+
+| Control        | Meaning                                                       |
+| -------------- | ------------------------------------------------------------- |
+| Program name   | Name used when saving the current Blockly workspace           |
+| Saved dropdown | Existing backend programs found on the Flask server           |
+| Refresh        | Reloads the saved-program list from the backend               |
+| Save           | Saves the current workspace and generated plan to the backend |
+| Load           | Loads the selected backend program into the Blockly workspace |
+| Delete         | Deletes the selected backend program from the backend         |
+
+Backend programs are stored as JSON files here:
+
+```text
+~/.openamr_ui/block_programs/
+```
+
+Each saved file contains:
+
+- the program name
+- the save timestamp
+- the Blockly workspace JSON
+- the generated plan preview
+
+Program names may contain letters, numbers, spaces, dots, underscores, and
+hyphens. Names must be 1 to 64 characters long.
+
+Backend API endpoints:
+
+| Endpoint                     | Method   | Use                 |
+| ---------------------------- | -------- | ------------------- |
+| `/api/block-programs`        | `GET`    | List saved programs |
+| `/api/block-programs/<name>` | `GET`    | Load one program    |
+| `/api/block-programs/<name>` | `POST`   | Save or overwrite   |
+| `/api/block-programs/<name>` | `DELETE` | Delete one program  |
+
+When running the React development server at `http://localhost:3000/blocks`,
+the frontend calls the Flask backend at `http://127.0.0.1:5050`. Start the ROS
+UI launch first if you want backend Save/Load/Delete to work in development.
+
+### Browser Save, Load, Import, Export, And Reset
+
+The top-right `Save` and `Load` buttons use browser local storage:
+
+![Save, Load, Import, Export, and Reset toolbar buttons](../../../../docs/assets/saveloadimport.png)
 
 ```text
 openamr_blockly_workspace
 ```
 
-Buttons:
+Top-right buttons:
 
-| Button | Meaning                                            |
-| ------ | -------------------------------------------------- |
-| Save   | Saves the current blocks in this browser           |
-| Load   | Loads the saved blocks                             |
-| Reset  | Clears the workspace and loads the default program |
+| Button | Meaning                                                   |
+| ------ | --------------------------------------------------------- |
+| Save   | Saves the current blocks in this browser                  |
+| Load   | Loads the saved blocks                                    |
+| Import | Loads a Blockly workspace from a `.json` file             |
+| Export | Downloads the current Blockly workspace as a `.json` file |
+| Reset  | Clears the workspace and loads the default program        |
+
+Browser local storage is tied to one browser and one host. A workspace saved in
+one browser may not appear in another browser.
+
+Use `Export` and `Import` when you want to move a program between machines,
+share an example, or attach a reproducible program to an issue or pull request.
 
 If the UI behaves strangely after block changes, press `Reset` or clear browser
 site data for `127.0.0.1:5050`.
@@ -1288,8 +1490,10 @@ If that creates one Generated Plan step, the planner is working.
 
 ### Saved Blocks Look Wrong
 
-Blockly saves programs in browser local storage. If old blocks keep returning,
-the browser may be loading a saved workspace.
+The top toolbar `Save` button stores one workspace in browser local storage. If
+old blocks keep returning, the browser may be loading that saved workspace.
+Backend saved programs are separate and load only when you use the `Backend
+Programs` panel.
 
 Fix:
 
@@ -1345,11 +1549,17 @@ Do not test larger motion or patrol programs until this basic command works.
 The category screenshots are stored in:
 
 ```text
+docs/assets/completeuiimage.png
+docs/assets/saveloadimport.png
 docs/assets/program.png
 docs/assets/navigation.png
 docs/assets/motion.png
 docs/assets/docking.png
 docs/assets/robotstate.png
+docs/assets/programtemplate.png
+docs/assets/backendprogram.png
+docs/assets/namedlocations.png
+docs/assets/planchecksandgeneratedplan.png
 ```
 
 If they do not render in a Markdown viewer, confirm those files exist and that
