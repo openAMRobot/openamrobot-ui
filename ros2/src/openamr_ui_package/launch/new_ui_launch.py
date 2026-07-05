@@ -30,7 +30,11 @@ def generate_launch_description():
     config = PathJoinSubstitution([FindPackageShare("openamr_ui_package"), "param", "config.yaml"])
 
     # Package-scoped secrets (ANTHROPIC_API_KEY, etc.), gitignored. See .env.example.
-    package_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # realpath (not abspath) matters here: ros2 launch loads this file through
+    # the installed share/ copy, which is a symlink back to this source file
+    # under --symlink-install. abspath() doesn't follow symlinks, so it would
+    # resolve to the install directory instead of here, where .env actually is.
+    package_root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     flask_env = _load_env_file(os.path.join(package_root, ".env"))
 
     actions = []
