@@ -16,11 +16,17 @@ import {
   registerOpenAmrBlocks,
   setOpenAmrLocations,
   workspaceToRobotPlan,
+  planToWorkspace,
 } from "../features/blocks/blockDefinitions";
 import {
   executeRobotPlan,
   createRobotActionClient,
 } from "../features/blocks/robotActions";
+import { generatePlanFromVoice } from "../features/blocks/voicePlan";
+import {
+  createSpeechRecognizer,
+  isSpeechRecognitionSupported,
+} from "../features/blocks/voiceCapture";
 import {
   hasValidationErrors,
   validateRobotPlan,
@@ -195,8 +201,12 @@ const BlocksPage = () => {
   const workspaceRef = useRef(null);
   const importInputRef = useRef(null);
   const stopRequestedRef = useRef(false);
+  const activeRecognizerRef = useRef(null);
 
   const [plan, setPlan] = useState([]);
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceBusy, setVoiceBusy] = useState(false);
   const [validationMessages, setValidationMessages] = useState([]);
   const [running, setRunning] = useState(false);
   const [activeStep, setActiveStep] = useState(null);
@@ -229,6 +239,8 @@ const BlocksPage = () => {
       !running,
     [plan.length, rosStatus, running, validationHasErrors],
   );
+
+  const speechSupported = useMemo(() => isSpeechRecognitionSupported(), []);
 
   const selectedTemplateInfo = useMemo(
     () => programTemplates.find((item) => item.id === selectedTemplate),
@@ -647,9 +659,60 @@ const BlocksPage = () => {
     toast.warn("Stop command sent");
   };
 
+  const applyVoicePlan = async (transcript) => {
+    if (!workspaceRef.current) return;
+
+    setVoiceBusy(true);
+    try {
+      const { plan: generatedPlan } = await generatePlanFromVoice({
+        transcript,
+        locations,
+      });
+      workspaceRef.current.clear();
+      Blockly.serialization.workspaces.load(
+        planToWorkspace(generatedPlan),
+        workspaceRef.current,
+      );
+      updatePlanFromWorkspace(workspaceRef.current);
+      toast.success(
+        `Generated a ${generatedPlan.length}-step plan from voice. Review the blocks, then press Run.`,
+      );
+    } catch (err) {
+      toast.error(err.message || "Could not generate a plan from voice");
+    } finally {
+      setVoiceBusy(false);
+    }
+  };
+
+  const startVoiceListening = () => {
+    if (!isSpeechRecognitionSupported()) {
+      toast.error("Voice input isn't supported in this browser");
+      return;
+    }
+
+    const recognizer = createSpeechRecognizer({
+      onInterimResult: setVoiceTranscript,
+      onFinalResult: (text) => {
+        setVoiceTranscript(text);
+        applyVoicePlan(text);
+      },
+      onError: (error) => toast.error(`Voice input error: ${error}`),
+      onEnd: () => setVoiceListening(false),
+    });
+
+    activeRecognizerRef.current = recognizer;
+    setVoiceTranscript("");
+    setVoiceListening(true);
+    recognizer.start();
+  };
+
+  const stopVoiceListening = () => {
+    activeRecognizerRef.current?.stop();
+  };
+
   return (
     <section className="grid min-h-[520px] grid-cols-1 gap-3 py-3 lg:h-[calc(100vh-96px)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:overflow-hidden">
-      <div className="flex min-h-[480px] flex-col overflow-hidden rounded-lg border border-borderSubtle bg-bgCard shadow-sm shadow-slate-200/70 lg:min-h-0">
+      <div className="flex min-h-[480px] flex-col overflow-hidden rounded-lg border border-borderSubtle bg-bgCard shadow-sm shadow-slate-200/70 dark:shadow-slate-950/40 lg:min-h-0">
         <div className="flex shrink-0 items-center justify-between border-b border-borderSubtle px-3 py-2">
           <div>
             <h1 className="font-[RobotoMono] text-lg font-bold text-themeBlue">
@@ -702,7 +765,7 @@ const BlocksPage = () => {
         <div ref={blocklyDivRef} className="min-h-[420px] flex-1 lg:min-h-0" />
       </div>
 
-      <aside className="flex min-h-0 flex-col overflow-y-auto rounded-lg border border-borderSubtle bg-bgCard p-3 shadow-sm shadow-slate-200/70 lg:h-full">
+      <aside className="flex min-h-0 flex-col overflow-y-auto rounded-lg border border-borderSubtle bg-bgCard p-3 shadow-sm shadow-slate-200/70 dark:shadow-slate-950/40 lg:h-full">
         <div className="mb-3">
           <p className="font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
             ROSBridge
@@ -732,6 +795,49 @@ const BlocksPage = () => {
             Stop
           </button>
         </div>
+
+        <details
+          open
+          className="mb-3 rounded-lg border border-borderSubtle bg-bgSurface p-2.5"
+        >
+          <summary className="cursor-pointer font-[RobotoMono] text-sm font-bold text-textWhiteHover">
+            Voice Command
+          </summary>
+
+          {!speechSupported ? (
+            <div className="mt-2 rounded-lg border border-dashed border-borderSubtle bg-bgCard p-3 text-xs text-themeTextGray">
+              Voice input isn't supported in this browser. Try Chrome on
+              http://localhost.
+            </div>
+          ) : (
+            <>
+              <p className="mb-2 mt-2 text-xs text-themeTextGray">
+                Speak a command to generate blocks below. Review them, then
+                press Run.
+              </p>
+              <button
+                onClick={
+                  voiceListening ? stopVoiceListening : startVoiceListening
+                }
+                disabled={voiceBusy}
+                className={`mb-2 w-full rounded-lg border py-2 font-[RobotoMono] text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
+                  voiceListening
+                    ? "border-statusRed bg-statusRed/10 text-statusRed"
+                    : "border-themeBlue bg-themeBlue/10 text-themeBlue hover:bg-themeBlue hover:text-white"
+                }`}
+              >
+                {voiceBusy
+                  ? "Generating plan..."
+                  : voiceListening
+                    ? "Listening... (tap to stop)"
+                    : "Tap to speak a command"}
+              </button>
+              <div className="min-h-[40px] rounded-lg border border-borderSubtle bg-bgCard px-3 py-2 text-xs text-textWhiteHover">
+                {voiceTranscript || "Transcript will appear here"}
+              </div>
+            </>
+          )}
+        </details>
 
         <details
           open
