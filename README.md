@@ -1,6 +1,6 @@
 # OpenAMRobot UI
 
-Standalone ROS 2 web UI workspace for OpenAMR autonomous mobile robots.
+Standalone ROS 2 web UI workspace for OpenAMRobot and other autonomous mobile robots.
 
 This repository contains the React browser dashboard, ROS 2 UI packages,
 custom UI messages, and helper scripts needed to build and run the UI. It is
