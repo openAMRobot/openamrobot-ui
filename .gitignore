@@ -9,8 +9,14 @@ ros2/log/
 web/node_modules/
 web/build/
 
+ros2/src/openamr_ui_package/openamr_ui_package/static/app/*
+!ros2/src/openamr_ui_package/openamr_ui_package/static/app/README.md
+
 __pycache__/
 *.pyc
 .vscode/
 **/.vscode/
 .DS_Store
+
+.env
+ros2/src/openamr_ui_package/.env

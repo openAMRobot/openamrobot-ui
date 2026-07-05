@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, createContext, useState } from "react";
+import React, { useCallback, useEffect, createContext, useState, useMemo } from "react";
 
 import "./configs/normalize.css";
 import "../shared/styles/fonts.css";
@@ -12,10 +12,29 @@ import Routes from "../pages";
 
 export const RosContext = createContext(null);
 export const RosStatusContext = createContext("disconnected");
+export const ThemeContext = createContext({ theme: "light", toggleTheme: () => {} });
 
 const App = () => {
   const [ros] = useState(new window.ROSLIB.Ros());
   const [status, setStatus] = useState("disconnected");
+
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("theme") || "light",
+  );
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => {
+      const next = t === "light" ? "dark" : "light";
+      localStorage.setItem("theme", next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
+
+  const themeValue = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
 
   const tryToConnect = useCallback(async () => {
     const currentIP = window.location.hostname;
@@ -66,11 +85,13 @@ const App = () => {
   }, [ros, tryToConnect]);
 
   return (
-    <RosContext.Provider value={ros}>
-      <RosStatusContext.Provider value={status}>
-        <Routes />
-      </RosStatusContext.Provider>
-    </RosContext.Provider>
+    <ThemeContext.Provider value={themeValue}>
+      <RosContext.Provider value={ros}>
+        <RosStatusContext.Provider value={status}>
+          <Routes />
+        </RosStatusContext.Provider>
+      </RosContext.Provider>
+    </ThemeContext.Provider>
   );
 };
 

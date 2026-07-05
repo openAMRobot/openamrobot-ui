@@ -41,6 +41,7 @@ toolbox. If your page looks different, compare it with the labels below.
 | Trash can                     | Delete area in the bottom-right of the workspace                        | Drag unwanted blocks to the trash, or select blocks and delete them                                              |
 | ROSBridge status              | Connection state in the right panel                                     | `connected` means the browser can talk to ROS through rosbridge; `disconnected` means Run will be disabled       |
 | Run and Stop                  | Execution buttons in the right panel                                    | Run executes the Generated Plan; Stop sends an emergency stop command                                            |
+| Voice Command                 | Mic button and live transcript in the right panel                       | Tap the mic, speak a command, and Claude turns it into blocks in the workspace for you to review before Run      |
 | Program Templates             | Ready-made example programs in the right panel                          | Load a safe starter program, navigation example, docking sequence, patrol route, or low-battery routine          |
 | Run History                   | Recent run results in the right panel                                   | Review success, failed, and stopped runs with timing and step counts                                             |
 | Backend Programs              | Program name, saved-program dropdown, and Save/Load/Delete buttons      | Store Blockly programs on the Flask backend so they survive browser storage clearing                             |
@@ -105,12 +106,14 @@ web/src/features/blocks/backendLocations.js
 web/src/features/blocks/backendRunHistory.js
 web/src/features/blocks/planValidation.js
 web/src/features/blocks/programTemplates.js
+web/src/features/blocks/voiceCapture.js
+web/src/features/blocks/voicePlan.js
 ```
 
 | File                   | Purpose                                                                                 |
 | ---------------------- | --------------------------------------------------------------------------------------- |
 | `BlocksPage.jsx`       | Shows the Blockly workspace, toolbar, sidebar panels, Run/Stop buttons, and plan status |
-| `blockDefinitions.js`  | Defines custom OpenAMR blocks and converts blocks into plan actions                     |
+| `blockDefinitions.js`  | Defines custom OpenAMR blocks, converts blocks into plan actions, and converts a plan back into Blockly JSON via `planToWorkspace()` |
 | `toolbox.js`           | Controls which block categories and blocks appear in the left sidebar                   |
 | `robotActions.js`      | Executes each generated action by publishing ROS messages or waiting for ROS status     |
 | `backendPrograms.js`   | Calls the backend saved-program API                                                     |
@@ -118,6 +121,8 @@ web/src/features/blocks/programTemplates.js
 | `backendRunHistory.js` | Calls the backend run-history API                                                       |
 | `planValidation.js`    | Builds Plan Checks warnings and speed-limit errors                                      |
 | `programTemplates.js`  | Defines ready-made Blockly starter programs                                             |
+| `voiceCapture.js`      | Thin wrapper around the browser's `SpeechRecognition`/`webkitSpeechRecognition` API      |
+| `voicePlan.js`         | Calls the backend `/api/voice-plan` endpoint with the transcript and known locations     |
 
 ## Requirements
 
@@ -128,6 +133,8 @@ You need:
 - ROS 2 for the Flask/ROS UI server
 - A running robot or simulation if you want real robot movement
 - rosbridge running so the browser can talk to ROS
+- An Anthropic API key, only if you want to use the `Voice Command` panel (see
+  [Voice Command](#voice-command))
 
 The UI can open without a robot, but `Run` needs ROSBridge to be connected.
 
@@ -1263,6 +1270,139 @@ To add a new template, add one item to `programTemplates` with a unique `id`, a
 display `name`, a short `description`, and a `createWorkspace` function that
 returns Blockly workspace JSON.
 
+## Voice Command
+
+The `Voice Command` panel lets you speak a command instead of dragging
+blocks. The browser captures your speech, sends the transcript to the Flask
+backend, which calls the Claude API to translate it into a robot action plan.
+The UI then converts that plan into real Blockly blocks in the workspace so
+you can review them before running.
+
+Flow:
+
+```text
+You speak
+  -> browser Web Speech API transcript
+  -> POST /api/voice-plan (Flask backend)
+  -> Claude API (claude-sonnet-5) returns a structured action plan
+  -> planToWorkspace() builds Blockly JSON
+  -> Blockly.serialization.workspaces.load() populates the workspace
+  -> Generated Plan and Plan Checks update automatically
+  -> you review, then press Run
+```
+
+Voice input only builds and displays blocks. It never runs a program by
+itself; you still press `Run`, and any risky-action confirmation dialog still
+appears exactly as it does for a manually built or template-loaded program.
+
+### Voice Command Requirements
+
+- Chrome or Edge. The Web Speech API used for microphone capture is not
+  supported in Firefox.
+- A secure context: `http://localhost:5050` / `http://127.0.0.1:5050`, or
+  HTTPS. Browsers block microphone access on plain HTTP LAN addresses such as
+  `http://192.168.x.x:5050` — the permission control shows up greyed out and
+  stuck on `Block` in the browser's site settings, and it cannot be changed
+  from there. Either open the UI from the same machine using `localhost`, or
+  put HTTPS in front of Flask before using voice input from a tablet or a
+  second computer.
+- An Anthropic API key (`ANTHROPIC_API_KEY`) set in the environment of the
+  process that launches the UI. Get a key from
+  [console.anthropic.com](https://console.anthropic.com) under
+  **Settings -> API Keys**. Billing must be enabled on the account; API
+  usage is billed separately from a claude.ai subscription.
+
+Easiest setup: copy `ros2/src/openamr_ui_package/.env.example` to `.env` in
+that same directory and fill in `ANTHROPIC_API_KEY` there. It's gitignored,
+and `new_ui_launch.py` loads it and injects it only into the `flask_app`
+node's process — no shell `export` needed. See
+[launch/README.md](../../../../ros2/src/openamr_ui_package/launch/README.md).
+
+Alternatively, export the key in the terminal before launching:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-your-key-here"
+cd ~/openamrobot-ui
+source /opt/ros/jazzy/setup.bash
+source ros2/install/setup.bash
+bash scripts/run_ui_backend.sh
+```
+
+If the key is missing, the panel shows a toast: `ANTHROPIC_API_KEY is not set
+on the server.` If the browser cannot use speech recognition at all, the
+panel shows: `Voice input isn't supported in this browser.`
+
+### How To Use Voice Command
+
+1. Open the Blocks page from a supported browser/origin (see requirements
+   above).
+2. In the right panel, find `Voice Command`.
+3. Press `Tap to speak a command`. Allow the microphone permission prompt the
+   first time.
+4. Speak one sentence describing the program. The transcript box fills in
+   live, and listening stops automatically at the end of the sentence.
+5. The panel shows `Generating plan...` while it calls the backend.
+6. When it finishes, the workspace is replaced with generated blocks matching
+   the sentence, and a toast reports how many steps were generated.
+7. Check the `Generated Plan` and `Plan Checks` panels exactly as you would
+   for any other program.
+8. Press `Run` only after confirming the blocks and plan are correct.
+
+Generating a new voice plan replaces the current workspace. Save your current
+program first (`Backend Programs` or the toolbar `Save`/`Export`) if you want
+to keep it.
+
+### Example Voice Commands
+
+| What You Say                                                            | What Gets Built                                                                                                   |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| "Navigate to x 1 y 1 yaw 0, then wait 3 seconds, then dock"              | `navigate to x 1 y 1 yaw 0`, `wait 3 seconds`, `dock robot`                                                       |
+| "Go to the charging station and dock"                                   | `navigate to location Charging Station`, `dock robot` (uses the saved named location)                             |
+| "Drive forward slowly for 2 seconds then stop"                          | `drive linear speed 0.1 for 2 seconds`, `stop movement`                                                           |
+| "Rotate in place for 2 seconds, then wait 1 second"                     | `rotate angular speed ... for 2 seconds`, `wait 1 seconds`                                                        |
+| "Undock, wait 2 seconds, then drive away for 2 seconds"                 | `undock robot`, `wait 2 seconds`, `drive linear speed ... for 2 seconds`                                          |
+| "Repeat 3 times: log starting loop, then wait 1 second"                | `repeat 3 times` containing `log "starting loop"` and `wait 1 seconds`                                            |
+| "If battery is below 20 percent, go to the charging station and dock"   | `if battery below 20 percent` containing `navigate to location Charging Station` and `dock robot`                 |
+| "Set mode to autonomous, then navigate to x 2 y 0 yaw 0"                | `set mode autonomous`, `navigate to x 2 y 0 yaw 0`                                                                 |
+| "Emergency stop"                                                        | `emergency stop`                                                                                                   |
+| "Patrol between the pickup point and the dropoff point, repeat 3 times, wait 5 seconds between each" | `patrol` block with the two named locations, `repeat` set to `3`, `wait` set to `5 seconds`         |
+| "Navigate to the pickup point, wait until navigation is complete with a 60 second timeout, then log arrived" | `navigate to location Pickup Point`, `wait until navigation complete timeout 60 seconds`, `log "arrived"` |
+| "Log starting delivery, navigate to x 1.5 y 0 yaw 0, wait 2 seconds, undock, then emergency stop" | `log "starting delivery"`, `navigate to x 1.5 y 0 yaw 0`, `wait 2 seconds`, `undock robot`, `emergency stop` |
+
+Things Voice Command will **not** do: change robot firmware/config, answer
+general questions unrelated to building a program, or run the program for
+you. Say what the robot should do as a sequence of actions ("go here, wait,
+then dock") rather than asking a question ("why is the battery low?") — a
+question with no buildable action typically comes back as an empty or
+near-empty plan.
+
+Claude only uses the action types already defined for the Blockly blocks (see
+[Current Block Categories](#current-block-categories)); it cannot invent a new
+kind of action. Named-location commands only resolve correctly when that name
+already exists in the `Named Locations` panel — otherwise Plan Checks reports
+a missing-location error and disables `Run`, the same as it would for a
+manually built program.
+
+Speak clearly and keep commands to one program per phrase. Complex,
+multi-clause sentences are more likely to be misinterpreted; if the generated
+blocks look wrong, try a simpler phrasing, or edit the generated blocks by
+hand afterward.
+
+### Voice Command Backend Endpoint
+
+| Endpoint          | Method | Use                                                                    |
+| ------------------ | ------ | ----------------------------------------------------------------------- |
+| `/api/voice-plan`  | `POST` | Body `{ transcript, locations }`; returns `{ plan, transcript }`       |
+
+The endpoint is implemented in
+`ros2/src/openamr_ui_package/openamr_ui_package/flask_app.py`. It reads
+`ANTHROPIC_API_KEY` from the process environment, calls the Anthropic
+Messages API with a forced tool call constrained to the block action schema,
+sanitizes the returned actions (unknown action types are dropped, recursively,
+including inside `repeat`/`battery_below`), and returns the plan. No new
+Python dependency was added; the call uses the standard library
+`urllib.request`.
+
 ## Run History
 
 The `Run History` panel records the result of each block program run. It helps
@@ -1544,6 +1684,34 @@ start robot program
 
 Do not test larger motion or patrol programs until this basic command works.
 
+### Voice Command Doesn't Work
+
+Check these in order:
+
+1. **"Voice input isn't supported in this browser"** — use Chrome or Edge.
+   Firefox does not implement the Web Speech API used here.
+2. **Microphone permission is stuck on `Block` and greyed out in browser site
+   settings** — you are on an insecure origin, such as
+   `http://192.168.x.x:5050`. Open the UI at `http://localhost:5050` (same
+   machine) instead, or put HTTPS in front of Flask for LAN/tablet access.
+3. **Toast says `ANTHROPIC_API_KEY is not set on the server`** — export the
+   key in the terminal that launches the UI, then restart the launch:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-your-key-here"
+cd ~/openamrobot-ui
+source /opt/ros/jazzy/setup.bash
+source ros2/install/setup.bash
+bash scripts/run_ui_backend.sh
+```
+
+4. **Toast reports a Claude API error** — confirm `ANTHROPIC_API_KEY` is valid
+   and the account has billing enabled; check the terminal running the
+   Flask/ROS node for the full error detail.
+5. **Generated blocks don't match what you said** — try a shorter, simpler
+   sentence, one program per phrase. You can always edit the generated
+   blocks by hand afterward.
+
 ### Category Images Do Not Appear In The README
 
 The category screenshots are stored in:
@@ -1574,6 +1742,10 @@ relative image paths.
 - Use `stop movement` after direct speed commands.
 - Use `emergency stop` when you need to cancel active navigation too.
 - Confirm map coordinates before running navigation or docking programs.
+- Voice-generated plans go through the same Plan Checks and risky-action
+  confirmation as manually built programs. Always review the Generated Plan
+  before pressing Run, whether the blocks came from dragging, a template, or
+  voice.
 
 ## Quick Command Cheat Sheet
 
@@ -1610,6 +1782,13 @@ source install/setup.bash
 Run UI:
 
 ```bash
+ros2 launch openamr_ui_package new_ui_launch.py
+```
+
+Run UI with Voice Command enabled:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-your-key-here"
 ros2 launch openamr_ui_package new_ui_launch.py
 ```
 

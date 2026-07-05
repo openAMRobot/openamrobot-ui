@@ -276,7 +276,7 @@ const ControlPage = () => {
             <div className="flex items-center justify-center">
             <button
               onClick={emergencyStop}
-              className="h-[104px] w-[104px] rounded-full border-4 border-statusRed bg-statusRed/10 font-[RobotoMono] text-base font-bold text-statusRed shadow-lg shadow-red-200 transition-all hover:bg-statusRed hover:text-white"
+              className="h-[104px] w-[104px] rounded-full border-4 border-statusRed bg-statusRed/10 font-[RobotoMono] text-base font-bold text-statusRed shadow-lg shadow-red-200 dark:shadow-red-900/30 transition-all hover:bg-statusRed hover:text-white"
             >
               STOP
             </button>

@@ -1,3 +1,5 @@
+import os
+
 from launch import LaunchDescription
 from launch.actions import LogInfo
 from launch.substitutions import PathJoinSubstitution
@@ -6,12 +8,41 @@ from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
 
 
+def _load_env_file(path):
+    """Parse simple KEY=VALUE lines from a .env file. Missing file -> {}."""
+    env_vars = {}
+    if not os.path.isfile(path):
+        return env_vars
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            env_vars[key.strip()] = value.strip()
+    return env_vars
+
+
+
 # Launch file for the web related components (Flask app, camera feed, ros communication)
 def generate_launch_description():
 
     config = PathJoinSubstitution([FindPackageShare("openamr_ui_package"), "param", "config.yaml"])
 
+    # Package-scoped secrets (ANTHROPIC_API_KEY, etc.), gitignored. See .env.example.
+    package_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    flask_env = _load_env_file(os.path.join(package_root, ".env"))
+
     actions = []
+
+    if not flask_env:
+        actions.append(
+            LogInfo(
+                msg="[openamr_ui_package] No .env found next to the package "
+                "(copy .env.example to .env and fill in ANTHROPIC_API_KEY) -> "
+                "/api/voice-plan will return 500 until set."
+            )
+        )
 
     # Map QoS relay: bridges TRANSIENT_LOCAL map_server → VOLATILE for rosbridge
     actions.append(
@@ -44,6 +75,7 @@ def generate_launch_description():
             namespace="ui",
             output="screen",
             parameters=[config],
+            additional_env=flask_env,
         )
     )
 

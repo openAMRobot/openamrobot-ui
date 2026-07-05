@@ -5,11 +5,11 @@ const RoundedButton = ({ type, children, onBtnClick }) => {
   switch (type) {
     case "success":
       cls =
-        "bg-statusGreen hover:bg-green-500 active:bg-green-600 shadow-lg shadow-green-200";
+        "bg-statusGreen hover:bg-green-500 active:bg-green-600 shadow-lg shadow-green-200 dark:shadow-green-900/40";
       break;
     case "danger":
       cls =
-        "bg-statusRed hover:bg-red-500 active:bg-red-600 shadow-lg shadow-red-200";
+        "bg-statusRed hover:bg-red-500 active:bg-red-600 shadow-lg shadow-red-200 dark:shadow-red-900/40";
       break;
     default:
       cls = "bg-themeBlue hover:bg-themeMediumBlue active:bg-themeDarkBlue";

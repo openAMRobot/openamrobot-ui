@@ -37,6 +37,10 @@ Run UI backend (requires ROS2):
 bash scripts/run_ui_backend.sh
 ```
 
+For the Blockly `Voice Command` feature to work, set an LLM API key first —
+see `ros2/src/openamr_ui_package/.env.example` and
+[../ros2/src/openamr_ui_package/launch/README.md](../ros2/src/openamr_ui_package/launch/README.md).
+
 ## Docker Container
 
 `container_entrypoint.sh` is used by the root `Dockerfile`. It sources ROS 2,

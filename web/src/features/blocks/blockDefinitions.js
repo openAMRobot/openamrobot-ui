@@ -432,3 +432,137 @@ export const workspaceToRobotPlan = (workspace) => {
 
   return sequenceToRobotPlan(startBlock.getNextBlock());
 };
+
+const actionToBlockJson = (action, nextId) => {
+  switch (action.type) {
+    case "navigate":
+      return {
+        type: "openamr_navigate",
+        id: nextId(),
+        fields: {
+          X: toNumber(action.x),
+          Y: toNumber(action.y),
+          YAW: toNumber(action.yaw),
+        },
+      };
+    case "navigate_named":
+      return {
+        type: "openamr_navigate_named",
+        id: nextId(),
+        fields: { LOCATION: action.location || "" },
+      };
+    case "wait":
+      return {
+        type: "openamr_wait",
+        id: nextId(),
+        fields: { SECONDS: Math.max(0, toNumber(action.seconds)) },
+      };
+    case "set_speed":
+      return {
+        type: "openamr_set_speed",
+        id: nextId(),
+        fields: { LINEAR: toNumber(action.linear), ANGULAR: toNumber(action.angular) },
+      };
+    case "drive_for":
+      return {
+        type: "openamr_drive_for",
+        id: nextId(),
+        fields: {
+          LINEAR: toNumber(action.linear),
+          SECONDS: Math.max(0, toNumber(action.seconds)),
+        },
+      };
+    case "rotate_for":
+      return {
+        type: "openamr_rotate_for",
+        id: nextId(),
+        fields: {
+          ANGULAR: toNumber(action.angular),
+          SECONDS: Math.max(0, toNumber(action.seconds)),
+        },
+      };
+    case "stop_movement":
+      return { type: "openamr_stop_movement", id: nextId() };
+    case "wait_nav_complete":
+      return {
+        type: "openamr_wait_nav_complete",
+        id: nextId(),
+        fields: { TIMEOUT: Math.max(1, toNumber(action.timeout, 60)) },
+      };
+    case "repeat":
+      return {
+        type: "openamr_repeat",
+        id: nextId(),
+        fields: { TIMES: Math.max(1, Math.floor(toNumber(action.times, 1))) },
+        inputs: buildStatementInput("DO", action.actions || [], nextId),
+      };
+    case "battery_below":
+      return {
+        type: "openamr_battery_below",
+        id: nextId(),
+        fields: { PERCENT: Math.max(0, toNumber(action.percent)) },
+        inputs: buildStatementInput("DO", action.actions || [], nextId),
+      };
+    case "log":
+      return {
+        type: "openamr_log",
+        id: nextId(),
+        fields: { MESSAGE: action.message || "" },
+      };
+    case "set_mode":
+      return {
+        type: "openamr_set_mode",
+        id: nextId(),
+        fields: { MODE: action.mode || "idle" },
+      };
+    case "dock":
+      return { type: "openamr_dock", id: nextId() };
+    case "undock":
+      return { type: "openamr_undock", id: nextId() };
+    case "stop":
+      return { type: "openamr_stop", id: nextId() };
+    default:
+      return null;
+  }
+};
+
+const buildChain = (actions, nextId) => {
+  const blocks = actions
+    .map((action) => actionToBlockJson(action, nextId))
+    .filter(Boolean);
+
+  for (let i = blocks.length - 2; i >= 0; i -= 1) {
+    blocks[i].next = { block: blocks[i + 1] };
+  }
+
+  return blocks[0] || null;
+};
+
+const buildStatementInput = (name, actions, nextId) => {
+  const head = buildChain(actions, nextId);
+  return head ? { [name]: { block: head } } : undefined;
+};
+
+export const planToWorkspace = (plan) => {
+  let counter = 0;
+  const nextId = () => `voice-${counter++}`;
+
+  const startBlock = {
+    type: "openamr_start",
+    id: nextId(),
+    x: 48,
+    y: 48,
+  };
+
+  const chainHead = buildChain(plan || [], nextId);
+  if (chainHead) {
+    startBlock.next = { block: chainHead };
+  }
+
+  return {
+    blocks: {
+      languageVersion: 0,
+      blocks: [startBlock],
+    },
+  };
+};

@@ -174,6 +174,7 @@ README index:
 | [ros2/src/openamr_ui_package/resource/README.md](ros2/src/openamr_ui_package/resource/README.md)                                           | ROS package resource marker notes                                                     |
 | [ros2/src/openamr_ui_package/openamr_ui_package/README.md](ros2/src/openamr_ui_package/openamr_ui_package/README.md)                       | Python package modules and backend nodes                                              |
 | [ros2/src/openamr_ui_package/openamr_ui_package/static/README.md](ros2/src/openamr_ui_package/openamr_ui_package/static/README.md)         | Static frontend asset directory notes                                                 |
+| [ros2/src/openamr_ui_package/openamr_ui_package/static/app/README.md](ros2/src/openamr_ui_package/openamr_ui_package/static/app/README.md) | React build output directory notes                                                    |
 | [ros2/src/openamr_ui_package/openamr_ui_package/templates/README.md](ros2/src/openamr_ui_package/openamr_ui_package/templates/README.md)   | Flask templates directory notes                                                       |
 | [ros2/src/openamr_ui_package/openamr_ui_package/submodules/README.md](ros2/src/openamr_ui_package/openamr_ui_package/submodules/README.md) | Optional backend submodule notes                                                      |
 
@@ -470,13 +471,14 @@ full robot, Nav2, localization, map server, sensors, docking, or simulator.
 After launching the UI, these commands are useful quick checks:
 
 ```bash
-ros2 node list | grep -E "flask|rosbridge|web_video|map_relay|nav_relay"
+ros2 node list | grep -E "flask_app|rosbridge|camera|map_volatile_relay|nav_relays"
 ros2 topic list | grep -E "^/map$|^/ui/map$|^/odom$|^/tf$|^/tf_static$"
 ```
 
-Expected UI-side nodes include `flask`, `rosbridge_websocket`,
-`web_video_server`, `map_relay`, and `nav_relay`. Expected robot-side topics for
-basic map and motion display include `/map`, `/odom`, `/tf`, and `/tf_static`.
+Expected UI-side nodes include `flask_app`, `rosbridge_websocket`,
+`camera` (web_video_server), `map_volatile_relay`, and `nav_relays`. Expected
+robot-side topics for basic map and motion display include `/map`, `/odom`,
+`/tf`, and `/tf_static`.
 
 ## Blockly Robot Programming
 
@@ -518,6 +520,13 @@ troubleshooting, see:
 ```text
 web/src/features/blocks/README.md
 ```
+
+The Blockly page also includes a `Voice Command` panel that turns spoken
+instructions into blocks via the Anthropic (Claude) API. This needs
+an API key: copy `ros2/src/openamr_ui_package/.env.example` to `.env` in that
+same directory and set `ANTHROPIC_API_KEY` (see
+[launch/README.md](ros2/src/openamr_ui_package/launch/README.md)). Details
+and troubleshooting are in the blocks README linked above.
 
 When changing Blockly code, rebuild and reinstall the frontend before testing
 through Flask:
