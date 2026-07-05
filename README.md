@@ -522,9 +522,12 @@ web/src/features/blocks/README.md
 ```
 
 The Blockly page also includes a `Voice Command` panel that turns spoken
-instructions into blocks via the Anthropic (Claude) API. This needs
-an API key: copy `ros2/src/openamr_ui_package/.env.example` to `.env` in that
-same directory and set `ANTHROPIC_API_KEY` (see
+instructions into blocks via the Anthropic (Claude) API. Tap the mic and say
+"Monsieur" followed by a command (e.g. "Monsieur, navigate to x 1 y 1 yaw 0,
+then wait 3 seconds, then dock") — the transcript only appears once the wake
+word is heard. This needs an API key: copy
+`ros2/src/openamr_ui_package/.env.example` to `.env` in that same directory
+and set `ANTHROPIC_API_KEY` (see
 [launch/README.md](ros2/src/openamr_ui_package/launch/README.md)). Details
 and troubleshooting are in the blocks README linked above.
 

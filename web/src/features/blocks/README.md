@@ -41,7 +41,7 @@ toolbox. If your page looks different, compare it with the labels below.
 | Trash can                     | Delete area in the bottom-right of the workspace                        | Drag unwanted blocks to the trash, or select blocks and delete them                                              |
 | ROSBridge status              | Connection state in the right panel                                     | `connected` means the browser can talk to ROS through rosbridge; `disconnected` means Run will be disabled       |
 | Run and Stop                  | Execution buttons in the right panel                                    | Run executes the Generated Plan; Stop sends an emergency stop command                                            |
-| Voice Command                 | Mic button and live transcript in the right panel                       | Tap the mic, speak a command, and Claude turns it into blocks in the workspace for you to review before Run      |
+| Voice Command                 | Mic button and live transcript in the right panel                       | Tap the mic and say "Monsieur" followed by a command; Claude turns it into blocks in the workspace for you to review before Run |
 | Program Templates             | Ready-made example programs in the right panel                          | Load a safe starter program, navigation example, docking sequence, patrol route, or low-battery routine          |
 | Run History                   | Recent run results in the right panel                                   | Review success, failed, and stopped runs with timing and step counts                                             |
 | Backend Programs              | Program name, saved-program dropdown, and Save/Load/Delete buttons      | Store Blockly programs on the Flask backend so they survive browser storage clearing                             |
@@ -1278,11 +1278,15 @@ backend, which calls the Claude API to translate it into a robot action plan.
 The UI then converts that plan into real Blockly blocks in the workspace so
 you can review them before running.
 
+You must say the wake word "Monsieur" before your command (see
+[Wake Word](#wake-word)); speech before it is ignored.
+
 Flow:
 
 ```text
 You speak
   -> browser Web Speech API transcript
+  -> strip everything up to and including "Monsieur"
   -> POST /api/voice-plan (Flask backend)
   -> Claude API (claude-sonnet-5) returns a structured action plan
   -> planToWorkspace() builds Blockly JSON
@@ -1339,8 +1343,9 @@ panel shows: `Voice input isn't supported in this browser.`
 2. In the right panel, find `Voice Command`.
 3. Press `Tap to speak a command`. Allow the microphone permission prompt the
    first time.
-4. Speak one sentence describing the program. The transcript box fills in
-   live, and listening stops automatically at the end of the sentence.
+4. Say "Monsieur" followed by one sentence describing the program, e.g.
+   "Monsieur, navigate to x 1 y 1 yaw 0, then wait 3 seconds, then dock".
+   Listening stops automatically at the end of the sentence.
 5. The panel shows `Generating plan...` while it calls the backend.
 6. When it finishes, the workspace is replaced with generated blocks matching
    the sentence, and a toast reports how many steps were generated.
@@ -1352,7 +1357,33 @@ Generating a new voice plan replaces the current workspace. Save your current
 program first (`Backend Programs` or the toolbar `Save`/`Export`) if you want
 to keep it.
 
+### Wake Word
+
+You must say the wake word "Monsieur" before your command, e.g.:
+
+> "Monsieur, navigate to x 1 y 1 yaw 0, then wait 3 seconds, then dock"
+
+The transcript box stays empty while you're speaking until "Monsieur" is
+heard — only the text after it is shown and sent to `/api/voice-plan`. The
+panel strips the wake word itself (and a trailing comma/colon, if any) before
+sending the command.
+
+Notes:
+
+- The wake word match is case-insensitive and does not need to be the first
+  word — "hey Monsieur, dock" also works — but it does need the browser's
+  speech recognizer to actually transcribe the word "Monsieur" correctly.
+- If you finish speaking without saying "Monsieur" at all, a toast reports
+  that the wake word wasn't heard and no plan is generated. If you say
+  "Monsieur" but nothing after it, a toast asks you to try again.
+- Listening stops automatically after one sentence, same as before — there is
+  no continuous/always-listening mode.
+
 ### Example Voice Commands
+
+Say "Monsieur" before each of these (omitted from the table below for
+brevity), e.g. "Monsieur, navigate to x 1 y 1 yaw 0, then wait 3 seconds,
+then dock".
 
 | What You Say                                                            | What Gets Built                                                                                                   |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
@@ -1711,6 +1742,10 @@ bash scripts/run_ui_backend.sh
 5. **Generated blocks don't match what you said** — try a shorter, simpler
    sentence, one program per phrase. You can always edit the generated
    blocks by hand afterward.
+6. **Toast says the wake word wasn't heard, even though you said
+   "Monsieur"** — the recognizer likely misheard it as something else (e.g.
+   "monsewer"). Speak it more clearly and pause briefly after it, then try
+   again.
 
 ### Category Images Do Not Appear In The README
 

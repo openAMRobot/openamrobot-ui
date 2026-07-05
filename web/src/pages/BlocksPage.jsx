@@ -25,6 +25,7 @@ import {
 import { generatePlanFromVoice } from "../features/blocks/voicePlan";
 import {
   createSpeechRecognizer,
+  extractWakeWordCommand,
   isSpeechRecognitionSupported,
 } from "../features/blocks/voiceCapture";
 import {
@@ -346,6 +347,7 @@ const BlocksPage = () => {
       window.removeEventListener("resize", resize);
       workspace.dispose();
       workspaceRef.current = null;
+      activeRecognizerRef.current?.stop();
     };
   }, [
     refreshLocations,
@@ -691,10 +693,24 @@ const BlocksPage = () => {
     }
 
     const recognizer = createSpeechRecognizer({
-      onInterimResult: setVoiceTranscript,
+      onInterimResult: (text) => {
+        // Keep the transcript box empty until the wake word is heard, so
+        // partial speech before "Monsieur" doesn't show up.
+        const command = extractWakeWordCommand(text);
+        setVoiceTranscript(command === null ? "" : command);
+      },
       onFinalResult: (text) => {
-        setVoiceTranscript(text);
-        applyVoicePlan(text);
+        const command = extractWakeWordCommand(text);
+        if (command === null) {
+          toast.error('Didn\'t hear the wake word "Monsieur" — try again.');
+          return;
+        }
+        if (!command) {
+          toast.info('Heard "Monsieur" but no command after it — try again.');
+          return;
+        }
+        setVoiceTranscript(command);
+        applyVoicePlan(command);
       },
       onError: (error) => toast.error(`Voice input error: ${error}`),
       onEnd: () => setVoiceListening(false),
@@ -812,8 +828,10 @@ const BlocksPage = () => {
           ) : (
             <>
               <p className="mb-2 mt-2 text-xs text-themeTextGray">
-                Speak a command to generate blocks below. Review them, then
-                press Run.
+                Tap to speak, then say “Monsieur” followed by a command, e.g.
+                “Monsieur, navigate to x 1 y 1 yaw 0, then wait 3 seconds,
+                then dock”. The transcript only appears once “Monsieur” is
+                heard.
               </p>
               <button
                 onClick={
@@ -829,9 +847,10 @@ const BlocksPage = () => {
                 {voiceBusy
                   ? "Generating plan..."
                   : voiceListening
-                    ? "Listening... (tap to stop)"
+                    ? "Listening for “Monsieur”... (tap to stop)"
                     : "Tap to speak a command"}
               </button>
+
               <div className="min-h-[40px] rounded-lg border border-borderSubtle bg-bgCard px-3 py-2 text-xs text-textWhiteHover">
                 {voiceTranscript || "Transcript will appear here"}
               </div>

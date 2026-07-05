@@ -52,3 +52,14 @@ export const createSpeechRecognizer = ({
     stop: () => recognition.stop(),
   };
 };
+
+const WAKE_WORD_PATTERN = /\bmonsieur\b[,:.]?\s*/i;
+
+// Only run the recognized transcript through plan generation once the wake
+// word is heard, so ambient background speech doesn't trigger robot actions.
+export const extractWakeWordCommand = (transcript) => {
+  if (!transcript) return null;
+  const match = WAKE_WORD_PATTERN.exec(transcript);
+  if (!match) return null;
+  return transcript.slice(match.index + match[0].length).trim();
+};
