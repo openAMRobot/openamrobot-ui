@@ -59,6 +59,7 @@ const JoystickComponent = ({ maxSpeed, compact = false }) => {
   };
 
   useEffect(() => {
+    if (!joysticRef.current) return;
     const blockWidth = joysticRef.current.getBoundingClientRect().width;
     setSize(blockWidth);
     setStickSize(blockWidth * 0.66);

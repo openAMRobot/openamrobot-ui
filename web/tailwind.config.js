@@ -2,32 +2,34 @@
 // eslint-disable-next-line no-undef
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        // Light control-room theme
-        bgBase: "#f4f8fb",
-        bgCard: "#ffffff",
-        bgSurface: "#eaf1f7",
-        borderSubtle: "#c9d8e6",
+        // All colors are driven by CSS custom properties so the entire
+        // palette flips automatically when the .dark class is toggled on <html>.
+        // The `<alpha-value>` placeholder lets Tailwind's opacity modifiers
+        // (e.g. bg-themeBlue/10) work correctly with CSS variables.
+        bgBase:          "rgb(var(--color-bg-base)          / <alpha-value>)",
+        bgCard:          "rgb(var(--color-bg-card)          / <alpha-value>)",
+        bgSurface:       "rgb(var(--color-bg-surface)       / <alpha-value>)",
+        borderSubtle:    "rgb(var(--color-border-subtle)    / <alpha-value>)",
 
-        // Existing semantic names mapped to light-friendly variants
-        themeLightGray: "#eaf1f7",
-        themeMediumGray: "#d7e3ee",
-        themeTextGray: "#64748b",
+        themeLightGray:  "rgb(var(--color-theme-light-gray)  / <alpha-value>)",
+        themeMediumGray: "rgb(var(--color-theme-medium-gray) / <alpha-value>)",
+        themeTextGray:   "rgb(var(--color-theme-text-gray)   / <alpha-value>)",
 
-        themeBlue: "#087ea4",
-        themeMediumBlue: "#0e9fbc",
-        themeDarkBlue: "#075985",
+        themeBlue:       "rgb(var(--color-theme-blue)        / <alpha-value>)",
+        themeMediumBlue: "rgb(var(--color-theme-medium-blue) / <alpha-value>)",
+        themeDarkBlue:   "rgb(var(--color-theme-dark-blue)   / <alpha-value>)",
 
-        textWhiteHover: "#172033",
-        textWhiteActive: "#334155",
+        textWhiteHover:  "rgb(var(--color-text-white-hover)  / <alpha-value>)",
+        textWhiteActive: "rgb(var(--color-text-white-active) / <alpha-value>)",
 
-        // Status colors
-        statusGreen: "#16a34a",
-        statusRed: "#dc2626",
-        statusYellow: "#d97706",
-        statusBlue: "#2563eb",
+        statusGreen:     "rgb(var(--color-status-green)  / <alpha-value>)",
+        statusRed:       "rgb(var(--color-status-red)    / <alpha-value>)",
+        statusYellow:    "rgb(var(--color-status-yellow) / <alpha-value>)",
+        statusBlue:      "rgb(var(--color-status-blue)   / <alpha-value>)",
       },
     },
   },

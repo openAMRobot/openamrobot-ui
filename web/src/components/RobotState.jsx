@@ -89,7 +89,7 @@ const State = () => {
       amclTopic.unsubscribe();
       odomTopic.unsubscribe();
     };
-  }, [ros, amclActive]);
+  }, [ros]);
 
   return (
     <div className="flex w-full gap-3">

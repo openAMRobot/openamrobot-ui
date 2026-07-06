@@ -15,7 +15,7 @@ fi
 mkdir -p "${ROS_APP_DIR}"
 
 echo "[sync] Cleaning existing ROS package React build..."
-rm -rf "${ROS_APP_DIR:?}/"*
+find "${ROS_APP_DIR}" -mindepth 1 ! -name README.md -exec rm -rf {} +
 
 echo "[sync] Copying full React build into ROS2 package static/app/ ..."
 cp -a "${WEB_BUILD_DIR}/." "${ROS_APP_DIR}/"

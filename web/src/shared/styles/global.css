@@ -1,3 +1,147 @@
+/* ─── Light theme (default) ─────────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --color-bg-base:          244 248 251;
+  --color-bg-card:          255 255 255;
+  --color-bg-surface:       234 241 247;
+  --color-border-subtle:    201 216 230;
+
+  /* Grays */
+  --color-theme-light-gray:  234 241 247;
+  --color-theme-medium-gray: 215 227 238;
+  --color-theme-text-gray:   100 116 139;
+
+  /* Blues */
+  --color-theme-blue:        8   126 164;
+  --color-theme-medium-blue: 14  159 188;
+  --color-theme-dark-blue:   7   89  133;
+
+  /* Text */
+  --color-text-white-hover:  23  32  51;
+  --color-text-white-active: 51  65  85;
+
+  /* Status */
+  --color-status-green:  22  163 74;
+  --color-status-red:    220 38  38;
+  --color-status-yellow: 217 119 6;
+  --color-status-blue:   37  99  235;
+
+  /* Page gradient */
+  --app-gradient:
+    radial-gradient(circle at 20% 0%, rgba(14, 159, 188, 0.09), transparent 28rem),
+    linear-gradient(180deg, #f8fbfd 0%, #eef5f9 100%);
+}
+
+/* ─── Dark theme ────────────────────────────────────────────────────────── */
+.dark {
+  /* Backgrounds */
+  --color-bg-base:          15  25  35;
+  --color-bg-card:          23  32  48;
+  --color-bg-surface:       12  21  32;
+  --color-border-subtle:    30  48  69;
+
+  /* Grays */
+  --color-theme-light-gray:  12  21  32;
+  --color-theme-medium-gray: 22  34  50;
+  --color-theme-text-gray:   122 155 181;
+
+  /* Blues */
+  --color-theme-blue:        15  168 200;
+  --color-theme-medium-blue: 20  189 214;
+  --color-theme-dark-blue:   125 211 240;
+
+  /* Text */
+  --color-text-white-hover:  212 229 245;
+  --color-text-white-active: 168 196 216;
+
+  /* Status */
+  --color-status-green:  34  197 94;
+  --color-status-red:    239 68  68;
+  --color-status-yellow: 245 158 11;
+  --color-status-blue:   59  130 246;
+
+  /* Page gradient */
+  --app-gradient:
+    radial-gradient(circle at 20% 0%, rgba(8, 126, 164, 0.07), transparent 28rem),
+    linear-gradient(180deg, #0f1923 0%, #0b1520 100%);
+}
+
+/* ─── Page background ───────────────────────────────────────────────────── */
+.app-bg {
+  background: var(--app-gradient);
+}
+
+body {
+  background: var(--app-gradient);
+  color: rgb(var(--color-text-white-hover));
+}
+
+/* ─── Map canvas ────────────────────────────────────────────────────────── */
+.mapContainer canvas {
+  border-radius: 0.875rem;
+  box-shadow: 0 18px 45px rgba(15, 35, 52, 0.12);
+  touch-action: none;
+}
+
+.dark .mapContainer canvas {
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+}
+
+/* ─── Layout ────────────────────────────────────────────────────────────── */
+.sectionHeight {
+  min-height: calc(100vh - 72px);
+}
+
+/* ─── Blockly ───────────────────────────────────────────────────────────── */
+.blocklyMainBackground {
+  stroke: #d8e4ed;
+}
+
+.dark .blocklyMainBackground {
+  stroke: #1e3045;
+}
+
+.blocklyToolboxDiv,
+.blocklyFlyoutBackground {
+  background: #f8fbfd;
+}
+
+.dark .blocklyToolboxDiv,
+.dark .blocklyFlyoutBackground {
+  background: #172030;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #eaf1f7;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #0c1520;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #b7c8d8;
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #243447;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #087ea4;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #0fa8c8;
+}
+
+/* ─── Form elements ─────────────────────────────────────────────────────── */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
@@ -6,47 +150,6 @@ input[type="number"]::-webkit-outer-spin-button {
 
 input[type="number"] {
   -moz-appearance: textfield;
-}
-
-body {
-  background:
-    radial-gradient(circle at 20% 0%, rgba(14, 159, 188, 0.09), transparent 28rem),
-    linear-gradient(180deg, #f8fbfd 0%, #eef5f9 100%);
-  color: #172033;
-}
-
-.mapContainer canvas {
-  border-radius: 0.875rem;
-  box-shadow: 0 18px 45px rgba(15, 35, 52, 0.12);
-  touch-action: none;
-}
-
-.sectionHeight {
-  min-height: calc(100vh - 72px);
-}
-
-.blocklyMainBackground {
-  stroke: #d8e4ed;
-}
-
-.blocklyToolboxDiv,
-.blocklyFlyoutBackground {
-  background: #f8fbfd;
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #eaf1f7;
-}
-::-webkit-scrollbar-thumb {
-  background: #b7c8d8;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #087ea4;
 }
 
 button,

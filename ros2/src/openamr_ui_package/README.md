@@ -27,6 +27,15 @@ build commands, run commands, ports, topics, and troubleshooting.
 - `waypoint_nav.py`: optional route-following helper using Nav2 Simple
   Commander.
 
+## Voice Command API Key
+
+`flask_app.py` reads `ANTHROPIC_API_KEY` from the environment for the
+`/api/voice-plan` endpoint (Blockly's Voice Command feature). Copy
+`.env.example` in this directory to `.env` and set the key there — it's
+gitignored, and `launch/new_ui_launch.py` loads it and injects it only into
+the `flask_app` node's process, so no shell `export` is needed. See
+[launch/README.md](launch/README.md) for details.
+
 ## Static App
 
 The React source lives in the repository-level `web/` directory. Production
@@ -39,6 +48,43 @@ openamr_ui_package/static/app/
 Use the repository-level scripts:
 
 ```bash
+cd ~/openamrobot-ui
 bash scripts/build_frontend.sh
 bash scripts/sync_frontend_to_ros.sh
+```
+
+Then build the ROS 2 workspace from the `ros2/` workspace:
+
+```bash
+cd ~/openamrobot-ui/ros2
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+```
+
+Or use the helper script from the repository root:
+
+```bash
+cd ~/openamrobot-ui
+source /opt/ros/jazzy/setup.bash
+bash scripts/build_ros.sh
+source ros2/install/setup.bash
+```
+
+After sourcing, confirm the package is installed:
+
+```bash
+ros2 pkg prefix openamr_ui_package
+```
+
+Run the recommended UI launch:
+
+```bash
+ros2 launch openamr_ui_bringup ui.launch.py
+```
+
+Open the browser at:
+
+```text
+http://127.0.0.1:5050/control
 ```
