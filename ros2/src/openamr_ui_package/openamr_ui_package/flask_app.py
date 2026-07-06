@@ -1,6 +1,8 @@
 import os
 import json
 import re
+import urllib.request
+import urllib.error
 from datetime import datetime, timezone
 import rclpy
 from rclpy.node import Node
@@ -33,6 +35,254 @@ DEFAULT_BLOCK_LOCATIONS = {
     "Pickup Point": {"x": 2, "y": 1, "yaw": 1.57},
     "Dropoff Point": {"x": 0, "y": 2, "yaw": 3.14},
 }
+
+# Mirrors web/src/shared/constants/index.js AppConfig so the model doesn't
+# propose speeds the UI's own plan validation will just reject.
+MAX_LINEAR_SPEED = 0.2
+MAX_ANGULAR_SPEED = 2
+
+ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_MODEL = "claude-sonnet-5"
+ANTHROPIC_VERSION = "2023-06-01"
+
+ACTION_TYPES = {
+    "navigate",
+    "navigate_named",
+    "wait",
+    "set_speed",
+    "drive_for",
+    "rotate_for",
+    "stop_movement",
+    "wait_nav_complete",
+    "repeat",
+    "battery_below",
+    "log",
+    "set_mode",
+    "dock",
+    "undock",
+    "stop",
+}
+
+# JSON Schema for the tool Claude must call. Mirrors the action union already
+# implemented client-side in web/src/features/blocks/blockDefinitions.js
+# (blockToAction / planToWorkspace).
+ACTION_SCHEMA = {
+    "$defs": {
+        "action": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "navigate"},
+                        "x": {"type": "number"},
+                        "y": {"type": "number"},
+                        "yaw": {"type": "number", "description": "radians"},
+                    },
+                    "required": ["type", "x", "y", "yaw"],
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "navigate_named"},
+                        "location": {"type": "string"},
+                    },
+                    "required": ["type", "location"],
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "wait"},
+                        "seconds": {"type": "number"},
+                    },
+                    "required": ["type", "seconds"],
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "set_speed"},
+                        "linear": {"type": "number"},
+                        "angular": {"type": "number"},
+                    },
+                    "required": ["type", "linear", "angular"],
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "drive_for"},
+                        "linear": {"type": "number"},
+                        "seconds": {"type": "number"},
+                    },
+                    "required": ["type", "linear", "seconds"],
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "rotate_for"},
+                        "angular": {"type": "number"},
+                        "seconds": {"type": "number"},
+                    },
+                    "required": ["type", "angular", "seconds"],
+                },
+                {
+                    "type": "object",
+                    "properties": {"type": {"const": "stop_movement"}},
+                    "required": ["type"],
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "wait_nav_complete"},
+                        "timeout": {"type": "number"},
+                    },
+                    "required": ["type", "timeout"],
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "repeat"},
+                        "times": {"type": "integer", "minimum": 1},
+                        "actions": {
+                            "type": "array",
+                            "items": {"$ref": "#/$defs/action"},
+                        },
+                    },
+                    "required": ["type", "times", "actions"],
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "battery_below"},
+                        "percent": {"type": "number"},
+                        "actions": {
+                            "type": "array",
+                            "items": {"$ref": "#/$defs/action"},
+                        },
+                    },
+                    "required": ["type", "percent", "actions"],
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "log"},
+                        "message": {"type": "string"},
+                    },
+                    "required": ["type", "message"],
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {"const": "set_mode"},
+                        "mode": {"enum": ["autonomous", "manual", "idle"]},
+                    },
+                    "required": ["type", "mode"],
+                },
+                {
+                    "type": "object",
+                    "properties": {"type": {"const": "dock"}},
+                    "required": ["type"],
+                },
+                {
+                    "type": "object",
+                    "properties": {"type": {"const": "undock"}},
+                    "required": ["type"],
+                },
+                {
+                    "type": "object",
+                    "properties": {"type": {"const": "stop"}},
+                    "required": ["type"],
+                },
+            ]
+        }
+    },
+    "type": "object",
+    "properties": {
+        "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},
+    },
+    "required": ["actions"],
+}
+
+
+def build_voice_plan_system_prompt(locations):
+    location_names = ", ".join(sorted(locations.keys())) or "(none saved yet)"
+    return (
+        "You translate a spoken command for a mobile robot into a structured "
+        "action plan by calling the build_robot_plan tool. Only use the action "
+        "types defined in the tool schema. Prefer navigate_named over navigate "
+        "when the command refers to one of the known named locations: "
+        f"{location_names}. Keep set_speed/drive_for linear speeds within "
+        f"+/-{MAX_LINEAR_SPEED} m/s and set_speed/rotate_for angular speeds "
+        f"within +/-{MAX_ANGULAR_SPEED} rad/s. If the command is ambiguous or "
+        "unsafe, produce the closest reasonable safe interpretation rather than "
+        "refusing. Do not add actions the command didn't ask for."
+    )
+
+
+def call_anthropic_voice_plan(transcript, locations):
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        abort(500, "ANTHROPIC_API_KEY is not set on the server.")
+
+    payload = {
+        "model": ANTHROPIC_MODEL,
+        "max_tokens": 2048,
+        "system": build_voice_plan_system_prompt(locations),
+        "messages": [{"role": "user", "content": transcript}],
+        "tools": [
+            {
+                "name": "build_robot_plan",
+                "description": "Return the sequence of robot actions for the spoken command.",
+                "input_schema": ACTION_SCHEMA,
+            }
+        ],
+        "tool_choice": {"type": "tool", "name": "build_robot_plan"},
+    }
+
+    request_obj = urllib.request.Request(
+        ANTHROPIC_API_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "anthropic-version": ANTHROPIC_VERSION,
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(request_obj, timeout=30) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="ignore")
+        abort(502, f"Claude API request failed ({error.code}): {detail[:200]}")
+    except urllib.error.URLError as error:
+        abort(502, f"Could not reach Claude API: {error.reason}")
+
+    for block in body.get("content", []):
+        if block.get("type") == "tool_use" and block.get("name") == "build_robot_plan":
+            return block.get("input", {}).get("actions", [])
+
+    abort(502, "Claude did not return a robot plan.")
+
+
+def generate_voice_plan_actions(transcript, locations):
+    return call_anthropic_voice_plan(transcript, locations)
+
+
+def sanitize_plan_actions(actions):
+    if not isinstance(actions, list):
+        return []
+
+    sanitized = []
+    for action in actions:
+        if not isinstance(action, dict) or action.get("type") not in ACTION_TYPES:
+            continue
+
+        clean = dict(action)
+        if clean["type"] in ("repeat", "battery_below"):
+            clean["actions"] = sanitize_plan_actions(clean.get("actions"))
+        sanitized.append(clean)
+
+    return sanitized
 
 
 def ensure_block_programs_dir():
@@ -317,6 +567,26 @@ def clear_block_run_history():
     return jsonify({"history": []})
 
 
+@app.route("/api/voice-plan", methods=["POST", "OPTIONS"])
+def create_voice_plan():
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    payload = request.get_json(silent=True) or {}
+    transcript = str(payload.get("transcript") or "").strip()
+    if not transcript:
+        abort(400, "Request body must include a non-empty transcript.")
+
+    locations = payload.get("locations")
+    if not isinstance(locations, dict):
+        locations = {}
+
+    raw_actions = generate_voice_plan_actions(transcript, locations)
+    plan = sanitize_plan_actions(raw_actions)
+
+    return jsonify({"plan": plan, "transcript": transcript})
+
+
 @app.route("/ros/<path:filename>")
 def serve_ros_libs(filename: str):
     # Serve legacy ROS web libs placed under build/ros/
@@ -342,6 +612,21 @@ class ParamFlask(Node):
         self.declare_parameter("portApp", 5050)
 
 
+# Optional HTTPS support, mainly so the microphone works on browsers other
+# than localhost (Chrome/Safari refuse getUserMedia/SpeechRecognition on
+# plain HTTP LAN origins). Point these at an mkcert-issued cert/key to enable
+# it; if either file is missing, the server falls back to plain HTTP exactly
+# as before.
+SSL_CERT_FILE = os.environ.get(
+    "OPENAMR_UI_SSL_CERT",
+    os.path.join(os.path.expanduser("~"), ".openamr_ui", "certs", "cert.pem"),
+)
+SSL_KEY_FILE = os.environ.get(
+    "OPENAMR_UI_SSL_KEY",
+    os.path.join(os.path.expanduser("~"), ".openamr_ui", "certs", "key.pem"),
+)
+
+
 def main():
     rclpy.init()
     node = ParamFlask()
@@ -349,7 +634,15 @@ def main():
     host = node.get_parameter("appAddress").get_parameter_value().string_value
     port = node.get_parameter("portApp").get_parameter_value().integer_value
 
-    app.run(host=host, port=port, debug=False)
+    ssl_context = None
+    if os.path.exists(SSL_CERT_FILE) and os.path.exists(SSL_KEY_FILE):
+        ssl_context = (SSL_CERT_FILE, SSL_KEY_FILE)
+        node.get_logger().info(f"Serving HTTPS using {SSL_CERT_FILE}")
+
+    # threaded=True so one slow/stuck connection (e.g. a browser probing with
+    # a plain-HTTP request against the HTTPS port, or a stalled TLS
+    # handshake) can't block every other client on this single process.
+    app.run(host=host, port=port, debug=False, ssl_context=ssl_context, threaded=True)
 
 
 if __name__ == "__main__":

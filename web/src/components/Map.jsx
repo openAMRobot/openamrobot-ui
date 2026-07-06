@@ -252,7 +252,7 @@ const Map = forwardRef((props, ref) => {
   return (
     <div
       ref={mapContainer}
-      className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl border border-borderSubtle bg-bgCard p-2 shadow-sm shadow-slate-200/80"
+      className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl border border-borderSubtle bg-bgCard p-2 shadow-sm shadow-slate-200/80 dark:shadow-slate-950/40"
     >
       <div
         className="relative"
@@ -269,7 +269,7 @@ const Map = forwardRef((props, ref) => {
           />
         </div>
 
-        <div className="absolute bottom-4 left-4 grid grid-cols-3 grid-rows-2 justify-items-center gap-1 rounded-xl border border-borderSubtle bg-white/85 p-1.5 shadow-lg shadow-slate-300/50 backdrop-blur">
+        <div className="absolute bottom-4 left-4 grid grid-cols-3 grid-rows-2 justify-items-center gap-1 rounded-xl border border-borderSubtle bg-bgCard/85 p-1.5 shadow-lg shadow-slate-300/50 dark:shadow-slate-950/40 backdrop-blur">
           <div />
           <MapButton
             type={"arrow"}

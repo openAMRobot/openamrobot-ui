@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.e0a0b472.css",
-    "main.js": "/static/js/main.c6659e00.js",
+    "main.css": "/static/css/main.0cd33819.css",
+    "main.js": "/static/js/main.80212dd5.js",
     "static/media/RobotoMono-Light.ttf": "/static/media/RobotoMono-Light.234f40fa88a810bad5e4.ttf",
     "static/media/RobotoMono-SemiBold.ttf": "/static/media/RobotoMono-SemiBold.caa2274ab099019bc599.ttf",
     "static/media/RobotoMono-Bold.ttf": "/static/media/RobotoMono-Bold.7211ab61a8b83177865a.ttf",
@@ -21,7 +21,7 @@
     "static/media/icon-minus.svg": "/static/media/icon-minus.5a526a59a4e149c704c4.svg"
   },
   "entrypoints": [
-    "static/css/main.e0a0b472.css",
-    "static/js/main.c6659e00.js"
+    "static/css/main.0cd33819.css",
+    "static/js/main.80212dd5.js"
   ]
 }

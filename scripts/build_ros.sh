@@ -11,6 +11,13 @@ if ! command -v colcon >/dev/null 2>&1; then
 fi
 
 cd "${WS_DIR}"
+
+INSTALLED_APP_DIR="${WS_DIR}/install/openamr_ui_package/share/openamr_ui_package/app"
+if [ -d "${INSTALLED_APP_DIR}" ]; then
+  echo "[build_ros] Cleaning stale installed frontend bundle..."
+  rm -rf "${INSTALLED_APP_DIR}"
+fi
+
 colcon build --symlink-install
 
 echo "[build_ros] OK: colcon build completed"

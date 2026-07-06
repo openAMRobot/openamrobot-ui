@@ -337,7 +337,7 @@ const RoutePage = () => {
             }
 
             setPointsSettable(false);
-            selectedFile.route = data;
+            setSelectedFile((prev) => ({ ...prev, route: data }));
             setSelectedPointType(null);
             window.NAV2D.pointType = null;
             window.NAV2D.arePointsSettable = false;
