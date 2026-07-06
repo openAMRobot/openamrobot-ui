@@ -5,9 +5,7 @@ autonomous mobile robot. It gives operators one place to see the live map,
 check where the robot is, drive it with a joystick, send it to saved locations,
 watch the camera view, dock it, and build simple routines without writing code.
 
-<video src="./docs/assets/openamrobot_ui_overview_FINAL_with_audio.mp4" controls preload="metadata" width="100%">
-  Your browser does not support the video tag.
-</video>
+[![OpenAMRobot UI overview video](docs/assets/openamrobot_ui_overview_thumbnail.png)](docs/assets/openamrobot_ui_overview_FINAL_with_audio.mp4)
 
 [Open the video directly](docs/assets/openamrobot_ui_overview_FINAL_with_audio.mp4)
 
