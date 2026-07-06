@@ -5,9 +5,7 @@ autonomous mobile robot. It gives operators one place to see the live map,
 check where the robot is, drive it with a joystick, send it to saved locations,
 watch the camera view, dock it, and build simple routines without writing code.
 
-[![OpenAMRobot UI overview video](docs/assets/openamrobot_ui_overview_thumbnail.png)](docs/assets/openamrobot_ui_overview_FINAL_with_audio.mp4)
-
-[Open the video directly](docs/assets/openamrobot_ui_overview_FINAL_with_audio.mp4)
+https://github.com/user-attachments/assets/a2007c67-8fa3-449c-ae97-f2aaa151666b
 
 Behind the scenes, this repository holds the web dashboard and the small ROS 2
 pieces that help the browser talk to the robot. The main robot or simulation
