@@ -1281,6 +1281,8 @@ you can review them before running.
 You must say the wake word "Monsieur" before your command (see
 [Wake Word](#wake-word)); speech before it is ignored.
 
+![Voice Command panel showing the wake word requirement and voice-to-plan flow](../../../../docs/assets/voicecommand.png)
+
 Flow:
 
 ```text

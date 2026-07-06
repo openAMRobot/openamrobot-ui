@@ -1,13 +1,22 @@
 # OpenAMRobot UI
 
-Standalone ROS 2 web UI workspace for OpenAMR autonomous mobile robots.
+OpenAMRobot UI is a browser dashboard for watching and controlling an
+autonomous mobile robot. It gives operators one place to see the live map,
+check where the robot is, drive it with a joystick, send it to saved locations,
+watch the camera view, dock it, and build simple routines without writing code.
 
-This repository contains the React browser dashboard, ROS 2 UI packages,
-custom UI messages, and helper scripts needed to build and run the UI. It is
-intended to live separately from the main robot or simulation workspace. The
-robot stack should start Nav2, localization, docking, Gazebo/RViz, sensors, and
-the map server. This workspace starts only the web UI, rosbridge, optional
-camera web streaming, and lightweight topic relays used by the browser.
+<video src="./docs/assets/openamrobot_ui_overview_FINAL_with_audio.mp4" controls preload="metadata" width="100%">
+  Your browser does not support the video tag.
+</video>
+
+[Open the video directly](docs/assets/openamrobot_ui_overview_FINAL_with_audio.mp4)
+
+Behind the scenes, this repository holds the web dashboard and the small ROS 2
+pieces that help the browser talk to the robot. The main robot or simulation
+workspace still starts the robot, navigation, localization, sensors, map server,
+and simulator tools. This workspace focuses on the user interface: it serves the
+web page, opens the browser-to-ROS connection, streams camera images when
+available, and passes selected robot updates to the dashboard.
 
 ## Beginner Overview
 
