@@ -50,6 +50,11 @@ const MapPage = () => {
   const queueExecutingRef = useRef(false);
   const queueIdxRef = useRef(0);
 
+  // Draw every queued waypoint on the map, not just the single in-flight goal.
+  useEffect(() => {
+    window.NAV2D?.setQueuedWaypoints?.(waypointQueue);
+  }, [waypointQueue]);
+
   const goalPoseTopic = useRef(null);
   const initialPoseTopic = useRef(null);
   const cancelClient = useRef(null);
@@ -116,6 +121,7 @@ const MapPage = () => {
         } else {
           queueExecutingRef.current = false;
           setQueueExecuting(false);
+          setWaypointQueue([]);
           toast.success("All waypoints complete!");
         }
       } else if (latest.status === 5 || latest.status === 6) {
@@ -284,23 +290,23 @@ const MapPage = () => {
         toastStyle={{ backgroundColor: "#ffffff", border: "1px solid #c9d8e6" }}
       />
 
-      <div className="flex h-[calc(100vh-72px)] min-h-0 flex-col gap-2 overflow-y-auto py-2 xl:overflow-hidden">
+      <div className="flex h-[calc(100vh-72px)] min-h-0 flex-col gap-2 overflow-y-auto py-2">
         <SystemAlerts />
         <NavStatus onCancelGoal={cancelGoal} />
         <MapLayers />
 
         {/* Map + Camera */}
         <section className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row">
-          <div className="min-h-[300px] w-full xl:h-full xl:min-h-0 xl:w-[58%]">
+          <div className="min-h-[300px] w-full xl:h-full xl:min-h-[260px] xl:w-[58%]">
             <Map ref={mapRef} />
           </div>
-          <div className="min-h-[220px] w-full xl:h-full xl:min-h-0 xl:w-[42%]">
+          <div className="min-h-[220px] w-full xl:h-full xl:min-h-[220px] xl:w-[42%]">
             <Camera />
           </div>
         </section>
 
         {/* Controls row */}
-        <section className="flex w-full shrink-0 items-stretch gap-3 xl:h-[112px]">
+        <section className="flex w-full shrink-0 items-stretch gap-3 xl:min-h-[112px]">
           {/* Joystick */}
           <div className="flex w-[110px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-borderSubtle bg-bgCard p-2 sm:w-[124px] 2xl:w-[136px]">
             <p className="font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
