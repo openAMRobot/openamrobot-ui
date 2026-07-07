@@ -289,6 +289,8 @@ export const registerOpenAmrBlocks = () => {
   }
 };
 
+const DEFAULT_NAV_WAIT_TIMEOUT = 60;
+
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -318,15 +320,26 @@ const sequenceToRobotPlan = (firstBlock) => {
   return plan;
 };
 
+// If the user already chained an explicit "wait until navigation complete"
+// block after this one, skip auto-inserting a second one on top of it.
+const hasExplicitNavWaitNext = (block) =>
+  block.getNextBlock()?.type === "openamr_wait_nav_complete";
+
 const blockToAction = (block) => {
   switch (block.type) {
-    case "openamr_navigate":
-      return {
+    case "openamr_navigate": {
+      const navigateAction = {
         type: "navigate",
         x: toNumber(block.getFieldValue("X")),
         y: toNumber(block.getFieldValue("Y")),
         yaw: toNumber(block.getFieldValue("YAW")),
       };
+      if (hasExplicitNavWaitNext(block)) return navigateAction;
+      return [
+        navigateAction,
+        { type: "wait_nav_complete", timeout: DEFAULT_NAV_WAIT_TIMEOUT },
+      ];
+    }
     case "openamr_wait":
       return {
         type: "wait",
@@ -356,12 +369,17 @@ const blockToAction = (block) => {
       const location = block.getFieldValue("LOCATION");
       const pose =
         OPEN_AMR_LOCATIONS[location] || DEFAULT_OPEN_AMR_LOCATIONS[location];
-      return {
+      const navigateAction = {
         type: "navigate",
         location,
         missingLocation: !pose,
         ...(pose || { x: 0, y: 0, yaw: 0 }),
       };
+      if (hasExplicitNavWaitNext(block)) return navigateAction;
+      return [
+        navigateAction,
+        { type: "wait_nav_complete", timeout: DEFAULT_NAV_WAIT_TIMEOUT },
+      ];
     }
     case "openamr_wait_nav_complete":
       return {
@@ -388,10 +406,10 @@ const blockToAction = (block) => {
         ),
         actions: [
           pointAction("A", block),
-          { type: "wait_nav_complete", timeout: 60 },
+          { type: "wait_nav_complete", timeout: DEFAULT_NAV_WAIT_TIMEOUT },
           { type: "wait", seconds: wait },
           pointAction("B", block),
-          { type: "wait_nav_complete", timeout: 60 },
+          { type: "wait_nav_complete", timeout: DEFAULT_NAV_WAIT_TIMEOUT },
           { type: "wait", seconds: wait },
         ],
       };

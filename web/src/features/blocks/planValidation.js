@@ -20,11 +20,6 @@ const collectActions = (actions, depth = 0) =>
     ...collectActions(actionChildren(action), depth + 1),
   ]);
 
-const hasNavigationWaitAfter = (actions, index) =>
-  actions
-    .slice(index + 1)
-    .some((action) => action.type === "wait_nav_complete");
-
 const blockTypeLabel = (type) =>
   type
     .replace(/^openamr_/, "")
@@ -136,14 +131,6 @@ export const validateRobotPlan = (workspace, plan) => {
       });
     }
 
-    if (action.type === "navigate" && !hasNavigationWaitAfter(plan, index)) {
-      messages.push({
-        severity: "warning",
-        text: `Step ${
-          index + 1
-        }: add wait until navigation complete after navigation if the next action depends on arrival.`,
-      });
-    }
   });
 
   return messages;

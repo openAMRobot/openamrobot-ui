@@ -19,6 +19,9 @@ window.NAV2D.robotMarker = null;
 window.NAV2D.scanShape = null;
 window.NAV2D.robotTrailShape = null;
 window.NAV2D.robotTrail = [];
+window.NAV2D.costmapItem = null;
+window.NAV2D.costmapTopic = null;
+window.NAV2D.queuedWaypointItems = [];
 window.NAV2D.layerState = {
   map: true,
   costmap: false,
@@ -255,6 +258,11 @@ window.NAV2D.InitMap = (ros) => {
     window.NAV2D.mapInited = true;
     navigator(ros);
   }
+
+  // Re-establish the costmap stream if it was left enabled across a remount.
+  if (window.NAV2D.layerState?.costmap) {
+    ensureCostmapSubscription();
+  }
 };
 
 // Cleaning map
@@ -312,9 +320,9 @@ const applyLayerState = () => {
   if (window.NAV2D.mapClient?.currentGrid) {
     window.NAV2D.mapClient.currentGrid.visible = state.map !== false;
   }
-  if (window.NAV2D.costmapClient?.currentGrid) {
-    window.NAV2D.costmapClient.currentGrid.visible = state.costmap !== false;
-    window.NAV2D.costmapClient.currentGrid.alpha = opacity.costmap ?? 0.35;
+  if (window.NAV2D.costmapItem) {
+    window.NAV2D.costmapItem.visible = state.costmap !== false;
+    window.NAV2D.costmapItem.alpha = opacity.costmap ?? 0.35;
   }
   if (window.NAV2D.scanShape) {
     window.NAV2D.scanShape.visible = state.scan !== false;
@@ -333,6 +341,71 @@ const applyLayerState = () => {
   (window.NAV2D.pointsArray || []).forEach((marker) => {
     marker.visible = state.waypoints !== false;
   });
+  (window.NAV2D.queuedWaypointItems || []).forEach((marker) => {
+    marker.visible = state.waypoints !== false;
+  });
+};
+
+// Costmap grids are large and expensive through rosbridge, so only subscribe
+// while the layer is actually toggled on; tear down when it's hidden again.
+const ensureCostmapSubscription = () => {
+  if (window.NAV2D.costmapTopic) return;
+  const ros = window.NAV2D.ros;
+  if (!ros) return;
+
+  window.NAV2D.costmapTopic = createSubscribeTopic(
+    ros,
+    TOPICS.globalCostmap,
+    "nav_msgs/OccupancyGrid",
+    (message) => {
+      const scene = getScene();
+      if (!scene) return;
+
+      const mapGrid = window.NAV2D.mapClient?.currentGrid;
+      const insertIndex = window.NAV2D.costmapItem
+        ? scene.getChildIndex(window.NAV2D.costmapItem)
+        : mapGrid
+          ? scene.getChildIndex(mapGrid) + 1
+          : 0;
+
+      if (window.NAV2D.costmapItem) {
+        try {
+          scene.removeChild(window.NAV2D.costmapItem);
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      const grid = new window.ROS2D.OccupancyGrid({ message });
+      grid.alpha = window.NAV2D.layerOpacity?.costmap ?? 0.35;
+      grid.visible = window.NAV2D.layerState?.costmap !== false;
+      scene.addChildAt(grid, Math.max(insertIndex, 0));
+
+      window.NAV2D.costmapItem = grid;
+      bringNavigationOverlaysToFront(scene);
+    },
+  );
+};
+
+const teardownCostmapSubscription = () => {
+  if (window.NAV2D.costmapTopic) {
+    try {
+      window.NAV2D.costmapTopic.unsubscribe();
+    } catch (e) {
+      // ignore
+    }
+    window.NAV2D.costmapTopic = null;
+  }
+
+  const scene = getScene();
+  if (scene && window.NAV2D.costmapItem) {
+    try {
+      scene.removeChild(window.NAV2D.costmapItem);
+    } catch (e) {
+      // ignore
+    }
+  }
+  window.NAV2D.costmapItem = null;
 };
 
 window.NAV2D.setLayerVisible = (layer, visible) => {
@@ -340,7 +413,46 @@ window.NAV2D.setLayerVisible = (layer, visible) => {
     ...window.NAV2D.layerState,
     [layer]: visible,
   };
+
+  if (layer === "costmap") {
+    if (visible) ensureCostmapSubscription();
+    else teardownCostmapSubscription();
+  }
+
   applyLayerState();
+};
+
+// Renders the client-side (not-yet-executed) waypoint queue as persistent
+// markers, distinct from the single in-flight goal marker and the backend's
+// own /WayPoints_topic markers.
+window.NAV2D.setQueuedWaypoints = (poses) => {
+  const scene = getScene();
+  if (!scene) return;
+
+  (window.NAV2D.queuedWaypointItems || []).forEach((marker) => {
+    try {
+      scene.removeChild(marker);
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  window.NAV2D.queuedWaypointItems = (poses || []).map((pose) => {
+    const marker = createCanvasPoint(16, { r: 8, g: 126, b: 164, a: 1 });
+    marker.x = pose.position.x;
+    marker.y = -pose.position.y;
+    marker.rotation = scene.rosQuaternionToGlobalTheta(pose.orientation);
+    scaleMarkerToScene(marker, scene);
+    marker.visible = window.NAV2D.layerState?.waypoints !== false;
+    scene.addChild(marker);
+    return marker;
+  });
+
+  bringNavigationOverlaysToFront(scene);
+};
+
+window.NAV2D.clearQueuedWaypoints = () => {
+  window.NAV2D.setQueuedWaypoints([]);
 };
 
 window.NAV2D.setLayerOpacity = (layer, opacity) => {

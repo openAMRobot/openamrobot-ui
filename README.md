@@ -1,13 +1,18 @@
 # OpenAMRobot UI
 
-Standalone ROS 2 web UI workspace for OpenAMRobot and other autonomous mobile robots.
+OpenAMRobot UI is a browser dashboard for watching and controlling an
+autonomous mobile robot. It gives operators one place to see the live map,
+check where the robot is, drive it with a joystick, send it to saved locations,
+watch the camera view, dock it, and build simple routines without writing code.
 
-This repository contains the React browser dashboard, ROS 2 UI packages,
-custom UI messages, and helper scripts needed to build and run the UI. It is
-intended to live separately from the main robot or simulation workspace. The
-robot stack should start Nav2, localization, docking, Gazebo/RViz, sensors, and
-the map server. This workspace starts only the web UI, rosbridge, optional
-camera web streaming, and lightweight topic relays used by the browser.
+https://github.com/user-attachments/assets/a2007c67-8fa3-449c-ae97-f2aaa151666b
+
+Behind the scenes, this repository holds the web dashboard and the small ROS 2
+pieces that help the browser talk to the robot. The main robot or simulation
+workspace still starts the robot, navigation, localization, sensors, map server,
+and simulator tools. This workspace focuses on the user interface: it serves the
+web page, opens the browser-to-ROS connection, streams camera images when
+available, and passes selected robot updates to the dashboard.
 
 ## Beginner Overview
 
@@ -498,6 +503,11 @@ start robot program
   dock robot
 ```
 
+Every `navigate to x/y/yaw` or `navigate to location` block automatically
+waits for Nav2 to report arrival (60s default timeout) before the next block
+runs. Add an explicit `wait until navigation complete timeout N seconds`
+block yourself only if you need a different timeout than the default.
+
 Common Blockly categories include:
 
 | Category    | Examples                                                                         |
@@ -726,7 +736,7 @@ space, walls, and unknown areas are rendered from the map data published by the
 robot or simulation stack and relayed by `map_relay`. The blue robot marker
 shows the current robot pose from odometry, TF, and AMCL-related updates. When
 navigation data is available, the page can also show the planned path, route
-waypoints, goal marker, laser scan, global costmap, local costmap, and trail.
+waypoints, goal marker, laser scan, global costmap, and trail.
 
 The layer controls let you turn map overlays on or off without restarting ROS.
 This is useful when debugging navigation: keep the map and robot visible for
@@ -939,8 +949,7 @@ Common topics:
 | `/cmd_vel`                    | UI publishes    | Manual velocity commands                                      |
 | `/odom`                       | UI subscribes   | Robot pose and velocity                                       |
 | `/ui/map`                     | UI subscribes   | Browser-friendly occupancy grid relay                         |
-| `/global_costmap/costmap`     | UI subscribes   | Global costmap layer                                          |
-| `/local_costmap/costmap`      | UI subscribes   | Local costmap layer                                           |
+| `/global_costmap/costmap`     | UI subscribes   | Global costmap layer (only while the Costmap layer is enabled) |
 | `/scan_filtered`              | UI subscribes   | Laser scan layer                                              |
 | `/plan`                       | UI subscribes   | Planned path                                                  |
 | `/tf`, `/tf_static`           | UI subscribes   | Robot/map transforms                                          |
