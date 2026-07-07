@@ -223,6 +223,13 @@ const Map = forwardRef((props, ref) => {
           } catch (e) {}
           window.NAV2D.scanTopic = null;
         }
+        if (window.NAV2D.costmapTopic) {
+          try {
+            window.NAV2D.costmapTopic.unsubscribe();
+          } catch (e) {}
+          window.NAV2D.costmapTopic = null;
+        }
+        window.NAV2D.costmapItem = null;
       }
     };
   }, [ros, createCanvasContainer]);

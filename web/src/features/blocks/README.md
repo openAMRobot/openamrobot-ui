@@ -350,8 +350,10 @@ These blocks send navigation goals or wait for navigation.
 | `wait until navigation complete timeout N seconds` | Waits for Nav2 status success, cancel, failure, or timeout |
 | `patrol A ... B ... repeat N times wait S seconds` | Moves between two map points repeatedly                    |
 
-Place `wait until navigation complete` after a navigation block when later
-steps must wait for the robot to arrive.
+Every navigation block already waits for arrival automatically (60s default
+timeout) before the next block runs. Place an explicit
+`wait until navigation complete` after a navigation block only when you want a
+different timeout than the default.
 
 ### Motion
 
@@ -515,9 +517,10 @@ yaw -1.57  = face right 90 degrees
 yaw 3.14   = face backward
 ```
 
-Important: the `navigate` block publishes the goal and continues immediately.
-Add `wait until navigation complete` after it when the next step should wait for
-arrival.
+The `navigate` block automatically waits for Nav2 to report arrival (60s
+default timeout) before the next block runs, so the
+`wait until navigation complete` block in the example above is optional here.
+Add it explicitly only when you want a different timeout than the default.
 
 #### `navigate to location NAME`
 
@@ -1050,8 +1053,10 @@ start robot program
   wait 2 seconds
 ```
 
-This is better than only using `navigate`, because the next block waits until
-navigation finishes.
+`navigate` already waits for arrival by default, so the explicit
+`wait until navigation complete` here is only needed to set a custom timeout;
+remove it and `navigate` still waits (with the default 60s timeout) before the
+`wait 2 seconds` block runs.
 
 ### 4. Navigate To Charging Station And Dock
 
@@ -1280,6 +1285,8 @@ you can review them before running.
 
 You must say the wake word "Monsieur" before your command (see
 [Wake Word](#wake-word)); speech before it is ignored.
+
+![Voice Command panel showing the wake word requirement and voice-to-plan flow](../../../../docs/assets/voicecommand.png)
 
 Flow:
 
