@@ -503,6 +503,11 @@ start robot program
   dock robot
 ```
 
+Every `navigate to x/y/yaw` or `navigate to location` block automatically
+waits for Nav2 to report arrival (60s default timeout) before the next block
+runs. Add an explicit `wait until navigation complete timeout N seconds`
+block yourself only if you need a different timeout than the default.
+
 Common Blockly categories include:
 
 | Category    | Examples                                                                         |
@@ -731,7 +736,7 @@ space, walls, and unknown areas are rendered from the map data published by the
 robot or simulation stack and relayed by `map_relay`. The blue robot marker
 shows the current robot pose from odometry, TF, and AMCL-related updates. When
 navigation data is available, the page can also show the planned path, route
-waypoints, goal marker, laser scan, global costmap, local costmap, and trail.
+waypoints, goal marker, laser scan, global costmap, and trail.
 
 The layer controls let you turn map overlays on or off without restarting ROS.
 This is useful when debugging navigation: keep the map and robot visible for
@@ -944,8 +949,7 @@ Common topics:
 | `/cmd_vel`                    | UI publishes    | Manual velocity commands                                      |
 | `/odom`                       | UI subscribes   | Robot pose and velocity                                       |
 | `/ui/map`                     | UI subscribes   | Browser-friendly occupancy grid relay                         |
-| `/global_costmap/costmap`     | UI subscribes   | Global costmap layer                                          |
-| `/local_costmap/costmap`      | UI subscribes   | Local costmap layer                                           |
+| `/global_costmap/costmap`     | UI subscribes   | Global costmap layer (only while the Costmap layer is enabled) |
 | `/scan_filtered`              | UI subscribes   | Laser scan layer                                              |
 | `/plan`                       | UI subscribes   | Planned path                                                  |
 | `/tf`, `/tf_static`           | UI subscribes   | Robot/map transforms                                          |
