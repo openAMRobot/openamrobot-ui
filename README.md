@@ -14,6 +14,13 @@ and simulator tools. This workspace focuses on the user interface: it serves the
 web page, opens the browser-to-ROS connection, streams camera images when
 available, and passes selected robot updates to the dashboard.
 
+> [!NOTE]
+> This repository is part of the **OpenAMRobot vX.X.X** release.
+>
+> Download the complete product release (Hardware + Software + Firmware + UI + Documentation) here:
+>
+> **https://github.com/openAMRobot/openamrobot-release/releases/latest**
+
 ## Beginner Overview
 
 There are two different workspaces involved when using the UI with a robot or
