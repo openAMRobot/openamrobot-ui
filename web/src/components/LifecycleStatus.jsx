@@ -1,13 +1,6 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import { RosContext } from "../app/App";
-
-const NODES = [
-  { name: "map_server", base: "/map_server" },
-  { name: "amcl", base: "/amcl" },
-  { name: "controller", base: "/controller_server" },
-  { name: "planner", base: "/planner_server" },
-  { name: "bt_navigator", base: "/bt_navigator" },
-];
+import React, { useEffect, useRef, useState } from "react";
+import { useRos } from "../app/App";
+import { LIFECYCLE_NODES as NODES } from "../shared/constants";
 
 const TRANSITIONS = {
   configure: 1,
@@ -30,15 +23,23 @@ const DOTS = {
   unknown: "bg-themeTextGray",
 };
 
+const EXPLANATIONS = {
+  active: "Configured and running normally.",
+  inactive: "Configured but idle — call Activate to bring it online.",
+  unconfigured: "Not configured yet — call Configure, or it's a fresh restart. Normal right after Nav2 launches, before activation.",
+  unknown: "get_state didn't respond — the node may not be running, rosbridge may be disconnected, or the service name doesn't match.",
+};
+
 const normalizeState = (label) => (label || "unknown").toLowerCase();
 
 const LifecycleStatus = ({ compact = false }) => {
-  const ros = useContext(RosContext);
+  const ros = useRos();
   const clientsRef = useRef({});
   const changeClientsRef = useRef({});
   const [states, setStates] = useState(() =>
     Object.fromEntries(NODES.map(({ name }) => [name, "unknown"])),
   );
+  const [showLegend, setShowLegend] = useState(false);
 
   useEffect(() => {
     if (!ros || !window.ROSLIB) return;
@@ -107,7 +108,25 @@ const LifecycleStatus = ({ compact = false }) => {
           <p className="text-xs uppercase tracking-wider text-themeTextGray">
             Lifecycle
           </p>
+          <button
+            onClick={() => setShowLegend((v) => !v)}
+            aria-label="What do these states mean?"
+            title="What do these states mean?"
+            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-borderSubtle text-[10px] text-themeTextGray hover:border-themeBlue hover:text-themeBlue"
+          >
+            ?
+          </button>
         </div>
+
+        {showLegend && (
+          <div className="mb-2 space-y-1 rounded-lg bg-bgSurface p-2 text-[10px] leading-snug text-themeTextGray">
+            {Object.entries(EXPLANATIONS).map(([state, text]) => (
+              <p key={state}>
+                <span className={`font-semibold ${COLORS[state]}`}>{state}</span>: {text}
+              </p>
+            ))}
+          </div>
+        )}
 
         <div className="mb-2 grid grid-cols-2 gap-1.5">
           <button
@@ -146,7 +165,9 @@ const LifecycleStatus = ({ compact = false }) => {
               >
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOTS[state] || DOTS.unknown}`}
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                      DOTS[state] || DOTS.unknown
+                    }`}
                   />
                   <span className="truncate text-textWhiteHover">
                     {name.replace("_server", "").replace("bt_navigator", "bt")}
@@ -165,9 +186,7 @@ const LifecycleStatus = ({ compact = false }) => {
 
   return (
     <div
-      className={`rounded-xl border border-borderSubtle bg-bgCard font-[RobotoMono] ${
-        compact ? "p-3" : "p-4"
-      }`}
+      className={`dashboard-card font-[RobotoMono] ${compact ? "p-3" : "p-4"}`}
     >
       <p className="mb-2 text-xs uppercase tracking-wider text-themeTextGray">
         Lifecycle
@@ -198,14 +217,20 @@ const LifecycleStatus = ({ compact = false }) => {
           Cleanup
         </button>
       </div>
-      <div className={`grid gap-1.5 ${compact ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
+      <div
+        className={`grid gap-1.5 ${
+          compact ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"
+        }`}
+      >
         {NODES.map(({ name }) => {
           const state = states[name] || "unknown";
           return (
             <div key={name} className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span
-                  className={`h-2 w-2 rounded-full ${DOTS[state] || DOTS.unknown}`}
+                  className={`h-2 w-2 rounded-full ${
+                    DOTS[state] || DOTS.unknown
+                  }`}
                 />
                 <span className="text-xs text-textWhiteHover">{name}</span>
               </div>

@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import ipaddress
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
@@ -10,11 +11,82 @@ from flask import Flask, abort, jsonify, request, send_from_directory
 from ament_index_python.packages import get_package_share_directory
 from werkzeug.exceptions import HTTPException
 
+import xacro
+
+# ─────────────────────────────────────────────────────────────────────────
+# AUTH_MODE — open-source access model
+#
+# This UI must stay fully usable with zero authentication out of the box
+# (open-source, self-hosted, offline-first — see project design notes).
+# AUTH_MODE is an opt-in deployment switch for maintainers who need to lock
+# down a shared/classroom/lab robot, not a feature this app forces on
+# anyone:
+#   open     - default. No login. (only implemented mode right now)
+#   local    - backend-validated credentials/sessions for shared installs.
+#              NOT IMPLEMENTED YET: there is no user store, session/cookie
+#              handling, or password hashing in this codebase. Requesting
+#              it does not silently no-op into "unprotected" — it falls
+#              back to open and says so loudly (see AUTH_MODE_WARNING),
+#              because a maintainer believing they enabled auth when they
+#              didn't is worse than the current, honest "wide open" state.
+#   external - future OIDC/OAuth or authenticated-reverse-proxy support.
+#              NOT IMPLEMENTED YET, same reasoning as local.
+# Whichever mode is eventually real, it must be enforced here in the
+# backend — hiding frontend routes/buttons is never authorization.
+# ─────────────────────────────────────────────────────────────────────────
+VALID_AUTH_MODES = {"open", "local", "external"}
+IMPLEMENTED_AUTH_MODES = {"open"}
+
+REQUESTED_AUTH_MODE = os.environ.get("AUTH_MODE", "open").strip().lower()
+if REQUESTED_AUTH_MODE not in VALID_AUTH_MODES:
+    print(
+        f"[openamr_ui] WARNING: unknown AUTH_MODE={REQUESTED_AUTH_MODE!r}; "
+        "falling back to 'open'. Valid values: open, local, external.",
+        flush=True,
+    )
+    REQUESTED_AUTH_MODE = "open"
+
+if REQUESTED_AUTH_MODE in IMPLEMENTED_AUTH_MODES:
+    AUTH_MODE = REQUESTED_AUTH_MODE
+    AUTH_MODE_WARNING = None
+else:
+    AUTH_MODE = "open"
+    AUTH_MODE_WARNING = (
+        f"AUTH_MODE={REQUESTED_AUTH_MODE!r} was requested but is not implemented "
+        "in this version yet — running with AUTH_MODE=open (no authentication)."
+    )
+    print(f"[openamr_ui] WARNING: {AUTH_MODE_WARNING}", flush=True)
+
+
+def is_local_address(addr):
+    """True if addr is a loopback/private/link-local IP (i.e. "this network"),
+    used only to warn operators in AUTH_MODE=open — not an access control."""
+    if not addr:
+        return False
+    try:
+        ip = ipaddress.ip_address(addr)
+    except ValueError:
+        return False
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
+    return bool(ip.is_private or ip.is_loopback or ip.is_link_local)
+
 # React build is installed to share/openamr_ui_package/static/app/ by setup.py
 SHARE_DIR = get_package_share_directory("openamr_ui_package")
 REACT_BUILD_DIR = os.path.join(SHARE_DIR, "app")
 REACT_STATIC_DIR = os.path.join(REACT_BUILD_DIR, "static")
 REACT_ROS_DIR = os.path.join(REACT_BUILD_DIR, "ros")
+
+# Vendored URDF/Xacro + meshes for the Robot Description page, installed to
+# share/openamr_ui_package/robot_description/openamrobot/ by setup.py.
+# Source of truth: openAMRobot/openamr-platform-sw's openamrobot_description
+# ROS package. Kept as a data subfolder here (not a second ROS package of the
+# same name) so this UI workspace never collides with the real robot-software
+# workspace if the two are ever colcon-built together.
+ROBOT_DESC_NAME = "openamrobot"
+ROBOT_DESC_DIR = os.path.join(SHARE_DIR, "robot_description", ROBOT_DESC_NAME)
+ROBOT_DESC_XACRO = os.path.join(ROBOT_DESC_DIR, "urdf", "robo_urdf.urdf.xacro")
+_robot_urdf_cache = {"mtime": None, "xml": None}
 
 # Make Flask serve /static/* from the CRA build folder
 app = Flask(__name__, static_folder=REACT_STATIC_DIR, static_url_path="/static")
@@ -407,6 +479,21 @@ def handle_http_error(error):
     return error
 
 
+@app.route("/api/auth/status", methods=["GET"])
+def auth_status():
+    remote_addr = request.remote_addr
+    return jsonify(
+        {
+            "mode": AUTH_MODE,
+            "requestedMode": REQUESTED_AUTH_MODE,
+            "implemented": REQUESTED_AUTH_MODE in IMPLEMENTED_AUTH_MODES,
+            "warning": AUTH_MODE_WARNING,
+            "remoteAddr": remote_addr,
+            "isLocalNetwork": is_local_address(remote_addr),
+        }
+    )
+
+
 @app.route("/api/block-programs", methods=["GET"])
 def list_block_programs():
     ensure_block_programs_dir()
@@ -585,6 +672,106 @@ def create_voice_plan():
     plan = sanitize_plan_actions(raw_actions)
 
     return jsonify({"plan": plan, "transcript": transcript})
+
+
+def get_robot_description_urdf_xml():
+    """Xacro-process the vendored robot description, cached by file mtime.
+
+    Re-reads gazebo_control.xacro's mtime too since it's xacro:included by
+    the main file and edits there should also invalidate the cache.
+    """
+    if not os.path.exists(ROBOT_DESC_XACRO):
+        abort(404, "Robot description xacro not found on this install.")
+
+    included = os.path.join(os.path.dirname(ROBOT_DESC_XACRO), "gazebo_control.xacro")
+    try:
+        mtime = (
+            os.path.getmtime(ROBOT_DESC_XACRO),
+            os.path.getmtime(included) if os.path.exists(included) else 0,
+        )
+    except OSError as error:
+        abort(500, f"Could not stat robot description files: {error}")
+
+    if _robot_urdf_cache["mtime"] == mtime and _robot_urdf_cache["xml"] is not None:
+        return _robot_urdf_cache["xml"]
+
+    try:
+        doc = xacro.process_file(ROBOT_DESC_XACRO)
+        xml_text = doc.toxml()
+    except Exception as error:  # xacro raises plain Exception/xml errors
+        abort(500, f"Xacro processing failed: {error}")
+
+    _robot_urdf_cache["mtime"] = mtime
+    _robot_urdf_cache["xml"] = xml_text
+    return xml_text
+
+
+@app.route("/api/robot-description/manifest", methods=["GET"])
+def robot_description_manifest():
+    xacro_exists = os.path.exists(ROBOT_DESC_XACRO)
+    return jsonify(
+        {
+            "name": "robo_urdf",
+            "displayName": "OpenAMRobot",
+            "package": "openamrobot_description",
+            "sourceRepo": "openAMRobot/openamr-platform-sw",
+            "available": xacro_exists,
+            "urdfUrl": "/api/robot-description/urdf",
+            "assetBaseUrl": "/api/robot-description/assets",
+            "packages": {"openamrobot_description": "/api/robot-description/assets"},
+        }
+    )
+
+
+@app.route("/api/robot-description/urdf", methods=["GET"])
+def robot_description_urdf():
+    xml_text = get_robot_description_urdf_xml()
+    return app.response_class(xml_text, mimetype="application/xml")
+
+
+@app.route("/api/robot-description/assets/<path:filename>", methods=["GET"])
+def robot_description_assets(filename: str):
+    # filename comes straight from the URL path — normalize and confirm the
+    # resolved path stays inside ROBOT_DESC_DIR before serving anything.
+    requested = os.path.normpath(os.path.join(ROBOT_DESC_DIR, filename))
+    if not requested.startswith(os.path.join(ROBOT_DESC_DIR, "")):
+        abort(404, "Asset not found.")
+    if not os.path.isfile(requested):
+        abort(404, "Asset not found.")
+
+    rel_dir = os.path.dirname(filename)
+    rel_name = os.path.basename(filename)
+    return send_from_directory(os.path.join(ROBOT_DESC_DIR, rel_dir), rel_name)
+
+
+@app.route("/api/devices/serial-ports", methods=["GET"])
+def list_serial_ports():
+    """Real serial ports currently present on this host (USB/Pi-attached).
+
+    This is genuine detection, not a stand-in for full USB/CAN plug-and-play
+    support: it only sees serial devices on the machine running this Flask
+    process, via pyserial's udev-backed enumeration. Every Linux box also
+    exposes /dev/ttyS0-31 legacy platform serial ports whether or not
+    anything is attached to them; pyserial reports hwid "n/a" for those, so
+    they're filtered out here to avoid a permanently-populated fake list.
+    """
+    try:
+        from serial.tools import list_ports
+    except ImportError:
+        return jsonify({"ports": [], "supported": False})
+
+    ports = [
+        {
+            "device": port.device,
+            "description": port.description if port.description != "n/a" else None,
+            "manufacturer": port.manufacturer,
+            "vid": port.vid,
+            "pid": port.pid,
+        }
+        for port in list_ports.comports()
+        if port.hwid and port.hwid != "n/a"
+    ]
+    return jsonify({"ports": ports, "supported": True})
 
 
 @app.route("/ros/<path:filename>")

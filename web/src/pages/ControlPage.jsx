@@ -1,15 +1,9 @@
-import React, {
-  useContext,
-  useRef,
-  useEffect,
-  useCallback,
-  useState,
-} from "react";
+import React, { useRef, useEffect, useCallback, useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { AppConfig } from "../shared/constants/index";
-import { RosContext } from "../app/App";
+import { useRos, useRuntimeConfig } from "../app/App";
 
 import Map from "../components/Map";
 import Joystick from "../components/Joystick";
@@ -27,7 +21,8 @@ const INITIAL_POSE_COV = [
 ];
 
 const ControlPage = () => {
-  const ros = useContext(RosContext);
+  const ros = useRos();
+  const { config } = useRuntimeConfig();
   const mapRef = useRef(null);
 
   // mode: null | 'goal' | 'pose'
@@ -38,7 +33,7 @@ const ControlPage = () => {
     setModeState(m);
   };
 
-  const [maxSpeed, setMaxSpeed] = useState(AppConfig.MAX_LINEAR_SPEED);
+  const [maxSpeed, setMaxSpeed] = useState(config.maxLinearSpeed);
 
   const goalPoseTopic = useRef(null);
   const initialPoseTopic = useRef(null);
@@ -63,7 +58,7 @@ const ControlPage = () => {
 
     cancelClient.current = new window.ROSLIB.Service({
       ros,
-      name: "/navigate_to_pose/_action/cancel_goal",
+      name: AppConfig.NAV_CANCEL_GOAL_SERVICE,
       serviceType: "action_msgs/CancelGoal",
     });
 
@@ -232,7 +227,9 @@ const ControlPage = () => {
             : "border-borderSubtle bg-bgCard text-themeBlue hover:border-themeBlue"
         }`}
       >
-        <span className="sm:hidden">{active ? shortActiveLabel : shortLabel}</span>
+        <span className="sm:hidden">
+          {active ? shortActiveLabel : shortLabel}
+        </span>
         <span className="hidden sm:inline">{active ? activeLabel : label}</span>
       </button>
     );
@@ -240,13 +237,9 @@ const ControlPage = () => {
 
   return (
     <>
-      <ToastContainer
-        position="bottom-right"
-        theme="light"
-        toastStyle={{ backgroundColor: "#ffffff", border: "1px solid #c9d8e6" }}
-      />
+      <ToastContainer position="bottom-right" theme="dark" />
 
-      <div className="flex h-[calc(100vh-72px)] min-h-0 flex-col gap-3 overflow-y-auto py-3 xl:flex-row xl:overflow-hidden">
+      <div className="flex h-[calc(100vh-104px)] min-h-0 flex-col gap-3 overflow-y-auto py-3 xl:flex-row xl:overflow-hidden">
         {/* Left: Map */}
         <section className="flex min-h-0 w-full flex-col gap-2 xl:w-[60%]">
           <SystemAlerts />
@@ -259,7 +252,13 @@ const ControlPage = () => {
           {/* Map controls */}
           <div className="flex shrink-0 gap-2">
             {modeBtn("○ Goal Mode", "Goal", "goal", "● Goal Mode ON", "● Goal")}
-            {modeBtn("⊕ Set Pose", "Pose", "pose", "● Click to Set Pose", "● Pose")}
+            {modeBtn(
+              "⊕ Set Pose",
+              "Pose",
+              "pose",
+              "● Click to Set Pose",
+              "● Pose",
+            )}
             <button
               onClick={sendHome}
               className="flex-1 rounded-xl border border-borderSubtle bg-bgCard px-2 py-3 font-[RobotoMono] text-[10px] text-textWhiteHover transition-colors hover:border-themeBlue hover:text-themeBlue sm:px-3 sm:text-sm"
@@ -274,16 +273,16 @@ const ControlPage = () => {
           <div className="grid gap-3 sm:grid-cols-[150px_1fr] xl:min-h-0">
             {/* Emergency stop */}
             <div className="flex items-center justify-center">
-            <button
-              onClick={emergencyStop}
-              className="h-[104px] w-[104px] rounded-full border-4 border-statusRed bg-statusRed/10 font-[RobotoMono] text-base font-bold text-statusRed shadow-lg shadow-red-200 dark:shadow-red-900/30 transition-all hover:bg-statusRed hover:text-white"
-            >
-              STOP
-            </button>
+              <button
+                onClick={emergencyStop}
+                className="h-[104px] w-[104px] rounded-full border-4 border-statusRed bg-statusRed/10 font-[RobotoMono] text-base font-bold text-statusRed shadow-lg shadow-red-200 transition-all hover:bg-statusRed hover:text-white dark:shadow-red-900/30"
+              >
+                STOP
+              </button>
             </div>
 
             {/* Speed slider */}
-            <div className="flex flex-col justify-center rounded-xl border border-borderSubtle bg-bgCard p-3 font-[RobotoMono]">
+            <div className="dashboard-card flex flex-col justify-center p-3 font-[RobotoMono]">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-xs uppercase tracking-wider text-themeTextGray">
                   Max Speed
@@ -310,7 +309,7 @@ const ControlPage = () => {
 
           <div className="grid min-h-0 gap-3 sm:grid-cols-[180px_1fr]">
             {/* Joystick */}
-            <div className="flex min-h-0 flex-col items-center justify-center gap-1 rounded-xl border border-borderSubtle bg-bgCard p-3">
+            <div className="dashboard-card flex min-h-0 flex-col items-center justify-center gap-1 p-3">
               <p className="font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
                 Manual Drive
               </p>
@@ -323,7 +322,7 @@ const ControlPage = () => {
 
           <MapLayers />
 
-          <div className="grid min-h-0 grid-cols-[1.15fr_0.85fr] gap-4 rounded-xl border border-borderSubtle bg-bgCard p-4">
+          <div className="dashboard-card grid min-h-0 grid-cols-1 gap-4 p-4 sm:grid-cols-[1.15fr_0.85fr]">
             <div className="min-h-0">
               <SystemHealth compact />
             </div>

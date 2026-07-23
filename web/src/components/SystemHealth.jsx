@@ -1,6 +1,5 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import { RosContext } from "../app/App";
-import { RosStatusContext } from "../app/App";
+import React, { useEffect, useRef, useState } from "react";
+import { useRos, useRosStatus } from "../app/App";
 import { AppConfig } from "../shared/constants";
 
 // Streaming topics: health = message received within timeout ms
@@ -78,8 +77,8 @@ const hasTfEdge = (edges, from, to) =>
   edges.has(`${from}->${to}`) || edges.has(`${to}->${from}`);
 
 const SystemHealth = ({ compact = false }) => {
-  const ros = useContext(RosContext);
-  const rosbridgeStatus = useContext(RosStatusContext);
+  const ros = useRos();
+  const rosbridgeStatus = useRosStatus();
   const topicStats = useRef({});
   const tfEdges = useRef(new Set());
   const [health, setHealth] = useState(() =>
@@ -90,7 +89,9 @@ const SystemHealth = ({ compact = false }) => {
   );
   const [stats, setStats] = useState({});
   const [tfLinks, setTfLinks] = useState(() =>
-    Object.fromEntries(TF_LINKS.map(([from, to]) => [`${from}->${to}`, "unknown"])),
+    Object.fromEntries(
+      TF_LINKS.map(([from, to]) => [`${from}->${to}`, "unknown"]),
+    ),
   );
 
   // Subscribe to streaming topics and stamp lastSeen on each message
@@ -103,7 +104,11 @@ const SystemHealth = ({ compact = false }) => {
         name: topic,
         messageType: type,
         throttle_rate:
-          key === "scan" ? 1000 : key === "costmap" || key === "map" ? 3000 : 500,
+          key === "scan"
+            ? 1000
+            : key === "costmap" || key === "map"
+            ? 3000
+            : 500,
         queue_length: 1,
       });
       t.subscribe(() => {
@@ -119,7 +124,10 @@ const SystemHealth = ({ compact = false }) => {
           last: now,
           count: elapsed > 3000 ? 1 : nextCount,
           windowStart: elapsed > 3000 ? now : prev.windowStart,
-          hz: elapsed > 3000 ? prev.hz : nextCount / Math.max(elapsed / 1000, 0.1),
+          hz:
+            elapsed > 3000
+              ? prev.hz
+              : nextCount / Math.max(elapsed / 1000, 0.1),
         };
       });
       return t;
@@ -182,16 +190,21 @@ const SystemHealth = ({ compact = false }) => {
         const nextLinks = Object.fromEntries(
           TF_LINKS.map(([from, to]) => [
             `${from}->${to}`,
-            hasTfEdge(edges, from, to) ? "online" : edges.size ? "offline" : "unknown",
+            hasTfEdge(edges, from, to)
+              ? "online"
+              : edges.size
+              ? "offline"
+              : "unknown",
           ]),
         );
         setTfLinks(nextLinks);
-        next.tfChain =
-          Object.values(nextLinks).every((state) => state === "online")
-            ? "online"
-            : edges.size
-              ? "offline"
-              : "unknown";
+        next.tfChain = Object.values(nextLinks).every(
+          (state) => state === "online",
+        )
+          ? "online"
+          : edges.size
+          ? "offline"
+          : "unknown";
         setStats(
           Object.fromEntries(
             STREAMING.map(({ key }) => {
@@ -257,8 +270,8 @@ const SystemHealth = ({ compact = false }) => {
                   isOnline
                     ? "border-statusGreen/30 bg-statusGreen/10 text-statusGreen"
                     : state === "offline"
-                      ? "border-statusRed/30 bg-statusRed/10 text-statusRed"
-                      : "border-borderSubtle bg-bgSurface text-themeTextGray"
+                    ? "border-statusRed/30 bg-statusRed/10 text-statusRed"
+                    : "border-borderSubtle bg-bgSurface text-themeTextGray"
                 }`}
               >
                 <span
@@ -275,9 +288,7 @@ const SystemHealth = ({ compact = false }) => {
 
   return (
     <div
-      className={`rounded-xl border border-borderSubtle bg-bgCard font-[RobotoMono] ${
-        compact ? "p-3" : "p-4"
-      }`}
+      className={`dashboard-card font-[RobotoMono] ${compact ? "p-3" : "p-4"}`}
     >
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-xs uppercase tracking-wider text-themeTextGray">
@@ -326,7 +337,9 @@ const SystemHealth = ({ compact = false }) => {
           const state = tfLinks[key] || "unknown";
           return (
             <div key={key} className="flex items-center justify-between gap-3">
-              <span className="truncate text-xs text-textWhiteHover">{key}</span>
+              <span className="truncate text-xs text-textWhiteHover">
+                {key}
+              </span>
               <span className={`shrink-0 text-xs ${TEXT[state]}`}>{state}</span>
             </div>
           );
@@ -346,7 +359,9 @@ const SystemHealth = ({ compact = false }) => {
               />
             )}
             <span
-              className={`relative inline-flex h-2 w-2 rounded-full ${DOT[health.tfChain]}`}
+              className={`relative inline-flex h-2 w-2 rounded-full ${
+                DOT[health.tfChain]
+              }`}
             />
           </div>
           <span className={`truncate text-xs ${TEXT[health.tfChain]}`}>
@@ -373,7 +388,9 @@ const SystemHealth = ({ compact = false }) => {
                 <span className="ml-auto text-[10px] text-themeTextGray">
                   {stats[key]?.age === null || stats[key] === undefined
                     ? "--"
-                    : `${stats[key].age.toFixed(1)}s / ${stats[key].hz.toFixed(1)}Hz`}
+                    : `${stats[key].age.toFixed(1)}s / ${stats[key].hz.toFixed(
+                        1,
+                      )}Hz`}
                 </span>
               )}
             </div>

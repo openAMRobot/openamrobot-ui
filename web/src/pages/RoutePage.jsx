@@ -1,21 +1,21 @@
-import React, {
-  useContext,
-  useRef,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { RosContext } from "../app/App";
+import { useRos } from "../app/App";
 import { AppConfig } from "../shared/constants/index";
 import TimeModal from "../components/modal/TimeModal";
 import RouteModal from "../components/modal/RouteModal";
 import TextInputModal from "../components/modal/TextInputModal";
 
 import Map from "../components/Map";
+import MapLayers from "../components/MapLayers";
 import Button from "../shared/ui/Button";
+import {
+  DashboardCard,
+  SectionHeader,
+  StatusBadge,
+} from "../shared/ui/Dashboard";
 
 const removeCsv = (data) => {
   if (Array.isArray(data)) {
@@ -132,7 +132,7 @@ const removePointFromCanvas = () => {
 };
 
 const RoutePage = () => {
-  const ros = useContext(RosContext);
+  const ros = useRos();
   // eslint-disable-next-line no-unused-vars
   const [selectedPointType, setSelectedPointType] = useState(null);
   const [pointsSettable, setPointsSettable] = useState(false);
@@ -158,6 +158,10 @@ const RoutePage = () => {
   const [openInputModal, setOpenInputModal] = useState(false);
 
   const [filesData, setFilesData] = useState([]);
+  // Unfiltered group->maps->routes catalog (filesData above is narrowed to
+  // just the routes on the *current* map) — kept so "Change map" can offer
+  // every map across every group, not only the active one.
+  const [allStructure, setAllStructure] = useState([]);
 
   const childRef = useRef(null);
   const routesModalType = useRef(null);
@@ -173,7 +177,7 @@ const RoutePage = () => {
   const filesReqTopic = useRef(
     new window.ROSLIB.Topic({
       ros,
-      name: "/nav_data_req",
+      name: AppConfig.NAV_DATA_REQ_TOPIC,
       messageType: "std_msgs/Empty",
     }),
   );
@@ -181,7 +185,7 @@ const RoutePage = () => {
   const filesResonseTopic = useRef(
     new window.ROSLIB.Topic({
       ros,
-      name: "/nav_data_resp",
+      name: AppConfig.NAV_DATA_RESP_TOPIC,
       messageType: "std_msgs/String",
     }),
   );
@@ -233,6 +237,7 @@ const RoutePage = () => {
       );
 
       setFilesData(filtredArrayBySelectedRoute);
+      setAllStructure(arrayWithSpaces);
       setSelectedFile(activeFilesWithSpaces);
     });
 
@@ -261,6 +266,13 @@ const RoutePage = () => {
     setOpenRouteModal(false);
 
     if (data) {
+      // CHANGE_MAP's modal list is "group / map" combined strings (see
+      // mapOptions below) since a map lives one level up from routes —
+      // split it back apart here rather than teaching RouteModal about
+      // two-level selection.
+      const [selectedGroup, selectedMap] =
+        modalKey.current === "CHANGE_MAP" ? data.split(" / ") : [];
+
       const operationsConfig = {
         CHANGE_ROUTE: {
           path: "change_route",
@@ -276,6 +288,17 @@ const RoutePage = () => {
               map: selectedFile.map,
               route: data,
             }),
+        },
+        CHANGE_MAP: {
+          path: "change_map",
+          data: { group: selectedGroup, map: selectedMap },
+          preActions: () => window.NAV2D.ClearMap(),
+          postActions: () => {
+            setSelectedFile({ group: selectedGroup, map: selectedMap, route: "Null" });
+            toast.info(
+              "Map loaded — set the robot's initial pose before navigating; its old localization no longer matches the new map.",
+            );
+          },
         },
       };
 
@@ -444,7 +467,7 @@ const RoutePage = () => {
       toast.info("Requesting path from Nav2 planner...");
       const nav2Client = new window.ROSLIB.Service({
         ros,
-        name: "/compute_path_to_pose",
+        name: AppConfig.COMPUTE_PATH_SERVICE,
         serviceType: "nav2_msgs/srv/ComputePathToPose",
       });
 
@@ -505,7 +528,7 @@ const RoutePage = () => {
 
             const wayPointTopic = new window.ROSLIB.Topic({
               ros,
-              name: "/new_way_point",
+              name: AppConfig.NEW_WAYPOINT_TOPIC,
               messageType: "geometry_msgs/PoseWithCovarianceStamped",
             });
 
@@ -597,6 +620,17 @@ const RoutePage = () => {
     setOpenRouteModal(true);
   };
 
+  const onChangeMapClick = () => {
+    window.NAV2D.arePointsSettable = false;
+    setPointsSettable(false);
+
+    modalKey.current = "CHANGE_MAP";
+    routesModalType.current = "selectMap";
+    isRoutesModalWithInput.current = false;
+    routesModalHeader.current = "Select map you want to load";
+    setOpenRouteModal(true);
+  };
+
   const onEditRouteClick = () => {
     if (pointsSettable) {
       setPointsSettable(false);
@@ -671,13 +705,23 @@ const RoutePage = () => {
     window.NAV2D.pointType = data;
   };
 
+  // Flat "group / map" list across every group, for the Change Map modal —
+  // RouteModal only knows how to show/select a flat list of strings, so a
+  // map (one level up from routes) is presented as a combined label rather
+  // than teaching that modal a second selection level.
+  const mapOptions = allStructure.flatMap((groupObj) =>
+    Object.entries(groupObj).flatMap(([group, maps]) =>
+      maps.flatMap((mapObj) => Object.keys(mapObj).map((mapName) => `${group} / ${mapName}`)),
+    ),
+  );
+
   return (
     <>
-      <ToastContainer />
+      <ToastContainer position="bottom-right" theme="dark" />
 
       {openRouteModal && (
         <RouteModal
-          routesList={filesData}
+          routesList={modalKey.current === "CHANGE_MAP" ? mapOptions : filesData}
           headerText={routesModalHeader.current}
           modalHandler={onRouteFormSubmitHandler}
         />
@@ -694,116 +738,123 @@ const RoutePage = () => {
         />
       )}
 
-      <div className="sectionHeight flex flex-col gap-7 pt-[30px]">
-        <h2 className="flex w-full flex-wrap items-center justify-center gap-3 text-center font-[RobotoMono] text-3xl font-bold text-themeBlue">
-          <span>
-            Group:{" "}
-            <span className="text-themeDarkBlue">{selectedFile.group}</span>
-          </span>
-          <span>
-            {" "}
-            Map: <span className="text-themeDarkBlue">{selectedFile.map}</span>
-          </span>
-          <span>
-            {selectedFile.route !== "New route" && <span>Current route:</span>}{" "}
-            <span className="text-themeDarkBlue">{selectedFile.route}</span>
-          </span>
-        </h2>
+      <div className="sectionHeight space-y-5 py-4 sm:space-y-6 sm:py-6">
+        <SectionHeader
+          eyebrow="Route authoring"
+          title="Plan reusable robot routes"
+          description="Place, edit, and manage waypoint sequences for the active map."
+          action={
+            <StatusBadge
+              status={pointsSettable ? "active" : "idle"}
+              label={pointsSettable ? "Editing route" : "View mode"}
+              pulse={pointsSettable}
+            />
+          }
+        />
 
-        <div className="flex h-full flex-col justify-start gap-[73px] md:flex-row">
-          <section className="color-white flex w-full flex-col items-start justify-start md:w-[55%]">
-            <div className="h-[400px] w-full lg:h-[674px]">
-              <Map ref={childRef} />
-            </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[
+            ["Group", selectedFile.group],
+            ["Map", selectedFile.map],
+            ["Current route", selectedFile.route],
+          ].map(([label, value]) => (
+            <DashboardCard key={label} className="min-w-0 px-4 py-3">
+              <p className="font-[RobotoMono] text-[10px] font-bold uppercase tracking-[0.14em] text-themeTextGray">
+                {label}
+              </p>
+              <p
+                className="mt-1 truncate font-[RobotoMono] text-sm font-semibold text-textWhiteHover"
+                title={value || "Not available"}
+              >
+                {value || "—"}
+              </p>
+            </DashboardCard>
+          ))}
+        </div>
+
+        <MapLayers />
+
+        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-5">
+          <section className="h-[440px] min-w-0 sm:h-[560px] xl:h-[calc(100vh-315px)] xl:min-h-[500px]">
+            <Map ref={childRef} />
           </section>
 
-          <section className="color-white flex h-[400px] w-full flex-1 flex-col items-center justify-start gap-7 md:w-2/5 lg:gap-[233px]">
-            <div className="flex w-full flex-col gap-6 lg:gap-3">
-              <div className="flex w-full flex-col items-center justify-center gap-6 lg:flex-row lg:gap-3">
-                <div className="w-full flex-1">
-                  <Button onBtnClick={onEditRouteClick}>
-                    {pointsSettable && <div>Cancel</div>}
-                    {!pointsSettable && (
-                      <div>
-                        <span className="iconMap" />
-                        <span className="mx-auto">Edit</span>
-                      </div>
-                    )}
-                  </Button>
-                </div>
-                <div className="w-full flex-1">
-                  <Button
-                    onBtnClick={onChangeRouteClick}
-                    type={pointsSettable ? "disabled" : ""}
-                  >
-                    <span className="iconCharge" />
-                    <span className="mx-auto">Change</span>
-                  </Button>
-                </div>
-                <div className="w-full flex-1">
-                  <Button
-                    onBtnClick={onSaveRouteClick}
-                    type={pointsSettable ? "" : "disabled"}
-                  >
-                    <span className="iconSave" />
-                    <span className="mx-auto">Save</span>
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex w-full flex-col items-center justify-center gap-6 lg:flex-row lg:gap-4">
-                <div className="w-full flex-1">
-                  <Button
-                    onBtnClick={onNewRouteClick}
-                    type={pointsSettable ? "disabled" : ""}
-                  >
-                    <span className="iconPlus" />
-                    <span className="mx-auto">Create</span>
-                  </Button>
-                </div>
-                <div className="w-full flex-1">
-                  <Button size="small" onBtnClick={onPlanRouteClick}>
-                    <span className="iconMap" />
-                    <span className="mx-auto">Plan</span>
-                  </Button>
-                </div>
-                <div className="w-full flex-1">
-                  <Button
-                    onBtnClick={onRenameRouteClick}
-                    type={
-                      pointsSettable || selectedFile.route === "Null"
-                        ? "disabled"
-                        : ""
-                    }
-                  >
-                    <span className="iconMap" />
-                    <span className="mx-auto">Rename</span>
-                  </Button>
-                </div>
-                <div className="w-full flex-1">
-                  <Button
-                    onBtnClick={onDeleteRouteClick}
-                    type={pointsSettable ? "disabled" : ""}
-                  >
-                    <span className="iconTrash" />
-                    <span className="mx-auto">Delete</span>
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex w-full flex-col items-center justify-center gap-6 lg:flex-row lg:gap-3">
-                <div className="w-full flex-1">
-                  <Button
-                    onBtnClick={onClearRouteClick}
-                    type={!pointsSettable ? "disabled" : ""}
-                  >
-                    <span className="iconMap" />
-                    <span className="mx-auto">Clear</span>
-                  </Button>
-                </div>
-              </div>
+          <DashboardCard className="h-fit p-4 sm:p-5">
+            <div className="mb-5 border-b border-borderSubtle pb-4">
+              <p className="font-[RobotoMono] text-[11px] font-bold uppercase tracking-[0.14em] text-themeBlue">
+                Route operations
+              </p>
+              <p className="mt-2 text-sm leading-6 text-themeTextGray">
+                {pointsSettable
+                  ? "Click the map to add or adjust points, then save your changes."
+                  : "Choose an operation to begin editing the current route or create a new one."}
+              </p>
             </div>
-          </section>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button onBtnClick={onEditRouteClick}>
+                <span className="iconMap" aria-hidden="true" />
+                <span>{pointsSettable ? "Cancel edit" : "Edit route"}</span>
+              </Button>
+              <Button
+                onBtnClick={onSaveRouteClick}
+                type={pointsSettable ? "success" : "disabled"}
+              >
+                <span className="iconSave" aria-hidden="true" />
+                <span>Save</span>
+              </Button>
+              <Button
+                onBtnClick={onNewRouteClick}
+                type={pointsSettable ? "disabled" : ""}
+              >
+                <span className="iconPlus" aria-hidden="true" />
+                <span>Create</span>
+              </Button>
+              <Button
+                onBtnClick={onChangeRouteClick}
+                type={pointsSettable ? "disabled" : ""}
+              >
+                <span className="iconCharge" aria-hidden="true" />
+                <span>Change</span>
+              </Button>
+              <Button
+                onBtnClick={onChangeMapClick}
+                type={pointsSettable ? "disabled" : ""}
+              >
+                <span className="iconMap" aria-hidden="true" />
+                <span>Change map</span>
+              </Button>
+              <Button onBtnClick={onPlanRouteClick}>
+                <span className="iconMap" aria-hidden="true" />
+                <span>Auto-plan</span>
+              </Button>
+              <Button
+                onBtnClick={onRenameRouteClick}
+                type={
+                  pointsSettable || selectedFile.route === "Null"
+                    ? "disabled"
+                    : ""
+                }
+              >
+                <span className="iconMap" aria-hidden="true" />
+                <span>Rename</span>
+              </Button>
+              <Button
+                onBtnClick={onClearRouteClick}
+                type={!pointsSettable ? "disabled" : "danger"}
+              >
+                <span className="iconTrash" aria-hidden="true" />
+                <span>Clear points</span>
+              </Button>
+              <Button
+                onBtnClick={onDeleteRouteClick}
+                type={pointsSettable ? "disabled" : "danger"}
+              >
+                <span className="iconTrash" aria-hidden="true" />
+                <span>Delete</span>
+              </Button>
+            </div>
+          </DashboardCard>
         </div>
       </div>
     </>

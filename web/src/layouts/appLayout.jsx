@@ -2,29 +2,46 @@ import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Header from "../components/Header";
 import Logs from "../components/Logs";
+import NotificationsWatcher from "../components/NotificationsWatcher";
+import AuthModeBanner from "../components/AuthModeBanner";
 
 const AppLayout = () => {
   const [showLogs, setShowLogs] = useState(false);
 
   return (
-    <div className="app-bg flex min-h-screen flex-col text-textWhiteHover">
+    <div className="app-bg flex min-h-screen flex-col text-textWhiteHover md:pl-56">
+      <a
+        href="#main-content"
+        className="fixed left-4 top-4 z-[100] -translate-y-20 rounded-lg bg-themeBlue px-4 py-2 text-sm font-semibold text-white focus:translate-y-0"
+      >
+        Skip to main content
+      </a>
       <Header showLogs={showLogs} onToggleLogs={() => setShowLogs(!showLogs)} />
-      <main className="mx-auto min-h-0 w-full max-w-[1920px] flex-1 px-4 pb-4 lg:px-8 2xl:px-20">
+      <NotificationsWatcher />
+      <main
+        id="main-content"
+        className="mx-auto min-h-0 w-full max-w-[1600px] flex-1 px-3 pb-4 sm:px-4 lg:px-6"
+      >
+        <AuthModeBanner />
         <Outlet />
       </main>
 
       {showLogs && (
-        <section className="fixed bottom-0 left-0 right-0 z-50 h-[240px] border-t border-borderSubtle bg-bgCard px-6 py-2 shadow-2xl shadow-slate-300/40 dark:shadow-slate-950/60 transition-all duration-300 ease-in-out lg:px-10">
-          <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between border-b border-borderSubtle pb-1">
-              <span className="font-[RobotoMono] text-xs font-semibold uppercase tracking-wider text-themeTextGray">
+        <section
+          aria-label="System diagnostics console"
+          className="fixed bottom-3 left-3 right-3 z-50 h-[260px] rounded-[18px] border border-borderSubtle bg-bgCard/95 p-3 shadow-2xl shadow-black/60 backdrop-blur-xl sm:bottom-4 sm:left-4 sm:right-4 md:left-60 lg:right-6"
+        >
+          <div className="mx-auto flex h-full max-w-[1560px] flex-col">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="font-[RobotoMono] text-[10px] font-semibold uppercase tracking-[0.16em] text-themeTextGray">
                 System Diagnostics Console
               </span>
               <button
+                type="button"
                 onClick={() => setShowLogs(false)}
-                className="font-[RobotoMono] text-xs text-statusRed hover:underline"
+                className="min-h-[36px] rounded-lg border border-borderSubtle px-3 font-[RobotoMono] text-[11px] text-themeTextGray hover:border-statusRed/40 hover:text-statusRed"
               >
-                Close [X]
+                Close
               </button>
             </div>
             <div className="flex-1 overflow-hidden pt-1">

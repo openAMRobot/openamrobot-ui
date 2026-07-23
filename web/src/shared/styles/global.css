@@ -1,69 +1,135 @@
 /* ─── Light theme (default) ─────────────────────────────────────────────── */
 :root {
   /* Backgrounds */
-  --color-bg-base:          244 248 251;
-  --color-bg-card:          255 255 255;
-  --color-bg-surface:       234 241 247;
-  --color-border-subtle:    201 216 230;
+  --color-bg-base: 247 247 250;
+  --color-bg-card: 255 255 255;
+  --color-bg-surface: 241 240 246;
+  --color-bg-raised: 255 255 255;
+  --color-border-subtle: 218 216 228;
+  --color-border-default: 205 202 216;
+  --color-border-strong: 190 187 202;
 
   /* Grays */
-  --color-theme-light-gray:  234 241 247;
-  --color-theme-medium-gray: 215 227 238;
-  --color-theme-text-gray:   100 116 139;
+  --color-theme-light-gray: 241 240 246;
+  --color-theme-medium-gray: 229 226 238;
+  --color-theme-text-gray: 101 99 116;
+  --color-text-muted: 138 136 150;
+  --color-text-disabled: 176 174 186;
 
   /* Blues */
-  --color-theme-blue:        8   126 164;
-  --color-theme-medium-blue: 14  159 188;
-  --color-theme-dark-blue:   7   89  133;
+  --color-theme-blue: 111 73 232;
+  --color-theme-medium-blue: 142 85 247;
+  --color-theme-dark-blue: 92 54 196;
+
+  /* Technical/spatial data only — 3D axes, frames, coordinate readouts */
+  --color-technical-cyan: 2 132 199;
 
   /* Text */
-  --color-text-white-hover:  23  32  51;
-  --color-text-white-active: 51  65  85;
+  --color-text-white-hover: 26 24 33;
+  --color-text-white-active: 58 55 68;
 
   /* Status */
-  --color-status-green:  22  163 74;
-  --color-status-red:    220 38  38;
+  --color-status-green: 22 163 74;
+  --color-status-red: 220 38 38;
   --color-status-yellow: 217 119 6;
-  --color-status-blue:   37  99  235;
+  --color-status-blue: 37 99 235;
 
   /* Page gradient */
-  --app-gradient:
-    radial-gradient(circle at 20% 0%, rgba(14, 159, 188, 0.09), transparent 28rem),
-    linear-gradient(180deg, #f8fbfd 0%, #eef5f9 100%);
+  --app-gradient: radial-gradient(
+      circle at 18% -5%,
+      rgba(111, 73, 232, 0.1),
+      transparent 31rem
+    ),
+    radial-gradient(
+      circle at 92% 8%,
+      rgba(224, 98, 171, 0.06),
+      transparent 26rem
+    ),
+    #f7f7fa;
+
+  --gradient-primary: linear-gradient(
+    120deg,
+    #7657f6 0%,
+    #9a5df2 55%,
+    #e270b4 100%
+  );
+  --shadow-card: 0 18px 50px rgba(35, 25, 62, 0.08);
+  --shadow-raised: 0 20px 60px rgba(35, 25, 62, 0.14);
+  --shadow-recessed: inset 0 2px 8px rgba(35, 25, 62, 0.07);
+  --radius-card: 16px;
+
+  /* Theme-agnostic sizing — same in light and dark */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-nav: 20px;
 }
 
-/* ─── Dark theme ────────────────────────────────────────────────────────── */
+/* ─── Dark theme — premium black spatial-interface palette ─────────────── */
 .dark {
-  /* Backgrounds */
-  --color-bg-base:          15  25  35;
-  --color-bg-card:          23  32  48;
-  --color-bg-surface:       12  21  32;
-  --color-border-subtle:    30  48  69;
+  /* Backgrounds — near-black app bg, graphite-black panels, one step up per tier */
+  --color-bg-base: 3 3 4; /* #030304 */
+  --color-bg-card: 13 13 17; /* #0d0d11 — dashboard-card / modal-surface */
+  --color-bg-surface: 18 18 23; /* #121217 — chips elevated on top of a card */
+  --color-bg-raised: 6 6 8; /* #060608 — nav / control-panel elevation */
+  --color-border-subtle: 255 255 255;
+  --color-border-default: 255 255 255;
+  --color-border-strong: 255 255 255;
 
   /* Grays */
-  --color-theme-light-gray:  12  21  32;
-  --color-theme-medium-gray: 22  34  50;
-  --color-theme-text-gray:   122 155 181;
+  --color-theme-light-gray: 18 18 23;
+  --color-theme-medium-gray: 23 23 29; /* surface-hover */
+  --color-theme-text-gray: 152 152 159; /* text-secondary */
+  --color-text-muted: 104 104 112;
+  --color-text-disabled: 72 72 80;
 
-  /* Blues */
-  --color-theme-blue:        15  168 200;
-  --color-theme-medium-blue: 20  189 214;
-  --color-theme-dark-blue:   125 211 240;
+  /* Accents — violet-to-pink for selection/primary interaction only */
+  --color-theme-blue: 139 92 246; /* accent-violet #8b5cf6 */
+  --color-theme-medium-blue: 168 85 247; /* gradient midpoint #a855f7 */
+  --color-theme-dark-blue: 236 111 145; /* accent-pink #ec6f91 */
+
+  /* Technical/spatial data only — 3D axes, frames, coordinate readouts */
+  --color-technical-cyan: 56 189 248; /* #38bdf8 */
 
   /* Text */
-  --color-text-white-hover:  212 229 245;
-  --color-text-white-active: 168 196 216;
+  --color-text-white-hover: 245 245 247; /* text-primary */
+  --color-text-white-active: 214 214 219;
 
   /* Status */
-  --color-status-green:  34  197 94;
-  --color-status-red:    239 68  68;
-  --color-status-yellow: 245 158 11;
-  --color-status-blue:   59  130 246;
+  --color-status-green: 85 200 120;
+  --color-status-red: 224 82 82;
+  --color-status-yellow: 229 163 61;
+  --color-status-blue: 56 189 248; /* aliases technical-cyan — info states here are model/telemetry-technical, not generic */
 
-  /* Page gradient */
-  --app-gradient:
-    radial-gradient(circle at 20% 0%, rgba(8, 126, 164, 0.07), transparent 28rem),
-    linear-gradient(180deg, #0f1923 0%, #0b1520 100%);
+  /* Page gradient — restrained, near-black with a faint violet/pink glow */
+  --app-gradient: radial-gradient(
+      circle at 16% -10%,
+      rgba(139, 92, 246, 0.12),
+      transparent 34rem
+    ),
+    radial-gradient(
+      circle at 92% 7%,
+      rgba(236, 111, 145, 0.07),
+      transparent 28rem
+    ),
+    #030304;
+
+  --gradient-primary: linear-gradient(90deg, #7c3aed, #a855f7, #ec6f91);
+
+  --shadow-card: 0 12px 35px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  --shadow-raised: 0 18px 45px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --shadow-recessed: inset 0 2px 10px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.dark .border-borderSubtle {
+  border-color: rgba(255, 255, 255, 0.055);
+}
+
+.dark .border-borderDefault {
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.dark .border-borderStrong {
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 /* ─── Page background ───────────────────────────────────────────────────── */
@@ -71,15 +137,37 @@
   background: var(--app-gradient);
 }
 
+html {
+  min-width: 320px;
+  background: rgb(var(--color-bg-base));
+}
+
 body {
+  min-width: 320px;
+  min-height: 100vh;
   background: var(--app-gradient);
+  color: rgb(var(--color-text-white-hover));
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: -0.01em;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgb(var(--color-theme-blue) / 0.28);
   color: rgb(var(--color-text-white-hover));
 }
 
 /* ─── Map canvas ────────────────────────────────────────────────────────── */
 .mapContainer canvas {
-  border-radius: 0.875rem;
-  box-shadow: 0 18px 45px rgba(15, 35, 52, 0.12);
+  border-radius: 0.75rem;
+  box-shadow: 0 18px 45px rgba(15, 10, 30, 0.16);
   touch-action: none;
 }
 
@@ -89,7 +177,7 @@ body {
 
 /* ─── Layout ────────────────────────────────────────────────────────────── */
 .sectionHeight {
-  min-height: calc(100vh - 72px);
+  min-height: calc(100vh - 104px);
 }
 
 /* ─── Blockly ───────────────────────────────────────────────────────────── */
@@ -98,7 +186,8 @@ body {
 }
 
 .dark .blocklyMainBackground {
-  stroke: #1e3045;
+  fill: #0d0d11;
+  stroke: rgba(255, 255, 255, 0.09);
 }
 
 .blocklyToolboxDiv,
@@ -108,7 +197,16 @@ body {
 
 .dark .blocklyToolboxDiv,
 .dark .blocklyFlyoutBackground {
-  background: #172030;
+  background: #111116;
+}
+
+.dark .blocklyToolboxDiv {
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dark .blocklyTreeLabel,
+.dark .blocklyFlyoutLabelText {
+  color: #d7d4df;
 }
 
 /* ─── Scrollbar ─────────────────────────────────────────────────────────── */
@@ -121,7 +219,7 @@ body {
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #0c1520;
+  background: #08080a;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -130,15 +228,15 @@ body {
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #243447;
+  background: #2c2935;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #087ea4;
+  background: #7657f6;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #0fa8c8;
+  background: #9970ff;
 }
 
 /* ─── Form elements ─────────────────────────────────────────────────────── */
@@ -154,6 +252,382 @@ input[type="number"] {
 
 button,
 a,
-input {
-  outline-color: #0e9fbc;
+input,
+select,
+textarea {
+  outline-color: rgb(var(--color-theme-blue));
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition-duration: 180ms;
+  transition-property: color, background-color, border-color, box-shadow,
+    opacity, transform;
+  transition-timing-function: ease;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid rgb(var(--color-theme-blue));
+  outline-offset: 3px;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  color-scheme: light;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  color-scheme: dark;
+}
+
+input[type="range"] {
+  min-height: 24px;
+}
+
+/* ─── Shared dashboard primitives ──────────────────────────────────────── */
+.dashboard-card {
+  position: relative;
+  border: 1px solid rgb(var(--color-border-subtle) / 0.055);
+  border-radius: var(--radius-card);
+  background: rgb(var(--color-bg-card) / 0.96);
+  box-shadow: var(--shadow-card);
+}
+
+:root:not(.dark) .dashboard-card {
+  border-color: rgb(var(--color-border-subtle));
+}
+
+.dashboard-card--interactive:hover {
+  border-color: rgb(var(--color-theme-blue) / 0.42);
+  box-shadow: var(--shadow-raised);
+  transform: translateY(-2px);
+}
+
+/* Sunken visualization workspaces (map canvas, 3D viewer, camera feed) sit
+   *into* the page rather than floating above it — inset shadow, darker
+   base, no hover lift. Distinct from the default elevated panel look used
+   for nav/control/side panels. */
+.dashboard-card--recessed {
+  background: rgb(var(--color-bg-base) / 0.6);
+  box-shadow: var(--shadow-recessed);
+  border-color: rgb(var(--color-border-subtle) / 0.07);
+}
+
+/* Nav bars and primary control surfaces sit slightly *above* the page. */
+.dashboard-card--raised {
+  background: rgb(var(--color-bg-raised) / 0.92);
+  border-color: rgb(var(--color-border-default) / 0.09);
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-header__eyebrow,
+.metric-card__label,
+.chart-card__label {
+  color: rgb(var(--color-theme-blue));
+  font-family: "RobotoMono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.section-header__title {
+  margin-top: 0.25rem;
+  color: rgb(var(--color-text-white-hover));
+  font-size: clamp(1.5rem, 3vw, 2.125rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.section-header__description {
+  max-width: 45rem;
+  margin-top: 0.5rem;
+  color: rgb(var(--color-theme-text-gray));
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.section-header__action {
+  flex: none;
+}
+
+.status-badge {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.25rem 0.625rem;
+  background: rgb(var(--color-bg-surface) / 0.82);
+  font-family: "RobotoMono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.status-badge--success {
+  color: rgb(var(--color-status-green));
+}
+.status-badge--danger {
+  color: rgb(var(--color-status-red));
+}
+.status-badge--warning {
+  color: rgb(var(--color-status-yellow));
+}
+.status-badge--info {
+  color: rgb(var(--color-status-blue));
+}
+.status-badge--neutral {
+  color: rgb(var(--color-theme-text-gray));
+}
+
+.status-badge__indicator {
+  position: relative;
+  display: flex;
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.status-badge__dot,
+.status-badge__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.status-badge__pulse {
+  animation: status-pulse 1.7s ease-out infinite;
+}
+
+.icon-button {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--color-border-subtle) / 0.1);
+  border-radius: 12px;
+  background: rgb(var(--color-bg-surface) / 0.76);
+  color: rgb(var(--color-theme-text-gray));
+}
+
+.icon-button:hover {
+  border-color: rgb(var(--color-theme-blue) / 0.45);
+  color: rgb(var(--color-text-white-hover));
+  transform: translateY(-1px);
+}
+
+.metric-card {
+  min-width: 0;
+  padding: 1rem;
+}
+
+.metric-card__topline,
+.chart-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.metric-card__icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgb(var(--color-theme-blue) / 0.1);
+  color: rgb(var(--color-theme-blue));
+}
+
+.metric-card__value,
+.chart-card__value {
+  margin-top: 0.65rem;
+  color: rgb(var(--color-text-white-hover));
+  font-family: "RobotoMono", ui-monospace, monospace;
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+}
+
+.metric-card__unit {
+  margin-left: 0.35rem;
+  color: rgb(var(--color-theme-text-gray));
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.metric-card__meta {
+  margin-top: 0.5rem;
+  color: rgb(var(--color-theme-text-gray));
+  font-size: 0.75rem;
+}
+
+.chart-card {
+  padding: 1rem;
+}
+
+.chart-card__value {
+  margin-top: 0.35rem;
+}
+
+.empty-state {
+  display: flex;
+  min-height: 120px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.empty-state__icon {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--color-border-subtle) / 0.1);
+  border-radius: 13px;
+  background: rgb(var(--color-bg-surface));
+  color: rgb(var(--color-theme-blue));
+}
+
+.empty-state__title {
+  margin-top: 0.75rem;
+  color: rgb(var(--color-text-white-hover));
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.empty-state__description {
+  max-width: 24rem;
+  margin-top: 0.25rem;
+  color: rgb(var(--color-theme-text-gray));
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.empty-state__action {
+  margin-top: 0.875rem;
+}
+
+.loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.loading-skeleton__line {
+  height: 0.55rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--color-bg-surface)) 20%,
+    rgb(var(--color-theme-medium-gray)) 50%,
+    rgb(var(--color-bg-surface)) 80%
+  );
+  background-size: 240% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.premium-progress {
+  position: relative;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(var(--color-bg-surface));
+}
+
+.premium-progress__value {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gradient-primary);
+  box-shadow: 0 0 18px rgb(var(--color-theme-blue) / 0.28);
+  transition: width 220ms ease;
+}
+
+.modal-surface {
+  border: 1px solid rgb(var(--color-border-subtle) / 0.1);
+  border-radius: 18px;
+  background: rgb(var(--color-bg-card));
+  box-shadow: var(--shadow-raised);
+}
+
+@keyframes status-pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .section-header__action {
+    width: 100%;
+  }
+
+  button,
+  [role="button"],
+  select {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

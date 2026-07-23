@@ -1,5 +1,5 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import { RosContext, RosStatusContext } from "../app/App";
+import React, { useEffect, useRef, useState } from "react";
+import { useRos, useRosStatus } from "../app/App";
 import { AppConfig } from "../shared/constants";
 
 const WATCHED = [
@@ -28,8 +28,8 @@ const WATCHED = [
 ];
 
 const SystemAlerts = () => {
-  const ros = useContext(RosContext);
-  const rosbridgeStatus = useContext(RosStatusContext);
+  const ros = useRos();
+  const rosbridgeStatus = useRosStatus();
   const seen = useRef({});
   const [alerts, setAlerts] = useState([]);
 

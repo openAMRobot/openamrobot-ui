@@ -1,26 +1,60 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import { RosContext } from "../app/App";
+import React, { useEffect, useRef, useState } from "react";
+import { useRos } from "../app/App";
 import { AppConfig } from "../shared/constants";
 
 const STATUS_CODES = {
-  0: { label: "Unknown", color: "text-themeTextGray", dot: "bg-themeTextGray" },
-  1: { label: "Accepted", color: "text-statusBlue", dot: "bg-statusBlue" },
-  2: { label: "Navigating", color: "text-statusGreen", dot: "bg-statusGreen" },
-  3: { label: "Canceling", color: "text-statusYellow", dot: "bg-statusYellow" },
-  4: { label: "Succeeded", color: "text-statusGreen", dot: "bg-statusGreen" },
+  0: {
+    label: "Unknown",
+    color: "text-themeTextGray",
+    dot: "bg-themeTextGray",
+    explain: "No goal has been sent yet, or its status hasn't arrived. Send a goal from the map or Control page.",
+  },
+  1: {
+    label: "Accepted",
+    color: "text-statusBlue",
+    dot: "bg-statusBlue",
+    explain: "Nav2 accepted the goal and is about to start planning and moving.",
+  },
+  2: {
+    label: "Navigating",
+    color: "text-statusGreen",
+    dot: "bg-statusGreen",
+    explain: "The robot is actively following a path toward the goal.",
+  },
+  3: {
+    label: "Canceling",
+    color: "text-statusYellow",
+    dot: "bg-statusYellow",
+    explain: "A cancel request was sent; the robot is stopping the current goal.",
+  },
+  4: {
+    label: "Succeeded",
+    color: "text-statusGreen",
+    dot: "bg-statusGreen",
+    explain: "The robot reached the goal within Nav2's tolerance.",
+  },
   5: {
     label: "Canceled",
     color: "text-themeTextGray",
     dot: "bg-themeTextGray",
+    explain: "The goal was stopped before completion — by the Cancel button or a new goal overriding it. Not an error; send a new goal to continue.",
   },
-  6: { label: "Failed", color: "text-statusRed", dot: "bg-statusRed" },
+  6: {
+    label: "Failed",
+    color: "text-statusRed",
+    dot: "bg-statusRed",
+    explain: "Nav2 couldn't complete the goal — usually no valid path was found, recovery behaviors were exhausted, or localization was too poor to navigate safely. Check that AMCL is well-localized and the goal isn't inside an obstacle, then retry.",
+  },
 };
 
 const NavStatus = ({ onCancelGoal }) => {
-  const ros = useContext(RosContext);
+  const ros = useRos();
   const [navStatus, setNavStatus] = useState(0);
   const [distRemaining, setDistRemaining] = useState(null);
   const [history, setHistory] = useState([]);
+  const [showExplain, setShowExplain] = useState(false);
+
+  useEffect(() => setShowExplain(false), [navStatus]);
   const lastTerminalRef = useRef(null);
   const statusTopicRef = useRef(null);
   const feedbackTopicRef = useRef(null);
@@ -45,7 +79,8 @@ const NavStatus = ({ onCancelGoal }) => {
         const latest = msg.status_list[msg.status_list.length - 1];
         setNavStatus(latest.status);
         if ([4, 5, 6].includes(latest.status)) {
-          const key = latest.goal_info?.goal_id?.uuid?.join?.("-") || Date.now();
+          const key =
+            latest.goal_info?.goal_id?.uuid?.join?.("-") || Date.now();
           if (lastTerminalRef.current !== key) {
             lastTerminalRef.current = key;
             const statusInfo = STATUS_CODES[latest.status] || STATUS_CODES[0];
@@ -86,11 +121,12 @@ const NavStatus = ({ onCancelGoal }) => {
     };
   }, [ros]);
 
-  const { label, color, dot } = STATUS_CODES[navStatus] || STATUS_CODES[0];
+  const statusInfo = STATUS_CODES[navStatus] || STATUS_CODES[0];
+  const { label, color, dot, explain } = statusInfo;
   const isActive = navStatus === 1 || navStatus === 2 || navStatus === 3;
 
   return (
-    <div className="rounded-xl border border-borderSubtle bg-bgCard px-4 py-1.5 font-[RobotoMono]">
+    <div className="dashboard-card px-4 py-1.5 font-[RobotoMono]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative flex h-2.5 w-2.5">
@@ -108,6 +144,14 @@ const NavStatus = ({ onCancelGoal }) => {
               Navigation{" "}
             </span>
             <span className={`text-sm font-semibold ${color}`}>{label}</span>
+            <button
+              onClick={() => setShowExplain((v) => !v)}
+              aria-label="What does this status mean?"
+              title="What does this status mean?"
+              className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-borderSubtle text-[10px] text-themeTextGray hover:border-themeBlue hover:text-themeBlue"
+            >
+              ?
+            </button>
             {isActive && distRemaining !== null && (
               <span className="ml-3 text-xs text-themeTextGray">
                 {distRemaining}m remaining
@@ -125,6 +169,12 @@ const NavStatus = ({ onCancelGoal }) => {
           </button>
         )}
       </div>
+
+      {showExplain && (
+        <p className="mt-1 border-t border-borderSubtle pt-1 text-[11px] leading-snug text-themeTextGray">
+          {explain}
+        </p>
+      )}
 
       {history.length > 0 && (
         <div className="mt-1 flex max-h-[22px] flex-wrap gap-2 overflow-hidden border-t border-borderSubtle pt-1">

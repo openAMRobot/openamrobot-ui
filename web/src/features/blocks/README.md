@@ -1,15 +1,12 @@
 # OpenAMR Blockly Guide
 
-This guide explains how to use and develop the Blockly robot programming page in
-OpenAMR UI. It is written for beginners, so it starts from the basics and then
-shows practical robot programs you can build with blocks.
+This guide is the practical reference for the Blockly robot programming page:
+setup, the full block-by-block reference, example programs, and
+troubleshooting. For the conceptual side — what Blockly is, how a block
+becomes a robot action, and how Voice Command fits together — see
+[Lesson 07 — Blockly Visual Programming](../../../../docs/lessons/09-blockly-programming.md).
 
-## What Blockly Is
-
-Blockly is a visual programming editor. Instead of writing code by hand, you
-drag blocks onto a workspace and connect them together.
-
-In this project, the Blockly page lets you create a robot action program like:
+The Blockly page lets you create a robot action program like:
 
 ```text
 start robot program
@@ -298,34 +295,11 @@ source install/setup.bash
 
 ## How A Block Runs
 
-Blockly uses this flow:
-
-```text
-Block in toolbox
-  -> block definition in blockDefinitions.js
-  -> action object in Generated Plan
-  -> execution logic in robotActions.js
-  -> ROS topic/service through roslibjs
-```
-
-For example:
-
-```text
-drive linear speed 0.1 for 2 seconds
-```
-
-becomes:
-
-```js
-{
-  type: "drive_for",
-  linear: 0.1,
-  seconds: 2
-}
-```
-
-Then `robotActions.js` publishes `/cmd_vel`, waits 2 seconds, and publishes zero
-velocity.
+Every block goes through the same pipeline before anything reaches the
+robot: block definition → action object in the Generated Plan → execution
+logic → ROS topic/service. See
+[Lesson 07 — The pipeline](../../../../docs/lessons/09-blockly-programming.md#the-pipeline-block--action--execution--ros)
+for the full explanation of why it's split this way.
 
 ## Current Block Categories
 
@@ -1145,71 +1119,17 @@ Use this only if the ROS side listens to the UI operation topic.
 
 ## Adding A New Block
 
-Adding a block usually requires three edits.
-
-### 1. Define The Block
-
-Edit:
-
-```text
-web/src/features/blocks/blockDefinitions.js
-```
-
-Add a JSON block definition:
-
-```js
-{
-  type: "openamr_beep",
-  message0: "beep robot",
-  previousStatement: null,
-  nextStatement: null,
-  colour: "#8b5cf6",
-  tooltip: "Trigger a robot beep.",
-}
-```
-
-Then convert it into an action in `blockToAction`:
-
-```js
-case "openamr_beep":
-  return { type: "beep" };
-```
-
-### 2. Add It To The Toolbox
-
-Edit:
-
-```text
-web/src/features/blocks/toolbox.js
-```
-
-Add:
-
-```js
-{ kind: "block", type: "openamr_beep" }
-```
-
-### 3. Execute The Action
-
-Edit:
-
-```text
-web/src/features/blocks/robotActions.js
-```
-
-Add a case:
-
-```js
-case "beep":
-  // Publish to your beep topic here.
-  return;
-```
-
-Then rebuild the frontend and ROS package.
+See
+[`docs/extending/add-a-blockly-block.md`](../../../../docs/extending/add-a-blockly-block.md)
+for the full step-by-step guide: defining the block, registering it in the
+toolbox, wiring its execution, and the rebuild/reinstall flow needed before
+Flask serves it.
 
 ## ROS Topics Used By Blockly
 
-The block executor uses topics and services configured in:
+See [Lesson 08 — Topics as the Contract](../../../../docs/lessons/10-topics-as-the-contract.md)
+for why centralizing these names matters. The block executor uses topics and
+services configured in:
 
 ```text
 web/src/shared/constants/index.js
@@ -1278,33 +1198,16 @@ returns Blockly workspace JSON.
 ## Voice Command
 
 The `Voice Command` panel lets you speak a command instead of dragging
-blocks. The browser captures your speech, sends the transcript to the Flask
-backend, which calls the Claude API to translate it into a robot action plan.
-The UI then converts that plan into real Blockly blocks in the workspace so
-you can review them before running.
+blocks — the browser captures speech, the Flask backend calls Claude to turn
+it into a plan, and the UI converts that plan into real Blockly blocks for
+you to review before running. For how that pipeline works and why voice
+can't run anything or invent an action type outside the normal blocks, see
+[Voice Command in Lesson 07](../../../../docs/lessons/09-blockly-programming.md#voice-command).
 
 You must say the wake word "Monsieur" before your command (see
 [Wake Word](#wake-word)); speech before it is ignored.
 
 ![Voice Command panel showing the wake word requirement and voice-to-plan flow](../../../../docs/assets/voicecommand.png)
-
-Flow:
-
-```text
-You speak
-  -> browser Web Speech API transcript
-  -> strip everything up to and including "Monsieur"
-  -> POST /api/voice-plan (Flask backend)
-  -> Claude API (claude-sonnet-5) returns a structured action plan
-  -> planToWorkspace() builds Blockly JSON
-  -> Blockly.serialization.workspaces.load() populates the workspace
-  -> Generated Plan and Plan Checks update automatically
-  -> you review, then press Run
-```
-
-Voice input only builds and displays blocks. It never runs a program by
-itself; you still press `Run`, and any risky-action confirmation dialog still
-appears exactly as it does for a manually built or template-loaded program.
 
 ### Voice Command Requirements
 

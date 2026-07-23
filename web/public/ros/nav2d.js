@@ -22,6 +22,8 @@ window.NAV2D.robotTrail = [];
 window.NAV2D.costmapItem = null;
 window.NAV2D.costmapTopic = null;
 window.NAV2D.queuedWaypointItems = [];
+window.NAV2D.savedWaypointItems = [];
+window.NAV2D._savedWaypointClickCallback = null;
 window.NAV2D.layerState = {
   map: true,
   costmap: false,
@@ -344,6 +346,9 @@ const applyLayerState = () => {
   (window.NAV2D.queuedWaypointItems || []).forEach((marker) => {
     marker.visible = state.waypoints !== false;
   });
+  (window.NAV2D.savedWaypointItems || []).forEach(({ marker }) => {
+    marker.visible = state.waypoints !== false;
+  });
 };
 
 // Costmap grids are large and expensive through rosbridge, so only subscribe
@@ -453,6 +458,57 @@ window.NAV2D.setQueuedWaypoints = (poses) => {
 
 window.NAV2D.clearQueuedWaypoints = () => {
   window.NAV2D.setQueuedWaypoints([]);
+};
+
+// Renders named, localStorage-persisted "saved waypoints" (see
+// useSavedWaypoints.js / WaypointLibrary.jsx) as clickable pins, distinct
+// from the ephemeral client-side queue above and the backend's own
+// /WayPoints_topic markers. Clicking a pin fires
+// window.NAV2D._savedWaypointClickCallback(id) — set by whichever page owns
+// the saved-waypoints list — mirroring the existing _poseCallback pattern
+// used for map clicks.
+window.NAV2D.setSavedWaypoints = (waypoints) => {
+  const scene = getScene();
+  if (!scene) return;
+
+  (window.NAV2D.savedWaypointItems || []).forEach(({ marker }) => {
+    try {
+      scene.removeChild(marker);
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  window.NAV2D.savedWaypointItems = (waypoints || []).map((wp) => {
+    // Violet accent — a saved/interactive place, not a status or the
+    // in-flight goal (amber) or queued-run waypoint (teal) markers.
+    const marker = createCanvasPoint(18, { r: 139, g: 92, b: 246, a: 1 });
+    marker.x = wp.x;
+    marker.y = -wp.y;
+    marker.rotation = scene.rosQuaternionToGlobalTheta({
+      x: 0,
+      y: 0,
+      z: wp.z,
+      w: wp.w,
+    });
+    scaleMarkerToScene(marker, scene);
+    marker.visible = window.NAV2D.layerState?.waypoints !== false;
+    marker.cursor = "pointer";
+    marker.addEventListener("click", (evt) => {
+      // EaselJS's click event doesn't filter by mouse button, so a
+      // right-click on a pin would otherwise fire both this (send the
+      // robot there) and the context menu at once — ignore anything that
+      // isn't a plain left-click.
+      if (evt?.nativeEvent && evt.nativeEvent.button !== 0) return;
+      window.NAV2D._savedWaypointClickCallback?.(wp.id);
+    });
+    scene.addChild(marker);
+    return { id: wp.id, marker };
+  });
+};
+
+window.NAV2D.clearSavedWaypoints = () => {
+  window.NAV2D.setSavedWaypoints([]);
 };
 
 window.NAV2D.setLayerOpacity = (layer, opacity) => {

@@ -1,14 +1,8 @@
-import React, {
-  useContext,
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { RosContext } from "../app/App";
+import { useRos } from "../app/App";
 import { AppConfig } from "../shared/constants";
 
 import Map from "../components/Map";
@@ -17,6 +11,8 @@ import Joystick from "../components/Joystick";
 import NavStatus from "../components/NavStatus";
 import MapLayers from "../components/MapLayers";
 import SystemAlerts from "../components/SystemAlerts";
+import WaypointLibrary from "../components/WaypointLibrary";
+import useSavedWaypoints from "../shared/hooks/useSavedWaypoints";
 
 const INITIAL_POSE_COV = [
   0.25, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -24,7 +20,7 @@ const INITIAL_POSE_COV = [
 ];
 
 const MapPage = () => {
-  const ros = useContext(RosContext);
+  const ros = useRos();
   const mapRef = useRef(null);
 
   // mode: null | 'goal' | 'pose' | 'waypoint'
@@ -49,6 +45,12 @@ const MapPage = () => {
   const [queueExecuting, setQueueExecuting] = useState(false);
   const queueExecutingRef = useRef(false);
   const queueIdxRef = useRef(0);
+
+  const { waypoints, addWaypoint, removeWaypoint } = useSavedWaypoints();
+  const waypointsRef = useRef(waypoints);
+  useEffect(() => {
+    waypointsRef.current = waypoints;
+  }, [waypoints]);
 
   // Draw every queued waypoint on the map, not just the single in-flight goal.
   useEffect(() => {
@@ -77,7 +79,7 @@ const MapPage = () => {
 
     cancelClient.current = new window.ROSLIB.Service({
       ros,
-      name: "/navigate_to_pose/_action/cancel_goal",
+      name: AppConfig.NAV_CANCEL_GOAL_SERVICE,
       serviceType: "action_msgs/CancelGoal",
     });
 
@@ -152,6 +154,76 @@ const MapPage = () => {
     );
     window.NAV2D?.setGoalPose?.(pose);
   };
+
+  const goToWaypoint = useCallback((wp) => {
+    publishGoal({
+      position: { x: wp.x, y: wp.y, z: 0 },
+      orientation: { x: 0, y: 0, z: wp.z, w: wp.w },
+    });
+    toast.success(`Navigating to "${wp.name}"`);
+  }, []);
+
+  // The three map right-click context-menu actions (Map.jsx's onContext*
+  // props) — each reuses the exact same publish/topic logic as the
+  // corresponding mode-button flow above, just without requiring a mode to
+  // be active first or a heading drag (orientation defaults to identity).
+  const sendGoalAt = (pose) => {
+    publishGoal(pose);
+    toast.success(
+      `Goal: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(2)})`,
+    );
+  };
+
+  const saveWaypointAt = (name, pose) => {
+    addWaypoint(name, {
+      x: pose.position.x,
+      y: pose.position.y,
+      z: pose.orientation.z,
+      w: pose.orientation.w,
+    });
+    toast.success(`Saved "${name}"`);
+  };
+
+  const setInitialPoseAt = (pose) => {
+    if (!initialPoseTopic.current) return;
+    initialPoseTopic.current.publish(
+      new window.ROSLIB.Message({
+        header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
+        pose: {
+          pose: {
+            position: { x: pose.position.x, y: pose.position.y, z: 0 },
+            orientation: {
+              x: 0,
+              y: 0,
+              z: pose.orientation.z,
+              w: pose.orientation.w,
+            },
+          },
+          covariance: INITIAL_POSE_COV,
+        },
+      }),
+    );
+    pendingInitialPoseRef.current = true;
+    window.NAV2D?.clearTrail?.();
+    window.NAV2D?.clearGoalPose?.();
+    toast.success(
+      `Initial pose set: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(2)})`,
+    );
+  };
+
+  // Clicking a saved-waypoint pin on the map fires this — set once (not
+  // re-registered every render) and reading the latest list via a ref, the
+  // same pattern modeRef/waypointQueueRef already use in this file.
+  useEffect(() => {
+    if (!window.NAV2D) return undefined;
+    window.NAV2D._savedWaypointClickCallback = (id) => {
+      const wp = waypointsRef.current.find((w) => w.id === id);
+      if (wp) goToWaypoint(wp);
+    };
+    return () => {
+      window.NAV2D._savedWaypointClickCallback = null;
+    };
+  }, [goToWaypoint]);
 
   // Install the direct NAV2D callback — fires synchronously from stagemouseup,
   // no DOM bubbling or setTimeout needed.
@@ -276,7 +348,9 @@ const MapPage = () => {
             : "border-borderSubtle bg-bgCard text-themeBlue hover:border-themeBlue"
         }`}
       >
-        <span className="sm:hidden">{active ? shortActiveLabel : shortLabel}</span>
+        <span className="sm:hidden">
+          {active ? shortActiveLabel : shortLabel}
+        </span>
         <span className="hidden sm:inline">{active ? activeLabel : label}</span>
       </button>
     );
@@ -284,23 +358,24 @@ const MapPage = () => {
 
   return (
     <>
-      <ToastContainer
-        position="bottom-right"
-        theme="light"
-        toastStyle={{ backgroundColor: "#ffffff", border: "1px solid #c9d8e6" }}
-      />
+      <ToastContainer position="bottom-right" theme="dark" />
 
-      <div className="flex h-[calc(100vh-72px)] min-h-0 flex-col gap-2 overflow-y-auto py-2">
+      <div className="flex min-h-[calc(100vh-104px)] flex-col gap-2 py-2 sm:py-3 xl:h-[calc(100vh-104px)] xl:min-h-0 xl:overflow-y-auto">
         <SystemAlerts />
         <NavStatus onCancelGoal={cancelGoal} />
         <MapLayers />
 
         {/* Map + Camera */}
         <section className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row">
-          <div className="min-h-[300px] w-full xl:h-full xl:min-h-[260px] xl:w-[58%]">
-            <Map ref={mapRef} />
+          <div className="h-[360px] min-h-[300px] w-full sm:h-[460px] xl:h-full xl:min-h-[260px] xl:w-[58%]">
+            <Map
+              ref={mapRef}
+              onContextGoal={sendGoalAt}
+              onContextSavePose={saveWaypointAt}
+              onContextSetPose={setInitialPoseAt}
+            />
           </div>
-          <div className="min-h-[220px] w-full xl:h-full xl:min-h-[220px] xl:w-[42%]">
+          <div className="h-[300px] min-h-[220px] w-full sm:h-[360px] xl:h-full xl:min-h-[220px] xl:w-[42%]">
             <Camera />
           </div>
         </section>
@@ -308,7 +383,7 @@ const MapPage = () => {
         {/* Controls row */}
         <section className="flex w-full shrink-0 items-stretch gap-3 xl:min-h-[112px]">
           {/* Joystick */}
-          <div className="flex w-[110px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-borderSubtle bg-bgCard p-2 sm:w-[124px] 2xl:w-[136px]">
+          <div className="dashboard-card flex w-[110px] shrink-0 flex-col items-center justify-center gap-1 p-2 sm:w-[124px] 2xl:w-[136px]">
             <p className="font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
               Manual
             </p>
@@ -318,12 +393,30 @@ const MapPage = () => {
           {/* Mode buttons + queue */}
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="flex gap-2">
-              {modeBtn("○ Goal Mode", "Goal", "goal", "● Goal Mode ON", "● Goal")}
-              {modeBtn("⊕ Set Pose", "Pose", "pose", "● Click to Set Pose", "● Pose")}
-              {modeBtn("＋ Add Waypoint", "Waypoint", "waypoint", "● Adding Waypoints", "● Adding")}
+              {modeBtn(
+                "○ Goal Mode",
+                "Goal",
+                "goal",
+                "● Goal Mode ON",
+                "● Goal",
+              )}
+              {modeBtn(
+                "⊕ Set Pose",
+                "Pose",
+                "pose",
+                "● Click to Set Pose",
+                "● Pose",
+              )}
+              {modeBtn(
+                "＋ Add Waypoint",
+                "Waypoint",
+                "waypoint",
+                "● Adding Waypoints",
+                "● Adding",
+              )}
             </div>
 
-            <div className="rounded-xl border border-borderSubtle bg-bgCard px-3 py-1">
+            <div className="dashboard-card px-3 py-1">
               <p className="font-[RobotoMono] text-xs leading-5 text-themeTextGray">
                 {mode === "goal" &&
                   "Click map to navigate. Drag before releasing to set heading."}
@@ -335,8 +428,15 @@ const MapPage = () => {
               </p>
             </div>
 
+            <WaypointLibrary
+              waypoints={waypoints}
+              onAdd={saveWaypointAt}
+              onGo={goToWaypoint}
+              onRemove={removeWaypoint}
+            />
+
             {waypointQueue.length > 0 && (
-              <div className="rounded-xl border border-borderSubtle bg-bgCard p-3 font-[RobotoMono]">
+              <div className="dashboard-card p-3 font-[RobotoMono]">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-xs uppercase tracking-wider text-themeTextGray">
                     Waypoint Queue ({waypointQueue.length})

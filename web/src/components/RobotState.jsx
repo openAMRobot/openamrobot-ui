@@ -1,32 +1,15 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as Three from "three";
 
-import { RosContext } from "../app/App";
+import { useRos } from "../app/App";
 import { AppConfig } from "../shared/constants/index";
-
-const StatCard = ({ title, badge, children }) => (
-  <div className="flex-1 rounded-xl border border-borderSubtle bg-bgCard p-3">
-    <div className="mb-2 flex items-center gap-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-themeBlue">
-        {title}
-      </p>
-      {badge && (
-        <span className="bg-themeBlue/15 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-themeBlue">
-          {badge}
-        </span>
-      )}
-    </div>
-    <div className="space-y-1 font-[RobotoMono] text-sm text-textWhiteHover">
-      {children}
-    </div>
-  </div>
-);
+import { MetricCard, StatusBadge } from "../shared/ui/Dashboard";
 
 const quatToYaw = (q) =>
   Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
 
 const State = () => {
-  const ros = useContext(RosContext);
+  const ros = useRos();
 
   const [linear, setLinear] = useState("0.00");
   const [angular, setAngular] = useState("0.00");
@@ -92,25 +75,41 @@ const State = () => {
   }, [ros]);
 
   return (
-    <div className="flex w-full gap-3">
-      <StatCard title="Velocity">
-        <p>
-          Linear: <span className="text-themeBlue">{linear}</span> m/s
-        </p>
-        <p>
-          Angular: <span className="text-themeBlue">{angular}</span> rad/s
-        </p>
-      </StatCard>
-      <StatCard title="Position" badge={amclActive ? "AMCL" : "ODOM"}>
-        <p>
-          X: <span className="text-themeBlue">{xCoord}</span> Y:{" "}
-          <span className="text-themeBlue">{yCoord}</span>
-        </p>
-        <p>
-          Heading: <span className="text-themeBlue">{orientation}</span>
-          {orientation !== "—" ? "°" : ""}
-        </p>
-      </StatCard>
+    <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+      <MetricCard
+        label="Linear velocity"
+        value={linear}
+        unit="m/s"
+        meta={
+          <span className="font-[RobotoMono]">
+            Angular{" "}
+            <strong className="font-semibold text-textWhiteHover">
+              {angular}
+            </strong>{" "}
+            rad/s
+          </span>
+        }
+      />
+      <MetricCard
+        label="Map position"
+        value={`${xCoord}, ${yCoord}`}
+        unit="x / y"
+        meta={
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-[RobotoMono]">
+              Heading{" "}
+              <strong className="font-semibold text-textWhiteHover">
+                {orientation}
+                {orientation !== "—" ? "°" : ""}
+              </strong>
+            </span>
+            <StatusBadge
+              status={amclActive ? "online" : "info"}
+              label={amclActive ? "AMCL" : "ODOM"}
+            />
+          </div>
+        }
+      />
     </div>
   );
 };

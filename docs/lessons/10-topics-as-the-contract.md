@@ -1,0 +1,64 @@
+# Lesson 10 — Topics as the Contract
+
+## There is no compiler checking this
+
+The UI (a JavaScript app) and the robot stack (a collection of independent
+ROS 2 processes, often in a completely separate workspace or on a separate
+machine) never import each other's code and are never built together.
+Nothing checks, at build time, that a topic the UI subscribes to actually
+exists on the robot side, or that the message type the UI expects matches
+what's actually published. The only thing connecting them is an agreed-upon
+**topic name string** and an agreed-upon **message type string**, as
+introduced in [Lesson 02](02-ros2-core-concepts.md). If the UI subscribes to
+`/ui/map` and nothing publishes `/ui/map`, nothing errors — the map panel
+just stays empty, silently.
+
+That means the topic name itself is the interface. Renaming a topic on one
+side without updating the other doesn't produce a stack trace; it produces a
+panel that mysteriously stopped updating. This is why topic names deserve the
+same care a function signature or an API schema would get in a normal
+codebase — they're just harder to verify automatically, so the discipline has
+to be manual.
+
+## Why centralizing the names matters
+
+Every topic, service, and action name this frontend depends on is collected
+in one file:
+[`web/src/shared/constants/index.js`](../../web/src/shared/constants/index.js)
+(plus the small `LIFECYCLE_NODES` and `CAMERA_TOPIC_OPTIONS` lists in the
+same file for the handful of places that need more than a single name). This
+buys three things:
+
+1. **One place to answer "what does the UI actually depend on."** Reading
+   this one file tells you the entire topic-level contract, without grepping
+   every page and component.
+2. **One place to fix a rename.** If the robot side renames `/scan_filtered`,
+   there is exactly one line to change here, instead of hunting for every
+   file that might have hardcoded the string.
+3. **No silent typo-mismatches.** A string literal duplicated in three files
+   can drift — one gets updated, two don't. A single imported constant
+   can't drift; every consumer reads the same value.
+
+Pages and components import from this file rather than writing topic strings
+inline — see how
+[`web/src/pages/MapPage.jsx`](../../web/src/pages/MapPage.jsx) or
+[`web/src/components/SystemHealth.jsx`](../../web/src/components/SystemHealth.jsx)
+reference `AppConfig.GOAL_POSE_TOPIC`, `AppConfig.SCAN_TOPIC`, and so on
+instead of the literal topic strings.
+
+## Relays are part of the same contract
+
+[Lesson 04](04-data-flow-and-relays.md) covered *why* relay nodes exist. From
+the contract's point of view, a relay just means the "official" browser-facing
+name (`/ui/map`) is different from the robot's original publishing name
+(`/map`). The UI-side constant always stores the *final* name the browser
+actually subscribes to — the relay is an implementation detail on the ROS
+side that the frontend doesn't need to know about beyond that one string.
+
+## Next
+
+[Lesson 11 — Failure Modes and Reconnection](11-failure-modes-and-reconnection.md)
+covers what happens when this contract breaks down at runtime — WiFi drops,
+rosbridge restarts, the robot workspace crashes — before
+[Lesson 13 — Extending the System](13-extending-the-system.md) bridges from
+theory to practice.
