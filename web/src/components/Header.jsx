@@ -4,6 +4,19 @@ import { ThemeContext, useRosStatus, useRuntimeConfig } from "../app/App";
 import { resolveRosbridgeHost } from "../shared/constants/runtimeConfig";
 import { IconButton, StatusBadge } from "../shared/ui/Dashboard";
 import { PAGE_REGISTRY } from "../pages/registry";
+import { useT } from "../shared/i18n/i18n";
+
+const LangToggle = ({ lang, setLang }) => (
+  <button
+    type="button"
+    onClick={() => setLang(lang === "en" ? "de" : "en")}
+    aria-label="Toggle language"
+    title="Language / Sprache"
+    className="rounded-lg border border-borderSubtle px-2 py-1 font-[RobotoMono] text-[11px] font-semibold uppercase text-themeTextGray transition-colors hover:border-themeBlue hover:text-themeBlue"
+  >
+    {lang === "en" ? "EN" : "DE"}
+  </button>
+);
 
 const statusConfig = {
   connected: { label: "Robot connected", pulse: true },
@@ -65,6 +78,53 @@ const NavIcon = ({ name }) => {
       <>
         <circle cx="12" cy="12" r="9" />
         <circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none" />
+      </>
+    ),
+    console: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="m7 9 3 3-3 3M13 15h4" />
+      </>
+    ),
+    metrics: (
+      <>
+        <path d="M3 3v18h18" />
+        <path d="m7 14 3-4 3 3 4-6" />
+      </>
+    ),
+    maps: (
+      <>
+        <path d="m9 4-6 2v14l6-2 6 2 6-2V4l-6 2-6-2Z" />
+        <path d="M9 4v14M15 6v14" />
+      </>
+    ),
+    scheduler: (
+      <>
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v4l2.5 2M9 2h6" />
+      </>
+    ),
+    events: (
+      <>
+        <path d="M4 5h16M4 12h16M4 19h10" />
+        <circle cx="19" cy="19" r="2" />
+      </>
+    ),
+    params: (
+      <>
+        <path d="M5 6h14M5 12h14M5 18h14" />
+        <circle cx="9" cy="6" r="2" fill="currentColor" stroke="none" />
+        <circle cx="15" cy="12" r="2" fill="currentColor" stroke="none" />
+        <circle cx="8" cy="18" r="2" fill="currentColor" stroke="none" />
+      </>
+    ),
+    fleet: (
+      <>
+        <rect x="3" y="10" width="7" height="7" rx="1.5" />
+        <rect x="14" y="10" width="7" height="7" rx="1.5" />
+        <path d="M6.5 10V7M17.5 10V7" />
+        <circle cx="6.5" cy="5" r="1" />
+        <circle cx="17.5" cy="5" r="1" />
       </>
     ),
     config: (
@@ -174,6 +234,7 @@ const Logo = ({ onClick }) => (
 const Header = ({ showLogs, onToggleLogs }) => {
   const status = useRosStatus();
   const { theme, toggleTheme } = useContext(ThemeContext);
+  const { t, lang, setLang } = useT();
   const { config } = useRuntimeConfig();
   const { label, pulse } = statusConfig[status] || statusConfig.disconnected;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -208,7 +269,7 @@ const Header = ({ showLogs, onToggleLogs }) => {
               }
             >
               <NavIcon name={icon} />
-              <span>{navLabel}</span>
+              <span>{t(navLabel)}</span>
             </NavLink>
           ))}
         </nav>
@@ -230,12 +291,15 @@ const Header = ({ showLogs, onToggleLogs }) => {
 
           <div className="flex items-center justify-between gap-2" data-tour="connection-status">
             <StatusBadge status={status} label={label} pulse={pulse} />
-            <IconButton
-              label={theme === "dark" ? "Use light theme" : "Use dark theme"}
-              onClick={toggleTheme}
-            >
-              {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-            </IconButton>
+            <div className="flex items-center gap-2">
+              <LangToggle lang={lang} setLang={setLang} />
+              <IconButton
+                label={theme === "dark" ? "Use light theme" : "Use dark theme"}
+                onClick={toggleTheme}
+              >
+                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+              </IconButton>
+            </div>
           </div>
           <NavLink
             to="/config"
@@ -253,6 +317,7 @@ const Header = ({ showLogs, onToggleLogs }) => {
           <Logo onClick={closeMenu} />
 
           <div className="flex items-center gap-2">
+            <LangToggle lang={lang} setLang={setLang} />
             <IconButton
               label={theme === "dark" ? "Use light theme" : "Use dark theme"}
               onClick={toggleTheme}
@@ -314,7 +379,7 @@ const Header = ({ showLogs, onToggleLogs }) => {
                     }
                   >
                     <NavIcon name={icon} />
-                    {navLabel}
+                    {t(navLabel)}
                   </NavLink>
                 ))}
                 <button

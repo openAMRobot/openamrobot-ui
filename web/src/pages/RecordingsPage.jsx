@@ -13,6 +13,7 @@ import {
   stopReplay,
   pauseReplay,
   resumeReplay,
+  downloadRecording,
 } from "../features/recordings/recordingsApi";
 import {
   DashboardCard,
@@ -386,6 +387,11 @@ const RecordingsPage = () => {
                         onBtnClick={() => handleReplay(entry.id, entry.name)}
                       >
                         Replay
+                      </Button>
+                    )}
+                    {entry.status !== "recording" && (
+                      <Button onBtnClick={() => downloadRecording(entry.id)}>
+                        Download
                       </Button>
                     )}
                     <button

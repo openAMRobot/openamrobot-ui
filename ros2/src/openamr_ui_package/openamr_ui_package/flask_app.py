@@ -10,7 +10,7 @@ import urllib.error
 from datetime import datetime, timezone
 import rclpy
 from rclpy.node import Node
-from flask import Flask, abort, jsonify, request, send_from_directory
+from flask import Flask, abort, jsonify, request, send_file, send_from_directory
 from ament_index_python.packages import get_package_share_directory
 from werkzeug.exceptions import HTTPException
 
@@ -1012,6 +1012,48 @@ def delete_recording(recording_id):
 
     write_recordings_index(remaining)
     return jsonify({"deleted": recording_id})
+
+
+@app.route("/api/recordings/<recording_id>/download", methods=["GET"])
+def download_recording(recording_id):
+    # A rosbag is a directory (metadata.yaml + one or more .db3/.mcap files),
+    # so we can't hand back a single file directly — zip the whole bag dir to a
+    # temp archive and stream that. The recording must have finished; a bag
+    # that's still being written isn't safe to archive.
+    entries = read_recordings_index()
+    entry = next((e for e in entries if e.get("id") == recording_id), None)
+    if not entry:
+        abort(404, "Recording not found.")
+    if _recording["id"] == recording_id and _recording_alive():
+        abort(409, "That recording is still in progress — stop it before downloading.")
+
+    bag_path = os.path.join(RECORDINGS_DIR, recording_id)
+    if not os.path.isdir(bag_path):
+        abort(404, "Recording files are missing on disk.")
+
+    import shutil
+    import tempfile
+
+    tmp_base = os.path.join(tempfile.gettempdir(), f"{recording_id}")
+    archive_path = shutil.make_archive(tmp_base, "zip", root_dir=bag_path)
+
+    response = send_file(
+        archive_path,
+        as_attachment=True,
+        download_name=f"{recording_id}.zip",
+        mimetype="application/zip",
+    )
+
+    # Delete the temp archive once the response has been fully sent — we only
+    # needed it to stream; keeping it would leak disk on every download.
+    @response.call_on_close
+    def _cleanup():
+        try:
+            os.remove(archive_path)
+        except OSError:
+            pass
+
+    return response
 
 
 @app.route("/api/recordings/<recording_id>/replay/start", methods=["POST", "OPTIONS"])

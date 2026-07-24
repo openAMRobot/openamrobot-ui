@@ -3,6 +3,9 @@ import { Outlet } from "react-router-dom";
 import Header from "../components/Header";
 import Logs from "../components/Logs";
 import NotificationsWatcher from "../components/NotificationsWatcher";
+import EventRecorder from "../components/EventRecorder";
+import SchedulerRunner from "../components/SchedulerRunner";
+import StatusBar from "../components/StatusBar";
 import AuthModeBanner from "../components/AuthModeBanner";
 import DemoModeBanner from "../components/DemoModeBanner";
 import ReplayModeBanner from "../components/ReplayModeBanner";
@@ -31,7 +34,10 @@ const AppLayout = () => {
         Skip to main content
       </a>
       <Header showLogs={showLogs} onToggleLogs={() => setShowLogs(!showLogs)} />
+      <StatusBar />
       <NotificationsWatcher />
+      <EventRecorder />
+      <SchedulerRunner />
       <main
         id="main-content"
         className="mx-auto min-h-0 w-full max-w-[1600px] flex-1 px-3 pb-4 sm:px-4 lg:px-6"

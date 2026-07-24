@@ -28,6 +28,17 @@ export const startRecording = ({ name, description, topics }) =>
 
 export const stopRecording = () => postJson("/api/recordings/stop");
 
+// Triggers a browser download of the zipped bag. Not a fetch — pointing the
+// browser at the URL lets it stream the (potentially large) archive straight
+// to disk without buffering it in JS memory.
+export const downloadRecording = (id) => {
+  window.open(
+    `${API_BASE}/api/recordings/${encodeURIComponent(id)}/download`,
+    "_blank",
+    "noopener",
+  );
+};
+
 export const deleteRecording = async (id) =>
   readJsonResponse(
     await fetch(`${API_BASE}/api/recordings/${encodeURIComponent(id)}`, {

@@ -11,6 +11,7 @@ import { SectionHeader, DashboardCard } from "../shared/ui/Dashboard";
 import Button from "../shared/ui/Button";
 import Switcher from "../shared/ui/Switcher";
 import useRobotProfiles from "../shared/hooks/useRobotProfiles";
+import KeepoutZones from "../components/KeepoutZones";
 
 const Field = ({ label, hint, children }) => (
   <label className="block">
@@ -326,6 +327,19 @@ const ConfigPage = () => {
             />
           </Field>
         </div>
+      </DashboardCard>
+
+      <DashboardCard className="p-4">
+        <p className="font-[RobotoMono] text-[11px] font-bold uppercase tracking-[0.14em] text-themeBlue">
+          Keep-out zones
+        </p>
+        <p className="mb-3 mt-1 text-sm text-themeTextGray">
+          Rectangular no-go areas drawn on the map (centre + size in map
+          metres). Toggle their visibility with the &quot;Zones&quot; layer on
+          the Map page. Visual aid only — enforcement needs a Nav2
+          keepout_filter on the robot.
+        </p>
+        <KeepoutZones />
       </DashboardCard>
 
       <div className="grid grid-cols-2 gap-3 sm:max-w-sm">

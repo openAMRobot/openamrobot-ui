@@ -3,15 +3,18 @@ import React, { useEffect, useState } from "react";
 const DEFAULT_VISIBLE = {
   map: true,
   costmap: false,
+  costmapLocal: false,
   scan: false,
   path: true,
   goal: true,
   waypoints: true,
+  zones: true,
   robotTrail: false,
 };
 
 const DEFAULT_OPACITY = {
   costmap: 0.35,
+  costmapLocal: 0.35,
   scan: 0.32,
   path: 0.95,
   robotTrail: 0.65,
@@ -19,16 +22,19 @@ const DEFAULT_OPACITY = {
 
 const TOGGLES = [
   ["map", "Map"],
-  ["costmap", "Costmap"],
+  ["costmap", "Costmap G"],
+  ["costmapLocal", "Costmap L"],
   ["scan", "Laser"],
   ["path", "Path"],
   ["goal", "Goal"],
   ["waypoints", "Waypoints"],
+  ["zones", "Zones"],
   ["robotTrail", "Trail"],
 ];
 
 const OPACITY = [
-  ["costmap", "Costmap"],
+  ["costmap", "Costmap G"],
+  ["costmapLocal", "Costmap L"],
   ["scan", "Laser"],
   ["path", "Path"],
   ["robotTrail", "Trail"],
@@ -54,7 +60,7 @@ const MapLayers = () => {
         <p className="shrink-0 text-xs uppercase tracking-wider text-themeTextGray">
           Layers
         </p>
-        <div className="grid min-w-0 flex-1 grid-cols-4 gap-1.5 xl:grid-cols-7">
+        <div className="grid min-w-0 flex-1 grid-cols-3 gap-1.5 sm:grid-cols-5 xl:grid-cols-9">
           {TOGGLES.map(([key, label]) => (
             <label
               key={key}

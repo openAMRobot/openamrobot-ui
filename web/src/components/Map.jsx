@@ -224,13 +224,13 @@ const Map = forwardRef(
           } catch (e) {}
           window.NAV2D.scanTopic = null;
         }
-        if (window.NAV2D.costmapTopic) {
+        Object.keys(window.NAV2D.costmapTopics || {}).forEach((key) => {
           try {
-            window.NAV2D.costmapTopic.unsubscribe();
+            window.NAV2D.costmapTopics[key]?.unsubscribe();
           } catch (e) {}
-          window.NAV2D.costmapTopic = null;
-        }
-        window.NAV2D.costmapItem = null;
+          window.NAV2D.costmapTopics[key] = null;
+        });
+        window.NAV2D.costmapItems = {};
       }
     };
   }, [ros, createCanvasContainer]);

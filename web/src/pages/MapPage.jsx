@@ -11,10 +11,14 @@ import Joystick from "../components/Joystick";
 import RobotState from "../components/RobotState";
 import DockingControl from "../components/DockingControl";
 import NavStatus from "../components/NavStatus";
+import LocalizationStatus from "../components/LocalizationStatus";
 import MapLayers from "../components/MapLayers";
 import SystemAlerts from "../components/SystemAlerts";
 import WaypointLibrary from "../components/WaypointLibrary";
+import SpeedPresets from "../components/SpeedPresets";
 import useSavedWaypoints from "../shared/hooks/useSavedWaypoints";
+import useKeepoutZones from "../shared/hooks/useKeepoutZones";
+import { addEvent } from "../shared/events/eventLog";
 
 const INITIAL_POSE_COV = [
   0.25, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -52,6 +56,9 @@ const MapPage = () => {
   const queueIdxRef = useRef(0);
 
   const { waypoints, addWaypoint, removeWaypoint } = useSavedWaypoints();
+  // Zones are managed on the Config page; calling the hook here just re-pushes
+  // the stored zones onto the map overlay whenever the Map page (re)mounts.
+  useKeepoutZones();
   const waypointsRef = useRef(waypoints);
   useEffect(() => {
     waypointsRef.current = waypoints;
@@ -333,6 +340,7 @@ const MapPage = () => {
       }),
     );
     cancelGoal();
+    addEvent({ type: "safety", severity: "error", message: "Emergency stop — robot halted" });
     toast.warn("Emergency stop — robot halted");
   }, [cancelGoal]);
 
@@ -405,6 +413,7 @@ const MapPage = () => {
       <div className="flex min-h-[calc(100vh-104px)] flex-col gap-2 py-2 sm:py-3">
         <SystemAlerts />
         <NavStatus onCancelGoal={cancelGoal} />
+        <LocalizationStatus onSetPoseMode={() => activateMode("pose")} />
         <MapLayers />
 
         {/* Map + Camera */}
@@ -470,6 +479,8 @@ const MapPage = () => {
               </div>
             </div>
 
+            <SpeedPresets value={maxSpeed} onApply={setMaxSpeed} />
+
             <div className="w-full shrink-0 sm:w-[380px]">
               <RobotState compact />
             </div>
@@ -486,6 +497,7 @@ const MapPage = () => {
                 onRemove={removeWaypoint}
               />
             </div>
+
           </div>
 
           {/* Mode buttons + queue */}
