@@ -9,13 +9,15 @@ export const PAGE_HELP = {
   "/": {
     title: "Map",
     summary:
-      "The main operational view: the live occupancy map, the robot's position, and the controls to send it somewhere.",
+      "The main operational view: the live occupancy map, the robot's position, and every control to drive or send it somewhere.",
     tips: [
       "Drag to pan, scroll or pinch to zoom, or use the +/− buttons.",
       "Layer toggles above the map control what's drawn — costmap, laser scan, planned path, saved waypoints, the robot's trail.",
-      "Goal Mode / Set Pose / Add Waypoint change what a click on the map does.",
+      "Goal Mode / Set Pose / Add Waypoint / Go Home change what a click on the map does, or send it straight to the origin.",
       "Right-click the map for a quick menu — send a goal, save a waypoint, or set the initial pose — without switching modes first.",
-      "The joystick in the corner drives the robot manually at any time.",
+      "The joystick drives the robot manually at any time; the max-speed slider caps how fast, and STOP halts it and cancels any active goal.",
+      "Linear velocity, map position, and heading update live next to the joystick.",
+      "Dock/Undock trigger the robot's charging-dock behaviors, when supported.",
     ],
   },
   "/route": {
@@ -26,17 +28,6 @@ export const PAGE_HELP = {
       "Pick a group and map at the top, then Create or Edit a route.",
       "While editing, click the map to add points — Save when you're happy with the sequence.",
       "Change map switches which map this route belongs to; Auto-plan asks Nav2 to compute a path between two points for you.",
-    ],
-  },
-  "/control": {
-    title: "Control",
-    summary:
-      "Manual driving plus a compact live-telemetry view — velocity, position, system health, and Nav2 lifecycle state, all in one place.",
-    tips: [
-      "The joystick drives the robot directly; the max-speed slider caps how fast.",
-      "Health shows whether topics like TF, odometry, and the laser scan are actually publishing right now.",
-      "Lifecycle shows Nav2's own node states (active/inactive/unconfigured) — useful when navigation isn't behaving as expected.",
-      "Dock/Undock trigger the robot's charging-dock behaviors, when supported.",
     ],
   },
   "/blocks": {

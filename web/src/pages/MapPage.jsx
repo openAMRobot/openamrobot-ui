@@ -2,12 +2,14 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { useRos } from "../app/App";
+import { useRos, useRuntimeConfig } from "../app/App";
 import { AppConfig } from "../shared/constants";
 
 import Map from "../components/Map";
 import Camera from "../components/Camera";
 import Joystick from "../components/Joystick";
+import RobotState from "../components/RobotState";
+import DockingControl from "../components/DockingControl";
 import NavStatus from "../components/NavStatus";
 import MapLayers from "../components/MapLayers";
 import SystemAlerts from "../components/SystemAlerts";
@@ -21,6 +23,7 @@ const INITIAL_POSE_COV = [
 
 const MapPage = () => {
   const ros = useRos();
+  const { config } = useRuntimeConfig();
   const mapRef = useRef(null);
 
   // mode: null | 'goal' | 'pose' | 'waypoint'
@@ -30,6 +33,8 @@ const MapPage = () => {
     modeRef.current = m;
     setModeState(m);
   };
+
+  const [maxSpeed, setMaxSpeed] = useState(config.maxLinearSpeed);
 
   const [waypointQueue, setWaypointQueueState] = useState([]);
   const waypointQueueRef = useRef([]);
@@ -60,6 +65,7 @@ const MapPage = () => {
   const goalPoseTopic = useRef(null);
   const initialPoseTopic = useRef(null);
   const cancelClient = useRef(null);
+  const cmdVelTopic = useRef(null);
   const pendingInitialPoseRef = useRef(false);
 
   useEffect(() => {
@@ -81,6 +87,12 @@ const MapPage = () => {
       ros,
       name: AppConfig.NAV_CANCEL_GOAL_SERVICE,
       serviceType: "action_msgs/CancelGoal",
+    });
+
+    cmdVelTopic.current = new window.ROSLIB.Topic({
+      ros,
+      name: AppConfig.CMD_VEL_TOPIC,
+      messageType: "geometry_msgs/Twist",
     });
 
     const amclTopic = new window.ROSLIB.Topic({
@@ -312,6 +324,36 @@ const MapPage = () => {
     );
   }, []);
 
+  const emergencyStop = useCallback(() => {
+    if (!cmdVelTopic.current) return;
+    cmdVelTopic.current.publish(
+      new window.ROSLIB.Message({
+        linear: { x: 0, y: 0, z: 0 },
+        angular: { x: 0, y: 0, z: 0 },
+      }),
+    );
+    cancelGoal();
+    toast.warn("Emergency stop — robot halted");
+  }, [cancelGoal]);
+
+  const sendHome = useCallback(() => {
+    if (!goalPoseTopic.current) return;
+    goalPoseTopic.current.publish(
+      new window.ROSLIB.Message({
+        header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
+        pose: {
+          position: { x: 0, y: 0, z: 0 },
+          orientation: { x: 0, y: 0, z: 0, w: 1 },
+        },
+      }),
+    );
+    window.NAV2D?.setGoalPose?.({
+      position: { x: 0, y: 0, z: 0 },
+      orientation: { x: 0, y: 0, z: 0, w: 1 },
+    });
+    toast.info("Navigating to home position (0, 0)");
+  }, []);
+
   const executeQueue = useCallback(() => {
     if (!waypointQueueRef.current.length) return;
     queueIdxRef.current = 0;
@@ -360,15 +402,15 @@ const MapPage = () => {
     <>
       <ToastContainer position="bottom-right" theme="dark" />
 
-      <div className="flex min-h-[calc(100vh-104px)] flex-col gap-2 py-2 sm:py-3 xl:h-[calc(100vh-104px)] xl:min-h-0 xl:overflow-y-auto">
+      <div className="flex min-h-[calc(100vh-104px)] flex-col gap-2 py-2 sm:py-3">
         <SystemAlerts />
         <NavStatus onCancelGoal={cancelGoal} />
         <MapLayers />
 
         {/* Map + Camera */}
-        <section className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row">
+        <section className="flex flex-col gap-3 xl:flex-row">
           <div
-            className="h-[360px] min-h-[300px] w-full sm:h-[460px] xl:h-full xl:min-h-[260px] xl:w-[58%]"
+            className="h-[360px] w-full sm:h-[460px] xl:h-[480px] xl:w-[58%]"
             data-tour="map-canvas"
           >
             <Map
@@ -378,22 +420,72 @@ const MapPage = () => {
               onContextSetPose={setInitialPoseAt}
             />
           </div>
-          <div className="h-[300px] min-h-[220px] w-full sm:h-[360px] xl:h-full xl:min-h-[220px] xl:w-[42%]">
+          <div className="h-[300px] w-full sm:h-[360px] xl:h-[480px] xl:w-[42%]">
             <Camera />
           </div>
         </section>
 
         {/* Controls row */}
-        <section className="flex w-full shrink-0 items-stretch gap-3 xl:min-h-[112px]">
-          {/* Joystick */}
+        <section className="flex w-full shrink-0 flex-col gap-3">
+          {/* Manual drive: joystick + e-stop, max speed, live telemetry, docking, saved waypoints */}
           <div
-            className="dashboard-card flex w-[110px] shrink-0 flex-col items-center justify-center gap-1 p-2 sm:w-[124px] 2xl:w-[136px]"
+            className="flex w-full flex-wrap gap-3"
             data-tour="manual-drive"
           >
-            <p className="font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
-              Manual
-            </p>
-            <Joystick compact />
+            <div className="dashboard-card flex w-full shrink-0 flex-col items-center justify-center gap-2 p-2 sm:w-[140px]">
+              <p className="font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
+                Manual
+              </p>
+              <Joystick maxSpeed={maxSpeed} compact />
+              <button
+                onClick={emergencyStop}
+                title="Emergency stop"
+                className="mt-1 h-9 w-9 shrink-0 rounded-full border-2 border-statusRed bg-statusRed/10 font-[RobotoMono] text-[9px] font-bold leading-none text-statusRed transition-colors hover:bg-statusRed hover:text-white"
+              >
+                STOP
+              </button>
+            </div>
+
+            <div className="dashboard-card flex w-full shrink-0 flex-col justify-center gap-2 p-3 font-[RobotoMono] sm:w-[190px]">
+              <div className="flex items-center justify-between">
+                <p className="text-xs uppercase tracking-wider text-themeTextGray">
+                  Max Speed
+                </p>
+                <span className="text-sm font-semibold text-themeBlue">
+                  {maxSpeed.toFixed(2)} m/s
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0.05}
+                max={0.5}
+                step={0.05}
+                value={maxSpeed}
+                onChange={(e) => setMaxSpeed(parseFloat(e.target.value))}
+                className="w-full accent-themeBlue"
+              />
+              <div className="flex justify-between text-[10px] text-themeTextGray opacity-60">
+                <span>0.05</span>
+                <span>0.5 m/s</span>
+              </div>
+            </div>
+
+            <div className="w-full shrink-0 sm:w-[380px]">
+              <RobotState compact />
+            </div>
+
+            <div className="dashboard-card w-full shrink-0 p-3 sm:w-[260px]">
+              <DockingControl compact />
+            </div>
+
+            <div className="min-w-[280px] flex-1">
+              <WaypointLibrary
+                waypoints={waypoints}
+                onAdd={saveWaypointAt}
+                onGo={goToWaypoint}
+                onRemove={removeWaypoint}
+              />
+            </div>
           </div>
 
           {/* Mode buttons + queue */}
@@ -420,26 +512,24 @@ const MapPage = () => {
                 "● Adding Waypoints",
                 "● Adding",
               )}
+              <button
+                onClick={sendHome}
+                className="flex-1 rounded-xl border border-borderSubtle bg-bgCard px-2 py-3 font-[RobotoMono] text-[10px] font-semibold text-textWhiteHover transition-colors hover:border-themeBlue hover:text-themeBlue sm:px-3 sm:text-sm"
+              >
+                <span className="sm:hidden">Home</span>
+                <span className="hidden sm:inline">⌂ Go Home</span>
+              </button>
             </div>
 
-            <div className="dashboard-card px-3 py-1">
-              <p className="font-[RobotoMono] text-xs leading-5 text-themeTextGray">
-                {mode === "goal" &&
-                  "Click map to navigate. Drag before releasing to set heading."}
-                {mode === "pose" &&
-                  "Click map to set AMCL initial pose. Drag to set heading. One-shot."}
-                {mode === "waypoint" &&
-                  "Each click adds a waypoint. Drag to set heading. Execute all below."}
-                {!mode && "Select a mode above to interact with the map."}
-              </p>
-            </div>
-
-            <WaypointLibrary
-              waypoints={waypoints}
-              onAdd={saveWaypointAt}
-              onGo={goToWaypoint}
-              onRemove={removeWaypoint}
-            />
+            <p className="px-1 font-[RobotoMono] text-xs leading-5 text-themeTextGray">
+              {mode === "goal" &&
+                "Click map to navigate. Drag before releasing to set heading."}
+              {mode === "pose" &&
+                "Click map to set AMCL initial pose. Drag to set heading. One-shot."}
+              {mode === "waypoint" &&
+                "Each click adds a waypoint. Drag to set heading. Execute all below."}
+              {!mode && "Select a mode above to interact with the map."}
+            </p>
 
             {waypointQueue.length > 0 && (
               <div className="dashboard-card p-3 font-[RobotoMono]">

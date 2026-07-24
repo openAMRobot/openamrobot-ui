@@ -8,7 +8,7 @@ import { MetricCard, StatusBadge } from "../shared/ui/Dashboard";
 const quatToYaw = (q) =>
   Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
 
-const State = () => {
+const State = ({ compact = false }) => {
   const ros = useRos();
 
   const [linear, setLinear] = useState("0.00");
@@ -75,8 +75,11 @@ const State = () => {
   }, [ros]);
 
   return (
-    <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+    <div
+      className={`grid w-full min-w-0 grid-cols-1 sm:grid-cols-2 ${compact ? "gap-2" : "gap-3"}`}
+    >
       <MetricCard
+        compact={compact}
         label="Linear velocity"
         value={linear}
         unit="m/s"
@@ -91,6 +94,7 @@ const State = () => {
         }
       />
       <MetricCard
+        compact={compact}
         label="Map position"
         value={`${xCoord}, ${yCoord}`}
         unit="x / y"

@@ -1,6 +1,5 @@
 import MapPage from "./MapPage";
 import RoutePage from "./RoutePage";
-import ControlPage from "./ControlPage";
 import InfoPage from "./InfoPage";
 import BlocksPage from "./BlocksPage";
 import RobotDescriptionPage from "./RobotDescriptionPage";
@@ -23,7 +22,6 @@ import ConfigPage from "./ConfigPage";
 export const PAGE_REGISTRY = [
   { path: "/", label: "Map", icon: "map", component: MapPage },
   { path: "/route", label: "Routes", icon: "route", component: RoutePage },
-  { path: "/control", label: "Control", icon: "control", component: ControlPage },
   { path: "/blocks", label: "Programs", icon: "blocks", component: BlocksPage },
   { path: "/info", label: "Status", icon: "status", component: InfoPage },
   { path: "/robot", label: "Robot", icon: "robot", component: RobotDescriptionPage },

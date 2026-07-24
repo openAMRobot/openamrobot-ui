@@ -450,6 +450,20 @@ input[type="range"] {
   padding: 1rem;
 }
 
+.metric-card--compact {
+  padding: 0.65rem 0.85rem;
+}
+
+.metric-card--compact .metric-card__value {
+  margin-top: 0.3rem;
+  font-size: 1.1rem;
+}
+
+.metric-card--compact .metric-card__meta {
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+}
+
 .metric-card__topline,
 .chart-card__header {
   display: flex;

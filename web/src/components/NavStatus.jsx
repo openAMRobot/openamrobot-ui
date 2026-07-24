@@ -7,7 +7,7 @@ const STATUS_CODES = {
     label: "Unknown",
     color: "text-themeTextGray",
     dot: "bg-themeTextGray",
-    explain: "No goal has been sent yet, or its status hasn't arrived. Send a goal from the map or Control page.",
+    explain: "No goal has been sent yet, or its status hasn't arrived. Send a goal from the map.",
   },
   1: {
     label: "Accepted",

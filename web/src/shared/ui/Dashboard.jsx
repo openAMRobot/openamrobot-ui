@@ -91,10 +91,13 @@ export const MetricCard = ({
   unit,
   meta,
   icon,
+  compact = false,
   className = "",
   children,
 }) => (
-  <DashboardCard className={join("metric-card", className)}>
+  <DashboardCard
+    className={join("metric-card", compact && "metric-card--compact", className)}
+  >
     <div className="metric-card__topline">
       <p className="metric-card__label">{label}</p>
       {icon ? <span className="metric-card__icon">{icon}</span> : null}

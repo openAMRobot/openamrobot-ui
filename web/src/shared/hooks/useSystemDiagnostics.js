@@ -214,7 +214,7 @@ export default function useSystemDiagnostics() {
         id: `lifecycle-${name}`,
         severity: state === "inactive" ? 1 : 2,
         message: `${name} lifecycle node is ${state}.`,
-        linkTo: "/control",
+        linkTo: "/health",
       });
     });
 

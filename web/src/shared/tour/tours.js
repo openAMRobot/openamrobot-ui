@@ -30,12 +30,12 @@ export const TOURS = {
     {
       selector: '[data-tour="map-actions"]',
       title: "Goal, pose, and waypoints",
-      body: "Switch what a click on the map does: send a navigation goal, set the robot's initial pose, or drop a saved waypoint.",
+      body: "Switch what a click on the map does: send a navigation goal, set the robot's initial pose, or drop a saved waypoint — or jump straight home.",
     },
     {
       selector: '[data-tour="manual-drive"]',
       title: "Manual drive",
-      body: "Drive the robot directly at any time — this works whether or not you're in Goal Mode.",
+      body: "Drive the robot directly at any time, cap its speed, or hit STOP to halt it and cancel any active goal — live velocity and position show alongside.",
     },
   ],
 };

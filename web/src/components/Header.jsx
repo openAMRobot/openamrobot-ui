@@ -26,13 +26,6 @@ const NavIcon = ({ name }) => {
         <path d="M8 18h3a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3h-1" />
       </>
     ),
-    control: (
-      <>
-        <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
-        <circle cx="16" cy="7" r="2" />
-        <circle cx="8" cy="17" r="2" />
-      </>
-    ),
     blocks: (
       <>
         <rect x="3" y="3" width="7" height="7" rx="2" />

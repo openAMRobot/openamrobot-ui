@@ -57,7 +57,7 @@ export const CAMERA_TOPIC_OPTIONS = [
 ];
 export const DEFAULT_CAMERA_TOPIC = "/rgb_image";
 
-// Nav2 lifecycle-managed nodes polled/controlled from the Control page.
+// Nav2 lifecycle-managed nodes polled/controlled from the Health page.
 // `base` is the ROS node namespace exposing get_state/change_state services.
 export const LIFECYCLE_NODES = [
   { name: "map_server", base: "/map_server" },

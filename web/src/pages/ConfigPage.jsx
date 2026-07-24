@@ -247,7 +247,7 @@ const ConfigPage = () => {
           Manual-drive safety limits
         </p>
         <p className="mt-1 text-sm text-themeTextGray">
-          Ceiling values for the joystick and the Control page&apos;s max-speed
+          Ceiling values for the joystick and the Map page&apos;s max-speed
           slider. Lowering these takes effect immediately for new drive
           commands.
         </p>
