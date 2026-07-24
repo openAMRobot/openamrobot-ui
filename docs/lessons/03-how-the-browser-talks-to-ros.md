@@ -26,11 +26,24 @@ rosbridge_server  (a ROS 2 node: rosbridge_websocket)
 The ROS 2 graph  (topics, services, actions on the robot/simulation side)
 ```
 
-The same chain, drawn as a full node/topic-level diagram including the
-relay nodes ([Lesson 04](04-data-flow-and-relays.md)) and the robot/simulation
-side ([Lesson 01](01-what-is-this-ui.md#the-two-workspace-model)):
+The same chain, extended one level further in each direction — the relay
+nodes ([Lesson 04](04-data-flow-and-relays.md)) on the UI side, and the
+robot/simulation workspace ([Lesson 01](01-what-is-this-ui.md#the-two-workspace-model))
+on the other:
 
-![OpenAMRobot UI architecture: React app to rosbridge to ROS 2 UI backend nodes to the robot/simulation stack](../assets/openamr_ros_topic_node_schematic.png)
+```text
+Browser tab                     This UI workspace                 Robot / simulation workspace
+------------                     -----------------                 -----------------------------
+React app
+  |
+  v
+roslibjs  <---- WebSocket ---->  rosbridge_websocket
+                                       |
+                                       v
+                                 map_relay / nav_relays  <---- topics ---->  Nav2, AMCL, map_server,
+                                 (republish for late-                       drivers, sensors, ...
+                                  joining browsers)
+```
 
 `roslibjs` is not npm-installed — it's a browser script loaded directly in
 [`web/public/index.html`](../../web/public/index.html), alongside `ros2d.js`,

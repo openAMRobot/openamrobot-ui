@@ -5,6 +5,7 @@ import Logs from "../components/Logs";
 import NotificationsWatcher from "../components/NotificationsWatcher";
 import EventRecorder from "../components/EventRecorder";
 import SchedulerRunner from "../components/SchedulerRunner";
+import MissionRunner from "../components/MissionRunner";
 import StatusBar from "../components/StatusBar";
 import AuthModeBanner from "../components/AuthModeBanner";
 import DemoModeBanner from "../components/DemoModeBanner";
@@ -19,6 +20,7 @@ const AppLayout = () => {
   const [showOnboarding, setShowOnboarding] = useState(
     () => localStorage.getItem(ONBOARDING_SEEN_KEY) !== "true",
   );
+  const [autoStartTour, setAutoStartTour] = useState(false);
 
   const closeOnboarding = () => {
     setShowOnboarding(false);
@@ -38,6 +40,7 @@ const AppLayout = () => {
       <NotificationsWatcher />
       <EventRecorder />
       <SchedulerRunner />
+      <MissionRunner />
       <main
         id="main-content"
         className="mx-auto min-h-0 w-full max-w-[1600px] flex-1 px-3 pb-4 sm:px-4 lg:px-6"
@@ -48,8 +51,16 @@ const AppLayout = () => {
         <Outlet />
       </main>
 
-      <HelpWidget onReplayOnboarding={() => setShowOnboarding(true)} />
-      <OnboardingWizard open={showOnboarding} onClose={closeOnboarding} />
+      <HelpWidget
+        onReplayOnboarding={() => setShowOnboarding(true)}
+        autoStartTour={autoStartTour}
+        onTourStarted={() => setAutoStartTour(false)}
+      />
+      <OnboardingWizard
+        open={showOnboarding}
+        onClose={closeOnboarding}
+        onRequestTour={() => setAutoStartTour(true)}
+      />
 
       {showLogs && (
         <section

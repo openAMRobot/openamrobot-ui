@@ -738,7 +738,7 @@ const RoutePage = () => {
         />
       )}
 
-      <div className="sectionHeight space-y-5 py-4 sm:space-y-6 sm:py-6">
+      <div className="sectionHeight flex flex-col gap-5 py-4 sm:gap-6 sm:py-6 xl:h-[calc(100vh-145px)] xl:min-h-0">
         <SectionHeader
           eyebrow="Route authoring"
           title="Plan reusable robot routes"
@@ -774,8 +774,8 @@ const RoutePage = () => {
 
         <MapLayers />
 
-        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-5">
-          <section className="h-[440px] min-w-0 sm:h-[560px] xl:h-[calc(100vh-315px)] xl:min-h-[500px]">
+        <div className="grid min-w-0 flex-1 gap-4 xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-5">
+          <section className="h-[440px] min-w-0 sm:h-[560px] xl:h-full xl:min-h-[500px]">
             <Map ref={childRef} />
           </section>
 

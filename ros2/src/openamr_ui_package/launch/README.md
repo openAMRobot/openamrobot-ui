@@ -13,6 +13,14 @@ Current launch files:
   waypoint route following.
 - `map_server_launch.py`: deprecated compatibility launch, namespaced under
   `ui_legacy`.
+- `mapping_launch.py` (includes `gmapping_launch.py` + `move_base_launch.py`)
+  and `navigation_launch.py` (includes `move_base_launch.py` +
+  `amcl_launch.py`): **not legacy** — `folders_handler.py`'s `build_map_func`/
+  `save_map_func` launch these directly, and they're what the web UI's Maps
+  page **Start mapping**/**Save current map** buttons actually trigger.
+  `amcl_launch.py`, `gmapping_launch.py`, and `move_base_launch.py` on their
+  own are just the pieces those two compose — not meant to be launched
+  standalone.
 
-The other launch files are legacy or compatibility helpers. For normal use, see
-the root `README.md` and prefer `openamr_ui_bringup ui.launch.py`.
+For normal use, see the root `README.md` and prefer
+`openamr_ui_bringup ui.launch.py`.

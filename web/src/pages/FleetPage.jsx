@@ -1,8 +1,21 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { useRuntimeConfig, useRosStatus } from "../app/App";
 import { resolveRosbridgeHost } from "../shared/constants/runtimeConfig";
 import { DashboardCard, EmptyState, SectionHeader } from "../shared/ui/Dashboard";
+import SystemHealth from "../components/SystemHealth";
+import LifecycleStatus from "../components/LifecycleStatus";
+import useSystemDiagnostics, {
+  OVERALL_LABELS,
+} from "../shared/hooks/useSystemDiagnostics";
+
+const OVERALL_DOT = {
+  0: "bg-statusGreen",
+  1: "bg-statusYellow",
+  2: "bg-statusRed",
+  3: "bg-statusRed",
+};
 
 const STORAGE_KEY = "openamrFleet";
 
@@ -58,6 +71,8 @@ const EMPTY = { name: "", host: "", port: "9090" };
 const FleetPage = () => {
   const { config, updateConfig } = useRuntimeConfig();
   const rosStatus = useRosStatus();
+  const { reportHealth, reportLifecycle, issues, overall, overallLabel } =
+    useSystemDiagnostics();
 
   const [fleet, setFleet] = useState(loadFleet);
   const [reach, setReach] = useState({}); // id -> bool | "checking"
@@ -108,7 +123,7 @@ const FleetPage = () => {
 
   const dotFor = (r) => {
     if (isActive(r)) {
-      return rosStatus === "connected" ? "bg-statusGreen" : "bg-statusYellow";
+      return rosStatus === "connected" ? OVERALL_DOT[overall] : "bg-statusYellow";
     }
     const state = reach[r.id];
     if (state === "checking") return "bg-themeTextGray animate-pulse";
@@ -132,6 +147,66 @@ const FleetPage = () => {
           </button>
         }
       />
+
+      <DashboardCard className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-[RobotoMono] text-[11px] font-bold uppercase tracking-[0.14em] text-themeBlue">
+            Active robot health
+          </p>
+          <div className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${OVERALL_DOT[overall]}`} />
+            <span className="text-xs font-semibold text-themeTextGray">
+              {rosStatus === "connected" ? overallLabel || OVERALL_LABELS[0] : "Not connected"}
+            </span>
+          </div>
+        </div>
+        <p className="mt-1 text-sm text-themeTextGray">
+          Full Health Centre rollup for whichever robot this browser is
+          currently connected to — this app only holds one live rosbridge
+          connection at a time, so other robots below show reachability only
+          (a raw WebSocket ping), not a full diagnostics rollup, until you
+          connect to them.
+        </p>
+
+        {issues.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {issues.map((issue) =>
+              issue.linkTo ? (
+                <Link
+                  key={issue.id}
+                  to={issue.linkTo}
+                  className="rounded-lg border border-borderSubtle bg-bgSurface px-2.5 py-1.5 text-xs text-textWhiteHover hover:border-themeBlue hover:text-themeBlue"
+                >
+                  {issue.message}
+                </Link>
+              ) : (
+                <span
+                  key={issue.id}
+                  className="rounded-lg border border-borderSubtle bg-bgSurface px-2.5 py-1.5 text-xs text-themeTextGray"
+                >
+                  {issue.message}
+                </span>
+              ),
+            )}
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="dashboard-card p-3">
+            <SystemHealth compact onHealthChange={reportHealth} />
+          </div>
+          <div className="dashboard-card p-3">
+            <LifecycleStatus compact onStatesChange={reportLifecycle} />
+          </div>
+        </div>
+
+        <Link
+          to="/health"
+          className="mt-3 inline-block text-xs text-themeBlue hover:underline"
+        >
+          Open full Health Centre →
+        </Link>
+      </DashboardCard>
 
       <DashboardCard className="p-0">
         {fleet.length === 0 ? (
@@ -157,8 +232,17 @@ const FleetPage = () => {
                     </p>
                     <p className="text-xs text-themeTextGray">
                       ws://{r.host}:{r.port}
+                      {active && rosStatus === "connected" && (
+                        <>
+                          {" · "}
+                          <Link to="/health" className="hover:text-themeBlue hover:underline">
+                            {overallLabel || OVERALL_LABELS[0]}
+                            {issues.length > 0 && ` (${issues.length})`}
+                          </Link>
+                        </>
+                      )}
                       {reach[r.id] === false && !active && " · unreachable"}
-                      {reach[r.id] === true && !active && " · reachable"}
+                      {reach[r.id] === true && !active && " · reachable only (ping)"}
                     </p>
                   </div>
                   <button

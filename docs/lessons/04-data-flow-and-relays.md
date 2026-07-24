@@ -95,6 +95,6 @@ adding a new relay.
 
 [Lesson 05 — Backend Nodes in Detail](05-backend-nodes-in-detail.md) finishes
 the ROS-side tour — the rest of what `openamr_ui_package` runs beyond the two
-relays — before [Lesson 06 — The Five Pages](06-the-five-pages.md) walks
-through what the Map, Route, Control, and Info pages actually show, and which
-topics (relayed or direct) each one depends on.
+relays — before [Lesson 06 — A Tour of Every Page](06-the-pages.md) walks
+through what each page actually shows, and which topics (relayed or direct)
+it depends on.

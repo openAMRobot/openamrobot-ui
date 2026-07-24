@@ -57,7 +57,7 @@ reply, synchronously from the caller's point of view. Use a service when you
 need an answer, not a stream. Two examples used in this UI:
 
 - Nav2 lifecycle nodes expose `get_state`/`change_state` services that the
-  Control page polls and calls — see
+  Health, Fleet, and Config pages poll and call — see
   [`web/src/components/LifecycleStatus.jsx`](../../web/src/components/LifecycleStatus.jsx).
   Example: `get_state` takes an empty request and replies with a single
   `current_state` field whose `label` is a string like `"active"`,
@@ -79,8 +79,10 @@ sends a goal pose, watches feedback (distance remaining) and status
 (navigating/succeeded/failed), and can cancel it. See
 [`web/src/components/NavStatus.jsx`](../../web/src/components/NavStatus.jsx)
 for the feedback/status side, and the cancel-goal service call in
-[`web/src/pages/MapPage.jsx`](../../web/src/pages/MapPage.jsx) or
-[`web/src/pages/ControlPage.jsx`](../../web/src/pages/ControlPage.jsx).
+[`web/src/pages/MapPage.jsx`](../../web/src/pages/MapPage.jsx) (also called
+directly by the E-STOP button in
+[`web/src/components/StatusBar.jsx`](../../web/src/components/StatusBar.jsx),
+visible on every page).
 
 Concretely, that one navigation looks like three separate messages over
 time: a goal pose sent once ("go to x=2, y=1"), a stream of feedback

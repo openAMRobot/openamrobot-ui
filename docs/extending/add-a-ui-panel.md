@@ -2,7 +2,7 @@
 
 A hands-on guide to adding a new screen or a new self-contained widget to the
 React app, without touching how the existing pages behave. If you haven't
-read them yet, [Lesson 06](../lessons/06-the-five-pages.md) and
+read them yet, [Lesson 06](../lessons/06-the-pages.md) and
 [Lesson 10](../lessons/10-topics-as-the-contract.md) explain the pattern this
 guide walks through mechanically.
 
@@ -16,26 +16,42 @@ guide walks through mechanically.
   or
   [`web/src/components/SystemAlerts.jsx`](../../web/src/components/SystemAlerts.jsx).
   Then import and render it from the page component you want it on (e.g.
-  [`web/src/pages/ControlPage.jsx`](../../web/src/pages/ControlPage.jsx)).
-  You're done after step 3 below — no routing changes needed.
+  [`web/src/pages/MapPage.jsx`](../../web/src/pages/MapPage.jsx)). You're
+  done after step 3 below — no routing changes needed.
 - **A whole new page** (its own URL, its own nav entry) → add a component
   under [`web/src/pages/`](../../web/src/pages/), following the shape of an
   existing page such as
-  [`web/src/pages/InfoPage.jsx`](../../web/src/pages/InfoPage.jsx) (it's the
-  shortest one). Continue to step 2.
+  [`web/src/pages/ConsolePage.jsx`](../../web/src/pages/ConsolePage.jsx)
+  (it's the shortest one). Continue to step 2.
 
 ## 2. Register the route (new pages only)
 
-Two files need updating together:
+Routing and navigation both read from one array, so there's exactly one file
+to touch: [`web/src/pages/registry.js`](../../web/src/pages/registry.js).
+Add an entry to `PAGE_REGISTRY`:
 
-- [`web/src/pages/index.jsx`](../../web/src/pages/index.jsx) — add a
-  `<Route path="..." element={<YourPage />} />` entry inside the existing
-  `<Route path="/" element={<AppLayout />}>` block, alongside `MapPage`,
-  `RoutePage`, `ControlPage`, `BlocksPage`, and `InfoPage`.
-- [`web/src/components/Header.jsx`](../../web/src/components/Header.jsx) —
-  add an entry to the `NAV_LINKS` array (`{ to: "/your-path", label: "Your
-  Label" }`) so the new page shows up in both the desktop nav and the mobile
-  dropdown menu, which both render from that same array.
+```js
+{ path: "/your-path", label: "Your Label", icon: "your-icon", component: YourPage },
+```
+
+[`web/src/pages/index.jsx`](../../web/src/pages/index.jsx) maps that array
+into routes, and
+[`web/src/components/Header.jsx`](../../web/src/components/Header.jsx) maps
+the same array into the desktop nav and mobile dropdown — neither needs a
+separate edit. `icon` must match a case in `Header.jsx`'s `NavIcon`; an
+unrecognized name just falls back to a generic dot rather than breaking
+anything, so it's safe to add the registry entry before you've picked (or
+added) an icon.
+
+If you'd rather ship the page as a self-contained plugin instead of editing
+the core registry directly — for example, something you don't want merged
+into this repo's `pages/` folder — call `registerPage(entry)` (exported from
+the same `registry.js` file) from your own module instead of pushing into
+`PAGE_REGISTRY` by hand. See
+[`web/src/plugins/notesPlugin/`](../../web/src/plugins/notesPlugin/) for a
+complete, working example — its `index.js` is the entire integration, and
+[`web/src/index.js`](../../web/src/index.js) installs it with one function
+call.
 
 ## 3. Reach the shared ROS connection
 

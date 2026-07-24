@@ -410,7 +410,7 @@ const MapPage = () => {
     <>
       <ToastContainer position="bottom-right" theme="dark" />
 
-      <div className="flex min-h-[calc(100vh-104px)] flex-col gap-2 py-2 sm:py-3">
+      <div className="flex min-h-[calc(100vh-145px)] flex-col gap-2 py-2 sm:py-3">
         <SystemAlerts />
         <NavStatus onCancelGoal={cancelGoal} />
         <LocalizationStatus onSetPoseMode={() => activateMode("pose")} />

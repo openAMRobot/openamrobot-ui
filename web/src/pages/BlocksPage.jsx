@@ -748,7 +748,7 @@ const BlocksPage = () => {
   };
 
   return (
-    <section className="grid min-h-[520px] grid-cols-1 gap-3 py-3 lg:h-[calc(100vh-104px)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_360px] lg:overflow-hidden">
+    <section className="grid min-h-[520px] grid-cols-1 gap-3 py-3 lg:h-[calc(100vh-145px)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_360px] lg:overflow-hidden">
       <div className="dashboard-card flex min-h-[480px] flex-col overflow-hidden lg:min-h-0">
         <div className="flex shrink-0 items-center justify-between border-b border-borderSubtle px-3 py-2">
           <div>

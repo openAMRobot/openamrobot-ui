@@ -27,7 +27,7 @@ the vocabulary below makes sense.
 publishes robot pose and velocity on `/odom`. You start this UI workspace;
 Flask serves the compiled React page to your browser; the browser opens a
 WebSocket to rosbridge (see [Lesson 03](03-how-the-browser-talks-to-ros.md));
-the Control page's `RobotState` panel then subscribes to `/odom` over that
+the Map page's `RobotState` panel then subscribes to `/odom` over that
 connection and renders the numbers you see update on screen. None of that
 happens until the robot/simulation workspace is already running and
 publishing `/odom` — the UI has nothing to show otherwise.

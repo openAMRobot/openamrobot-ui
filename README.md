@@ -5,9 +5,14 @@ autonomous mobile robot. It gives operators one place to see the live map,
 check where the robot is, drive it with a joystick, send it to saved locations,
 watch the camera view, dock it, build simple routines without writing code,
 inspect its 3D model, register external hardware, check overall system health,
-and record or replay sessions for debugging and demos. A built-in Demo Mode
+and record or replay sessions for debugging and demos. Beyond single-robot
+operation it also covers scheduled and multi-step missions, a small robot
+fleet roster, a live log console and parameter editor, and a metrics/events
+track record — with a one-tap E-STOP always visible. A built-in Demo Mode
 and a guided help system let you explore the whole interface with no robot
-connected at all.
+connected at all, and the page list itself is extensible: a working example
+plugin ships in the repo showing how to add a new page without touching core
+routing or navigation code.
 
 https://github.com/user-attachments/assets/a2007c67-8fa3-449c-ae97-f2aaa151666b
 
@@ -32,7 +37,7 @@ Quick start order:
 1. Choose one installation method: Docker Compose or manual install.
 2. Start the robot or simulation workspace.
 3. Start the UI launch from this workspace.
-4. Open the browser at `http://127.0.0.1:5050/control`.
+4. Open the browser at `http://127.0.0.1:5050/`.
 5. Confirm the UI says ROS is connected before driving or sending goals.
 
 No robot handy yet? Open `/config` and switch on **Demo Mode** — every page
@@ -63,15 +68,41 @@ this as a choice the first time the UI loads in a browser.
   serial-port detection on the host running the backend
 - A System Health Centre at `/health` rolling up the ROS connection, live
   topics, TF, Nav2 lifecycle, registered devices, and battery into one
-  overall Ready / Warning / Not-ready status, with clickable issues
+  overall Ready / Warning / Not-ready status, with clickable issues; the
+  same rollup is also reused on the Config and Fleet pages
 - Rosbag recording and replay at `/recordings`, backed by real `ros2 bag
   record`/`play` processes — useful for debugging, demos, and lessons
+- A time-triggered Scheduler at `/scheduler` (send the robot home or to a
+  saved waypoint on a schedule) and a multi-step Missions builder at
+  `/missions` (chain waypoints, waits, and dock/undock into one sequence,
+  runnable on its own or triggered from the Scheduler) — both run in the
+  browser tab, not as robot-side autonomy, so keep a tab open for them to fire
+- A Metrics page (`/metrics`) tracking distance, uptime, and goal/dock
+  success rates over time, and an Events page (`/events`) with a
+  filterable, exportable timeline of navigation/docking/battery/safety events
+- A live Console (`/console`) for `/rosout` and arbitrary topic echo, a
+  Parameters page (`/params`) for reading/setting Nav2 parameters on running
+  nodes, and a Fleet page (`/fleet`) for managing a small roster of robots
+  and switching which one this browser controls
+- A Maps page (`/maps`) to save, switch, rename, and organize the robot's
+  maps, including build/save-map actions when the optional helper node
+  (`physnode_launch.py`) is running
+- An always-visible status bar with connection state, battery, and a
+  one-tap software E-STOP, reachable from any page
+- A downloadable diagnostic support-package export (from the Health Centre)
+  bundling connection info, the health rollup, recent events, a metrics
+  snapshot, runtime config, and Nav2 parameters for offline troubleshooting
 - Demo Mode (toggle on the Config page): explore every page with believable
-  simulated telemetry, no robot or ROS connection required
+  simulated telemetry, no robot or ROS connection required, including a
+  guided-tasks flow from the first-run onboarding guide
 - A first-run onboarding guide and an in-app "?" help widget with
   page-specific tips and a guided tour of the Map page
 - Saved robot connection profiles and an optional `AUTH_MODE` deployment
   guard that warns when the UI is reachable from outside the local network
+- An extensible page/device-type registry (`web/src/pages/registry.js`) with
+  manifest validation and version compatibility checks — a real working
+  example plugin ships at `web/src/plugins/notesPlugin/` showing how to add
+  a page without editing core routing or navigation code
 
 ## Repository Layout
 
@@ -227,7 +258,7 @@ docker compose up --build
 Open the UI:
 
 ```text
-http://127.0.0.1:5050/control
+http://127.0.0.1:5050/
 ```
 
 Open Blockly:
@@ -419,14 +450,14 @@ ros2 launch openamr_ui_bringup ui.launch.py
 Open the UI:
 
 ```text
-http://127.0.0.1:5050/control
+http://127.0.0.1:5050/
 ```
 
 If you are running on a robot or another computer, replace `127.0.0.1` with the
 robot/computer IP address:
 
 ```text
-http://<robot-ip>:5050/control
+http://<robot-ip>:5050/
 ```
 
 Full UI functionality requires the robot or simulation workspace to already be
@@ -545,7 +576,7 @@ ros2 launch openamr_ui_bringup ui.launch.py
 Then open:
 
 ```text
-http://127.0.0.1:5050/control
+http://127.0.0.1:5050/
 ```
 
 This starts the recommended independent UI mode:
@@ -683,36 +714,62 @@ fallback IP before running `npm run dev`.
 
 ## Using the Web UI
 
+There is no separate "Control" page — manual driving, docking, and live
+telemetry live directly on the Map page (`/`), alongside an always-visible
+status bar (connection, battery, E-STOP) available from every page.
+
 The app has these main routes:
 
-| Page       | URL           | Purpose                                                     |
-| ---------- | ------------- | ------------------------------------------------------------ |
-| Map        | `/`           | Map view, robot pose, goals, map layers                     |
-| Routes     | `/route`      | Route and waypoint management                                |
-| Control    | `/control`    | Manual driving, docking, robot control, status               |
-| Programs   | `/blocks`     | Blockly visual robot programming                              |
-| Status     | `/info`       | Camera, telemetry, battery, and system health                |
-| Robot      | `/robot`      | 3D URDF model viewer — Description Mode and Live Mode         |
-| Devices    | `/devices`    | Manual external-device registry with live status             |
-| Health     | `/health`     | Overall system-readiness rollup with clickable issues         |
-| Recordings | `/recordings` | Rosbag record/replay for debugging, demos, and lessons        |
-| Config     | `/config`     | Connection settings, saved profiles, Demo Mode, safety limits |
+| Page       | URL           | Purpose                                                          |
+| ---------- | ------------- | ------------------------------------------------------------------ |
+| Map        | `/`           | Map view, robot pose, goals, manual driving, docking, waypoints   |
+| Routes     | `/route`      | Route and waypoint sequence management                            |
+| Maps       | `/maps`       | Save, switch, rename, and organize the robot's maps                |
+| Programs   | `/blocks`     | Blockly visual robot programming                                  |
+| Scheduler  | `/scheduler`  | Time-triggered single-action tasks (e.g. go home every evening)    |
+| Missions   | `/missions`   | Multi-step missions — waypoints, waits, dock/undock, chained       |
+| Status     | `/info`       | Camera, telemetry, battery, and system health                     |
+| Robot      | `/robot`      | 3D URDF model viewer — Description Mode and Live Mode              |
+| Devices    | `/devices`    | Manual external-device registry with live status                  |
+| Health     | `/health`     | Overall system-readiness rollup with clickable issues              |
+| Metrics    | `/metrics`    | Cumulative distance, uptime, and goal/dock success track record   |
+| Recordings | `/recordings` | Rosbag record/replay for debugging, demos, and lessons             |
+| Events     | `/events`     | Filterable, exportable event timeline                              |
+| Console    | `/console`    | Live `/rosout` and arbitrary topic echo                            |
+| Parameters | `/params`     | Read/set Nav2 parameters on running nodes                          |
+| Fleet      | `/fleet`      | Multi-robot roster; switch which robot this browser controls       |
+| Config     | `/config`     | Connection settings, saved profiles, Demo Mode, safety limits       |
+| Notes      | `/notes`      | Example plugin page (not core — see Extension SDK below)           |
 
 Every page also has a "?" help button (bottom-right) with page-specific tips,
-and the Map page includes a short guided tour. For deeper detail on the
-original five core pages, their controls, and screenshots, see
-[Lesson 06 — The Five Pages](docs/lessons/06-the-five-pages.md) (written
-before Robot/Devices/Health/Recordings were added — those are covered by
-their own in-app help); Blocks also gets a full deep dive of its own in
-[Lesson 09 — Blockly Visual Programming](docs/lessons/09-blockly-programming.md).
+and the Map page includes a short guided tour.
+[Lesson 06 — A Tour of Every Page](docs/lessons/06-the-pages.md) walks
+through all of the pages above with a real screenshot each, and
+[Lesson 09 — Blockly Visual Programming](docs/lessons/09-blockly-programming.md)
+is the deep dive on the Programs page specifically.
 The page/nav list itself is data-driven from `web/src/pages/registry.js` — a
 new page is added there, not by editing routing or the sidebar directly.
+
+### Extension SDK
+
+A contributor can add a page without touching `registry.js`, `Header.jsx`, or
+any routing code, by calling `registerPage()` (for a new top-level page) or
+`registerDeviceType()` (for a new Devices connection type) through the
+validating wrapper in `web/src/shared/plugins/registerPlugin.js`, which
+checks the plugin's manifest against `web/src/shared/plugins/pluginSchema.js`
+(required fields, a minimal `>=x.y.z` version-compatibility check) before
+installing it. `web/src/plugins/notesPlugin/` is a real, working example — a
+small localStorage-backed notes page — installed from a single line in
+`web/src/index.js`. Copy that folder as a starting point for a real plugin.
+There is no dynamic/remote plugin loading (fetching a third-party
+`manifest.json` and evaluating remote JS) — plugins are installed from the
+frontend source at build time, not loaded at runtime.
 
 Typical operating flow:
 
 1. Start the robot or simulation stack.
 2. Start the UI launch from this repository.
-3. Open `/control` or `/`.
+3. Open `/`.
 4. Confirm the ROS connection indicator shows connected.
 5. Use manual control, map goal setting, route management, docking controls, and
    status panels as needed.

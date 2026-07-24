@@ -176,8 +176,12 @@ body {
 }
 
 /* ─── Layout ────────────────────────────────────────────────────────────── */
+/* 145px = Header's mobile top bar + StatusBar (components/StatusBar.jsx),
+   the two pieces of chrome that sit above <main> in every layout. Keep this
+   in sync with the other calc(100vh-145px) spots (MapPage/ConsolePage/
+   BlocksPage) if either of those ever changes height. */
 .sectionHeight {
-  min-height: calc(100vh - 104px);
+  min-height: calc(100vh - 145px);
 }
 
 /* ─── Blockly ───────────────────────────────────────────────────────────── */

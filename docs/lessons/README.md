@@ -13,10 +13,10 @@ instead of a full lesson, see the [glossary](glossary.md).
 | 03 | [How the Browser Talks to ROS](03-how-the-browser-talks-to-ros.md) | The roslibjs → rosbridge chain, Flask, the camera path |
 | 04 | [Data Flow and Relays](04-data-flow-and-relays.md) | Why `map_relay`/`nav_relays` exist; the relay pattern |
 | 05 | [Backend Nodes in Detail](05-backend-nodes-in-detail.md) | `flask_app.py`, `folders_handler.py`, `waypoint_nav.py`, `battery.py`, and why the two-stage build exists |
-| 06 | [The Five Pages](06-the-five-pages.md) | Map, Route, Control, Info, and Blocks — purpose and topics |
-| 07 | [UI Components in Detail](07-ui-components.md) | Every panel under `web/src/components/`, plus the app shell (routing, providers, Redux, theme) |
+| 06 | [A Tour of Every Page](06-the-pages.md) | All 18 pages — Map, Routes, Maps, Programs, Scheduler, Missions, Status, Robot, Devices, Health, Metrics, Recordings, Events, Console, Parameters, Fleet, Config, Notes — purpose and topics, one real screenshot each |
+| 07 | [UI Components in Detail](07-ui-components.md) | Every panel behind Map and Route under `web/src/components/`, plus the app shell (routing, providers, Redux, theme, always-mounted background components) |
 | 08 | [The Map and Route File Model](08-map-and-route-model.md) | The group → map → route file hierarchy |
-| 09 | [Blockly Visual Programming](09-blockly-programming.md) | The block → action → execution pipeline, Voice Command |
+| 09 | [Blockly Visual Programming](09-blockly-programming.md) | The Programs page's block → action → execution pipeline, Voice Command |
 | 10 | [Topics as the Contract](10-topics-as-the-contract.md) | Why centralizing topic names matters |
 | 11 | [Failure Modes and Reconnection](11-failure-modes-and-reconnection.md) | What breaks, what recovers on its own, what doesn't |
 | 12 | [Debugging with ROS CLI Tools](12-debugging-with-ros-cli.md) | Which command to reach for at which layer |
@@ -32,8 +32,12 @@ The full 01–13 order is the default and the safest first pass, but if
 you're short on time, these narrower paths cover what each role actually
 needs:
 
-- **Just operating the robot day to day:** 01, 06, 07, 11, 12. Skip the
+- **Just operating the robot day to day:** 01, 06, 11, 12. Skip the
   backend/build internals unless something breaks.
+- **Automating routine tasks (Scheduler, Missions, Programs):** 01, then
+  [Lesson 06](06-the-pages.md)'s Scheduler/Missions/Programs sections, then
+  [Lesson 09](09-blockly-programming.md) if Programs specifically is the
+  goal.
 - **Adding a UI panel or a new device:** 01–04, then straight to
   [`docs/extending/`](../extending/README.md) — the extending guides are
   self-contained enough not to require 05–12 first, though

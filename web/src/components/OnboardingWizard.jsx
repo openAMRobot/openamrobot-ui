@@ -9,7 +9,7 @@ import { useRuntimeConfig } from "../app/App";
  * connection form inline; the "connect" path explains the three steps and
  * hands off to Config, since that form already exists and works.
  */
-const OnboardingWizard = ({ open, onClose }) => {
+const OnboardingWizard = ({ open, onClose, onRequestTour }) => {
   const { updateConfig } = useRuntimeConfig();
   const navigate = useNavigate();
   const [step, setStep] = useState("welcome");
@@ -114,23 +114,70 @@ const OnboardingWizard = ({ open, onClose }) => {
               Demo mode
             </p>
             <h2 className="mt-1 text-lg font-bold text-textWhiteHover">
-              You&apos;re all set
+              You&apos;re all set — try a few things
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-themeTextGray">
-              Demo mode is now on — every page will show believable simulated
-              telemetry, always clearly labeled with a Demo mode banner so
-              it&apos;s never mistaken for a live robot. Switch back to a real
-              connection any time from the Config page.
+              Demo mode is now on — every page shows believable simulated
+              telemetry, always clearly labeled with a Demo mode banner.
+              A few guided tasks to get a feel for it, or skip straight in.
             </p>
-            <div className="mt-5 flex justify-end">
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={() => {
+                  updateConfig({ demoMode: true });
+                  onRequestTour?.();
+                  finish("/");
+                }}
+                className="w-full rounded-xl border border-borderSubtle p-3 text-left hover:border-themeBlue"
+              >
+                <p className="text-sm font-semibold text-textWhiteHover">
+                  1. Take the guided Map tour
+                </p>
+                <p className="mt-0.5 text-xs text-themeTextGray">
+                  Six quick steps: navigation, connection status, map layers,
+                  goals, and manual drive.
+                </p>
+              </button>
+              <button
+                onClick={() => {
+                  updateConfig({ demoMode: true });
+                  finish("/health");
+                }}
+                className="w-full rounded-xl border border-borderSubtle p-3 text-left hover:border-themeBlue"
+              >
+                <p className="text-sm font-semibold text-textWhiteHover">
+                  2. Check the Health Centre
+                </p>
+                <p className="mt-0.5 text-xs text-themeTextGray">
+                  See the Ready / Warnings rollup this simulated robot reports,
+                  and how issues link back to where you&apos;d fix them.
+                </p>
+              </button>
+              <button
+                onClick={() => {
+                  updateConfig({ demoMode: true });
+                  finish("/metrics");
+                }}
+                className="w-full rounded-xl border border-borderSubtle p-3 text-left hover:border-themeBlue"
+              >
+                <p className="text-sm font-semibold text-textWhiteHover">
+                  3. Watch the track record build
+                </p>
+                <p className="mt-0.5 text-xs text-themeTextGray">
+                  Distance travelled, uptime, and goal outcomes accumulate
+                  live as the simulated robot moves.
+                </p>
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
               <button
                 onClick={() => {
                   updateConfig({ demoMode: true });
                   finish("/");
                 }}
-                className="rounded-lg bg-themeBlue px-4 py-2 text-sm font-semibold text-white hover:bg-themeMediumBlue"
+                className="text-xs text-themeTextGray hover:text-textWhiteHover"
               >
-                Start exploring
+                Just start exploring →
               </button>
             </div>
           </>

@@ -4,80 +4,12 @@ import "react-toastify/dist/ReactToastify.css";
 
 import { useRos, useRosStatus } from "../app/App";
 import { DashboardCard, SectionHeader, StatusBadge } from "../shared/ui/Dashboard";
-
-const STORAGE_KEY = "openamrParamRows";
-
-// A starter set of commonly-tuned Nav2 parameters. Exact names depend on the
-// robot's Nav2 config, so every field is editable and the list is persisted —
-// operators curate their own working set. Node is the fully-qualified node
-// name; the get/set services live at <node>/{get,set}_parameters.
-const DEFAULT_ROWS = [
-  { node: "/controller_server", param: "FollowPath.max_vel_x", type: "double" },
-  { node: "/controller_server", param: "FollowPath.max_vel_theta", type: "double" },
-  { node: "/controller_server", param: "general_goal_checker.xy_goal_tolerance", type: "double" },
-  { node: "/planner_server", param: "GridBased.tolerance", type: "double" },
-  { node: "/global_costmap/global_costmap", param: "inflation_layer.inflation_radius", type: "double" },
-  { node: "/local_costmap/local_costmap", param: "inflation_layer.inflation_radius", type: "double" },
-];
-
-// rcl_interfaces/msg/ParameterType values used here.
-const PT = { bool: 1, int: 2, double: 3, string: 4 };
-
-const emptyValue = () => ({
-  type: 0,
-  bool_value: false,
-  integer_value: 0,
-  double_value: 0,
-  string_value: "",
-  byte_array_value: [],
-  bool_array_value: [],
-  integer_array_value: [],
-  double_array_value: [],
-  string_array_value: [],
-});
-
-const readParamValue = (pv) => {
-  if (!pv) return "";
-  switch (pv.type) {
-    case PT.bool:
-      return String(pv.bool_value);
-    case PT.int:
-      return String(pv.integer_value);
-    case PT.double:
-      return String(pv.double_value);
-    case PT.string:
-      return pv.string_value;
-    default:
-      return "";
-  }
-};
-
-const buildParamValue = (type, raw) => {
-  const v = emptyValue();
-  if (type === "bool") {
-    v.type = PT.bool;
-    v.bool_value = raw === true || raw === "true" || raw === "1";
-  } else if (type === "int") {
-    v.type = PT.int;
-    v.integer_value = parseInt(raw, 10) || 0;
-  } else if (type === "double") {
-    v.type = PT.double;
-    v.double_value = parseFloat(raw) || 0;
-  } else {
-    v.type = PT.string;
-    v.string_value = String(raw ?? "");
-  }
-  return v;
-};
-
-const loadRows = () => {
-  try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    return Array.isArray(stored) && stored.length ? stored : DEFAULT_ROWS;
-  } catch {
-    return DEFAULT_ROWS;
-  }
-};
+import {
+  PARAM_ROWS_STORAGE_KEY,
+  readParamValue,
+  buildParamValue,
+  loadParamRows,
+} from "../shared/constants/navParams";
 
 const inputClass =
   "w-full rounded-lg border border-borderSubtle bg-bgCard px-2 py-1 text-xs text-textWhiteHover outline-none focus:border-themeBlue";
@@ -94,14 +26,14 @@ const ParamsPage = () => {
   const connected = rosStatus === "connected";
 
   const [rows, setRows] = useState(() =>
-    loadRows().map((r, i) => ({ id: `${i}`, value: "", ...r })),
+    loadParamRows().map((r, i) => ({ id: `${i}`, value: "", ...r })),
   );
   const servicesRef = useRef({});
 
   const persist = (next) => {
     setRows(next);
     localStorage.setItem(
-      STORAGE_KEY,
+      PARAM_ROWS_STORAGE_KEY,
       JSON.stringify(next.map(({ node, param, type }) => ({ node, param, type }))),
     );
   };

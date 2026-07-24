@@ -1,9 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import { useRosStatus } from "../app/App";
 import SystemHealth from "../components/SystemHealth";
 import LifecycleStatus from "../components/LifecycleStatus";
+import SupportPackageButton from "../components/SupportPackageButton";
 import useSystemDiagnostics from "../shared/hooks/useSystemDiagnostics";
 import {
   DashboardCard,
@@ -75,6 +78,7 @@ const HealthPage = () => {
         eyebrow="System overview"
         title="Health Centre"
         description="One place to answer: is the whole robot ready? Aggregated from the ROS bridge, live topics, TF, Nav2 lifecycle, registered devices, battery, and the robot description."
+        action={<SupportPackageButton health={{ overall, overallLabel, issues }} />}
       />
 
       <DashboardCard className={`border p-5 ${style.border} ${style.bg}`}>
@@ -315,6 +319,8 @@ const HealthPage = () => {
           )}
         </DashboardCard>
       </div>
+
+      <ToastContainer theme="dark" position="bottom-right" />
     </div>
   );
 };

@@ -83,4 +83,4 @@ assuming something else is broken.
 
 [Lesson 09 — Blockly Visual Programming](09-blockly-programming.md) is the
 deep dive on Blocks, the same way Lesson 07 was the deep dive on
-Map/Route/Control/Info's components.
+the components behind Map and Route.

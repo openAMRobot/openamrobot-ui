@@ -4,7 +4,7 @@ This guide is the practical reference for the Blockly robot programming page:
 setup, the full block-by-block reference, example programs, and
 troubleshooting. For the conceptual side — what Blockly is, how a block
 becomes a robot action, and how Voice Command fits together — see
-[Lesson 07 — Blockly Visual Programming](../../../../docs/lessons/09-blockly-programming.md).
+[Lesson 09 — Blockly Visual Programming](../../../../docs/lessons/09-blockly-programming.md).
 
 The Blockly page lets you create a robot action program like:
 
@@ -18,7 +18,7 @@ start robot program
 The UI converts those blocks into a robot plan, then sends ROS commands through
 rosbridge when you press `Run`.
 
-![Complete Blockly page with workspace, program templates, run history, backend programs, named locations, plan checks, and generated plan](../../../../docs/assets/completeuiimage.png)
+![Complete Blockly page with workspace, program templates, run history, backend programs, named locations, plan checks, and generated plan](<../../../../docs/assets/Programms/Blockly.png>)
 
 ## Blockly Page Areas
 
@@ -27,7 +27,7 @@ toolbox. If your page looks different, compare it with the labels below.
 
 | Area                          | What It Shows                                                           | How To Use It                                                                                                    |
 | ----------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Top navigation                | The main UI pages: Map, Route, Control, Blocks, and Info                | Click `Blocks` to open the Blockly robot-programming page                                                        |
+| Sidebar navigation            | Every top-level page (Map, Routes, Maps, Programs, Scheduler, Missions, Status, Robot, Devices, Health, Metrics, Recordings, Events, Console, Parameters, Fleet, Config, Notes) | Click `Programs` to open the Blockly robot-programming page (the file and code still call it "Blocks") |
 | Page title                    | `Blockly Robot Program` and a short description                         | Confirms you are on the correct page                                                                             |
 | Save/Load/Import/Export/Reset | Program storage buttons in the top right of the Blockly panel           | Save and Load use browser storage; Import and Export move Blockly JSON files; Reset restores the default program |
 | Left toolbox                  | Block categories: Program, Navigation, Motion, Docking, and Robot State | Click a category, then drag blocks from the flyout into the workspace                                            |
@@ -298,7 +298,7 @@ source install/setup.bash
 Every block goes through the same pipeline before anything reaches the
 robot: block definition → action object in the Generated Plan → execution
 logic → ROS topic/service. See
-[Lesson 07 — The pipeline](../../../../docs/lessons/09-blockly-programming.md#the-pipeline-block--action--execution--ros)
+[Lesson 09 — The pipeline](../../../../docs/lessons/09-blockly-programming.md#the-pipeline-block--action--execution--ros)
 for the full explanation of why it's split this way.
 
 ## Current Block Categories
@@ -368,12 +368,11 @@ If no battery message is received, the nested blocks are skipped.
 
 ## Category Screenshots And Detailed Block Reference
 
-The next sections explain every block shown in the saved category screenshots.
-Each example is written as a block chain you can build in the Blockly workspace.
+The next sections explain every block in each toolbox category (visible in the
+left sidebar in the screenshot above). Each example is written as a block
+chain you can build in the Blockly workspace.
 
 ### Program Blocks
-
-![Program category showing start, repeat, and log blocks](../../../../docs/assets/program.png)
 
 Program blocks control the shape of your Blockly program. They do not directly
 move the robot unless robot action blocks are connected below or inside them.
@@ -456,8 +455,6 @@ What happens:
 - The second log appears after navigation finishes.
 
 ### Navigation Blocks
-
-![Navigation category showing coordinate navigation, named location, wait for navigation, and patrol blocks](../../../../docs/assets/navigation.png)
 
 Navigation blocks publish map-frame goals or wait for Nav2-style navigation
 status. They are best used when the robot is localized and the map is correct.
@@ -583,8 +580,6 @@ What happens:
 Use patrol only when both points are reachable on the current map.
 
 ### Motion Blocks
-
-![Motion category showing wait, speed, drive, rotate, stop movement, and emergency stop blocks](../../../../docs/assets/motion.png)
 
 Motion blocks publish direct velocity commands or wait for time. These do not
 plan around obstacles. Use them carefully on a real robot.
@@ -719,8 +714,6 @@ stop.
 
 ### Docking Blocks
 
-![Docking category showing dock and undock blocks](../../../../docs/assets/docking.png)
-
 Docking blocks publish trigger messages. The robot stack must provide the real
 docking and undocking behavior.
 
@@ -768,8 +761,6 @@ What happens:
 Use a small speed and short time until the undocking behavior is verified.
 
 ### Robot State Blocks
-
-![Robot State category showing battery condition and mode blocks](../../../../docs/assets/robotstate.png)
 
 Robot State blocks use robot state or publish a selected mode command.
 
@@ -879,7 +870,9 @@ If the plan contains direct motion, docking, undocking, emergency stop, or
 validation warnings, the page asks for confirmation before running. Confirm only
 after checking that the robot area is clear.
 
-![Plan Checks and Generated Plan panels showing validation feedback and generated robot steps](../../../../docs/assets/planchecksandgeneratedplan.png)
+![Plan Checks panel showing configured speed limits and a "Ready. No validation warnings." result](<../../../../docs/assets/Programms/Planchecks.png>)
+
+![Generated Plan panel listing queued steps built from the connected blocks](<../../../../docs/assets/Programms/generatedplan.png>)
 
 The `Stop` button calls the same emergency stop behavior used by the
 `emergency stop` block: it publishes zero velocity and cancels navigation.
@@ -943,7 +936,7 @@ locations as a fallback.
 
 The `Named Locations` panel in the right sidebar lets you manage locations:
 
-![Named Locations panel showing location name, saved locations, x, y, yaw, save, and delete controls](../../../../docs/assets/namedlocations.png)
+![Named Locations panel showing location name, saved locations, x, y, yaw, save, and delete controls](<../../../../docs/assets/Programms/Named%20location.png>)
 
 | Control       | Meaning                                               |
 | ------------- | ----------------------------------------------------- |
@@ -1127,7 +1120,7 @@ Flask serves it.
 
 ## ROS Topics Used By Blockly
 
-See [Lesson 08 — Topics as the Contract](../../../../docs/lessons/10-topics-as-the-contract.md)
+See [Lesson 10 — Topics as the Contract](../../../../docs/lessons/10-topics-as-the-contract.md)
 for why centralizing these names matters. The block executor uses topics and
 services configured in:
 
@@ -1162,7 +1155,7 @@ The `Program Templates` panel in the right sidebar loads ready-made Blockly
 programs into the workspace. Templates are useful for first-time users, demos,
 and quick robot checks.
 
-![Program Templates panel showing template selection and Load Template button](../../../../docs/assets/programtemplate.png)
+![Program Templates panel showing template selection and Load Template button](<../../../../docs/assets/Programms/ProgramTemplates.png>)
 
 Loading a template clears the current workspace and replaces it with the
 selected example. Save your current program first if you want to keep it.
@@ -1202,12 +1195,12 @@ blocks — the browser captures speech, the Flask backend calls Claude to turn
 it into a plan, and the UI converts that plan into real Blockly blocks for
 you to review before running. For how that pipeline works and why voice
 can't run anything or invent an action type outside the normal blocks, see
-[Voice Command in Lesson 07](../../../../docs/lessons/09-blockly-programming.md#voice-command).
+[Voice Command in Lesson 09](../../../../docs/lessons/09-blockly-programming.md#voice-command).
 
 You must say the wake word "Monsieur" before your command (see
 [Wake Word](#wake-word)); speech before it is ignored.
 
-![Voice Command panel showing the wake word requirement and voice-to-plan flow](../../../../docs/assets/voicecommand.png)
+![Voice Command panel showing the wake word requirement and voice-to-plan flow](<../../../../docs/assets/Programms/Voicecommand.png>)
 
 ### Voice Command Requirements
 
@@ -1390,9 +1383,9 @@ quick temporary backup while editing.
 
 ### Backend Saved Programs
 
-The `Backend Programs` panel is in the right sidebar on the Blocks page.
-
-![Backend Programs panel showing program name, saved program list, Save, Load, and Delete buttons](../../../../docs/assets/backendprogram.png)
+The `Backend Programs` panel is in the right sidebar on the Blocks page
+(visible below Run History in the full-page screenshot near the top of this
+guide).
 
 | Control        | Meaning                                                       |
 | -------------- | ------------------------------------------------------------- |
@@ -1434,9 +1427,9 @@ UI launch first if you want backend Save/Load/Delete to work in development.
 
 ### Browser Save, Load, Import, Export, And Reset
 
-The top-right `Save` and `Load` buttons use browser local storage:
-
-![Save, Load, Import, Export, and Reset toolbar buttons](../../../../docs/assets/saveloadimport.png)
+The top-right `Save` and `Load` buttons use browser local storage (visible
+in the toolbar above the workspace in the full-page screenshot near the top
+of this guide):
 
 ```text
 openamr_blockly_workspace
@@ -1659,25 +1652,27 @@ bash scripts/run_ui_backend.sh
 
 ### Category Images Do Not Appear In The README
 
-The category screenshots are stored in:
+The screenshots used in this guide are stored in:
 
 ```text
-docs/assets/completeuiimage.png
-docs/assets/saveloadimport.png
-docs/assets/program.png
-docs/assets/navigation.png
-docs/assets/motion.png
-docs/assets/docking.png
-docs/assets/robotstate.png
-docs/assets/programtemplate.png
-docs/assets/backendprogram.png
-docs/assets/namedlocations.png
-docs/assets/planchecksandgeneratedplan.png
+docs/assets/Programms/Blockly.png
+docs/assets/Programms/ProgramTemplates.png
+docs/assets/Programms/Runhistory.png
+docs/assets/Programms/Named location.png
+docs/assets/Programms/Planchecks.png
+docs/assets/Programms/generatedplan.png
+docs/assets/Programms/Voicecommand.png
 ```
 
-If they do not render in a Markdown viewer, confirm those files exist and that
-you are viewing the README from the repository root or a viewer that supports
-relative image paths.
+There isn't a dedicated screenshot for each individual toolbox category
+(Program/Navigation/Motion/Docking/Robot State), the toolbar's Save/Load/
+Import/Export/Reset row, or the Backend Programs panel specifically — those
+are all visible within `Blockly.png`, the full-page screenshot near the top
+of this guide, just not cropped out separately.
+
+If an image does not render in a Markdown viewer, confirm the file exists at
+that path and that you are viewing the README from the repository root or a
+viewer that supports relative image paths with spaces in filenames.
 
 ## Safety Notes
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { PAGE_HELP, DEFAULT_HELP } from "../shared/help/helpContent";
@@ -11,14 +11,25 @@ import TourOverlay from "../shared/tour/TourOverlay";
  * single fixed-position widget covers every page uniformly instead of 11
  * separate per-page wire-ups). Looks up the current route in PAGE_HELP/
  * TOURS via useLocation() rather than needing each page to pass anything.
+ *
+ * `autoStartTour`/`onTourStarted` let OnboardingWizard's "guided tasks" step
+ * kick off this same tour engine after navigating here, instead of
+ * duplicating a second tour implementation just for the demo-mode flow.
  */
-const HelpWidget = ({ onReplayOnboarding }) => {
+const HelpWidget = ({ onReplayOnboarding, autoStartTour, onTourStarted }) => {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [touring, setTouring] = useState(false);
 
   const content = PAGE_HELP[location.pathname] || DEFAULT_HELP;
   const tourSteps = TOURS[location.pathname];
+
+  useEffect(() => {
+    if (autoStartTour && tourSteps) {
+      setTouring(true);
+      onTourStarted?.();
+    }
+  }, [autoStartTour, tourSteps, onTourStarted]);
 
   return (
     <>

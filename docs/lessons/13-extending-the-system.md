@@ -14,14 +14,13 @@ runs on:
 - What the rest of `openamr_ui_package` runs beyond the relays — the Flask
   web/API server and the two Route-page backend nodes
   ([Lesson 05](05-backend-nodes-in-detail.md)).
-- Five pages — Map, Route, Control, and Info as thin compositions of panels
-  that subscribe/publish through that one shared connection, and Blocks
-  reaching the same connection through the pipeline below
-  ([Lesson 06](06-the-five-pages.md)) — and exactly what each of those
-  Map/Route/Control/Info panels does ([Lesson 07](07-ui-components.md)).
+- A full tour of every page — most of them thin compositions of panels that
+  subscribe/publish through that one shared connection
+  ([Lesson 06](06-the-pages.md)) — and exactly what each of the panels
+  behind Map and Route does ([Lesson 07](07-ui-components.md)).
 - The group → map → route file hierarchy behind the Route page
   ([Lesson 08](08-map-and-route-model.md)).
-- A fifth page, Blocks, where the same publish/subscribe mechanics get
+- Programs (Blockly), where the same publish/subscribe mechanics get
   wrapped in a block → action → execution pipeline instead of direct panel
   code ([Lesson 09](09-blockly-programming.md)).
 - Topic names as the real, unchecked-by-any-compiler interface between the UI
@@ -58,11 +57,11 @@ relay, and how to expose and render the result in a panel.
 
 ## Adding a new Blockly block
 
-If you want a new drag-and-drop block on the Blocks page, follow
+If you want a new drag-and-drop block on the Programs page, follow
 [`docs/extending/add-a-blockly-block.md`](../extending/add-a-blockly-block.md).
 It covers defining the block, registering it in the toolbox, and wiring its
 execution — the same three-stage pipeline from
 [Lesson 09](09-blockly-programming.md).
 
 All three guides assume you're only adding things — none of them ask you to
-modify Map, Route, Control, Info, or Blocks' existing behavior.
+modify an existing page's behavior.

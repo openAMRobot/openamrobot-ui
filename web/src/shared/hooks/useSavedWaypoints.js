@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "openamrSavedWaypoints";
+export const SAVED_WAYPOINTS_KEY = "openamrSavedWaypoints";
 
-const loadWaypoints = () => {
+export const loadWaypoints = () => {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    return JSON.parse(localStorage.getItem(SAVED_WAYPOINTS_KEY) || "[]");
   } catch {
     return [];
   }
@@ -21,7 +21,7 @@ export default function useSavedWaypoints() {
   const [waypoints, setWaypoints] = useState(loadWaypoints);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(waypoints));
+    localStorage.setItem(SAVED_WAYPOINTS_KEY, JSON.stringify(waypoints));
     window.NAV2D?.setSavedWaypoints?.(waypoints);
   }, [waypoints]);
 

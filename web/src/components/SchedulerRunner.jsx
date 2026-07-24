@@ -5,16 +5,8 @@ import { useRos } from "../app/App";
 import { AppConfig } from "../shared/constants";
 import { getSchedules, updateSchedule } from "../shared/schedules/schedules";
 import { addEvent } from "../shared/events/eventLog";
-
-const SAVED_WAYPOINTS_KEY = "openamrSavedWaypoints";
-
-const readWaypoints = () => {
-  try {
-    return JSON.parse(localStorage.getItem(SAVED_WAYPOINTS_KEY) || "[]");
-  } catch {
-    return [];
-  }
-};
+import { loadWaypoints as readWaypoints } from "../shared/hooks/useSavedWaypoints";
+import { requestStart as requestMissionStart } from "../shared/missions/missionRunner";
 
 // Minute-resolution key so a schedule fires once per matching minute even
 // though we poll more often than that.
@@ -60,6 +52,13 @@ const SchedulerRunner = () => {
     };
 
     const runAction = (s) => {
+      if (s.action?.type === "mission") {
+        requestMissionStart(s.action.missionId);
+        toast.info(`Scheduled: running mission "${s.name}"`);
+        addEvent({ type: "system", severity: "info", message: `Schedule "${s.name}" fired → mission run started` });
+        return;
+      }
+
       let ok = false;
       let where = "";
       if (s.action?.type === "home") {

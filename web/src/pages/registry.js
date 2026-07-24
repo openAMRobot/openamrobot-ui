@@ -13,6 +13,7 @@ import ParamsPage from "./ParamsPage";
 import FleetPage from "./FleetPage";
 import MapsPage from "./MapsPage";
 import SchedulerPage from "./SchedulerPage";
+import MissionsPage from "./MissionsPage";
 import ConfigPage from "./ConfigPage";
 
 /**
@@ -32,6 +33,7 @@ export const PAGE_REGISTRY = [
   { path: "/maps", label: "Maps", icon: "maps", component: MapsPage },
   { path: "/blocks", label: "Programs", icon: "blocks", component: BlocksPage },
   { path: "/scheduler", label: "Scheduler", icon: "scheduler", component: SchedulerPage },
+  { path: "/missions", label: "Missions", icon: "missions", component: MissionsPage },
   { path: "/info", label: "Status", icon: "status", component: InfoPage },
   { path: "/robot", label: "Robot", icon: "robot", component: RobotDescriptionPage },
   { path: "/devices", label: "Devices", icon: "devices", component: DevicesPage },

@@ -7,6 +7,7 @@ import {
   updateSchedule,
   removeSchedule,
 } from "../shared/schedules/schedules";
+import { getMissions, subscribeMissions } from "../shared/missions/missions";
 import useSavedWaypoints from "../shared/hooks/useSavedWaypoints";
 import { DashboardCard, EmptyState, SectionHeader } from "../shared/ui/Dashboard";
 
@@ -22,24 +23,33 @@ const inputClass =
 const SchedulerPage = () => {
   const { waypoints } = useSavedWaypoints();
   const [schedules, setSchedules] = useState(getSchedules);
+  const [missions, setMissions] = useState(getMissions);
   const [form, setForm] = useState(EMPTY);
 
   useEffect(() => subscribeSchedules(setSchedules), []);
+  useEffect(() => subscribeMissions(setMissions), []);
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
   const add = () => {
     if (!form.name.trim() || !form.time) return;
-    const action =
-      form.target === "home"
-        ? { type: "home" }
-        : { type: "waypoint", waypointId: Number(form.target) };
+    let action;
+    if (form.target === "home") action = { type: "home" };
+    else if (form.target.startsWith("mission:")) {
+      action = { type: "mission", missionId: form.target.slice("mission:".length) };
+    } else {
+      action = { type: "waypoint", waypointId: Number(form.target.slice("wp:".length)) };
+    }
     addSchedule({ name: form.name.trim(), time: form.time, repeat: form.repeat, action });
     setForm(EMPTY);
   };
 
   const describe = (s) => {
     if (s.action?.type === "home") return "Go home (0, 0)";
+    if (s.action?.type === "mission") {
+      const mission = missions.find((m) => m.id === s.action?.missionId);
+      return mission ? `Run mission "${mission.name}"` : "Run mission (missing)";
+    }
     const wp = waypoints.find((w) => w.id === s.action?.waypointId);
     return wp ? `Navigate to "${wp.name}"` : "Navigate to (missing waypoint)";
   };
@@ -113,8 +123,13 @@ const SchedulerPage = () => {
           <select className={inputClass} value={form.target} onChange={set("target")}>
             <option value="home">Go home</option>
             {waypoints.map((w) => (
-              <option key={w.id} value={w.id}>
+              <option key={`wp:${w.id}`} value={`wp:${w.id}`}>
                 {w.name}
+              </option>
+            ))}
+            {missions.map((m) => (
+              <option key={`mission:${m.id}`} value={`mission:${m.id}`}>
+                Mission: {m.name}
               </option>
             ))}
           </select>
@@ -126,7 +141,8 @@ const SchedulerPage = () => {
           </button>
         </div>
         <p className="mt-2 text-[11px] text-themeTextGray/70">
-          Targets are saved waypoints (add them on the Map page) or home.
+          Targets are saved waypoints (add them on the Map page), home, or a
+          whole mission (build one on the Missions page).
         </p>
       </DashboardCard>
     </div>

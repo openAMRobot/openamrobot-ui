@@ -127,6 +127,13 @@ const NavIcon = ({ name }) => {
         <circle cx="17.5" cy="5" r="1" />
       </>
     ),
+    missions: (
+      <>
+        <path d="M9 4H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V9l-5-5Z" />
+        <path d="M9 3v4a2 2 0 0 0 2 2h4" />
+        <path d="m8 14 2 2 4-4" />
+      </>
+    ),
     config: (
       <>
         <circle cx="12" cy="12" r="3" />

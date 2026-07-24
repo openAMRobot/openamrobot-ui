@@ -8,7 +8,7 @@ already in the repo, it's what you'd actually write.
 
 **The scenario:** the robot gets a new front-facing ultrasonic range sensor.
 Its driver publishes `sensor_msgs/Range` on `/front_range`, continuously, at
-a few Hz. We want a small panel on the Control page showing the current
+a few Hz. We want a small panel on the Map page showing the current
 distance and a warning when something is too close.
 
 ## Step 1 — Decide: does this need a relay?
@@ -97,12 +97,12 @@ and what's done with the message once it arrives.
 
 ## Step 4 — Render it on a page
 
-Add it to whichever page makes sense — the Control page, since that's where
+Add it to whichever page makes sense — the Map page, since that's where
 drive-safety information belongs
-([Lesson 06](../lessons/06-the-five-pages.md#control--websrcpagescontrolpagejsx)):
+([Lesson 06](../lessons/06-the-pages.md#map--mappagejsx)):
 
 ```jsx
-// web/src/pages/ControlPage.jsx
+// web/src/pages/MapPage.jsx
 import FrontRangeIndicator from "../components/FrontRangeIndicator";
 // ...
 <FrontRangeIndicator />
@@ -121,7 +121,7 @@ doesn't apply.
 2. Rebuild and reinstall the frontend, then hard-refresh the browser — see
    [`add-a-ui-panel.md` step 5](add-a-ui-panel.md#5-confirm-it) for the dev
    vs. production build distinction.
-3. Open the Control page and confirm the panel shows live data, and that
+3. Open the Map page and confirm the panel shows live data, and that
    moving something within 0.3m in front of the sensor turns the readout
    red.
 

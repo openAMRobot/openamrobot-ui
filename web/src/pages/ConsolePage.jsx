@@ -15,7 +15,7 @@ const ConsolePage = () => {
   const connected = rosStatus === "connected";
 
   return (
-    <div className="flex min-h-[calc(100vh-104px)] flex-col gap-3 py-3">
+    <div className="flex min-h-[calc(100vh-145px)] flex-col gap-3 py-3">
       <SectionHeader
         title="Console"
         description="Live ROS logs and raw topic inspection"

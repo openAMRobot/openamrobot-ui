@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -12,6 +13,25 @@ import Button from "../shared/ui/Button";
 import Switcher from "../shared/ui/Switcher";
 import useRobotProfiles from "../shared/hooks/useRobotProfiles";
 import KeepoutZones from "../components/KeepoutZones";
+import SystemHealth from "../components/SystemHealth";
+import LifecycleStatus from "../components/LifecycleStatus";
+import useSystemDiagnostics, {
+  OVERALL_LABELS,
+} from "../shared/hooks/useSystemDiagnostics";
+
+const OVERALL_DOT = {
+  0: "bg-statusGreen",
+  1: "bg-statusYellow",
+  2: "bg-statusRed",
+  3: "bg-statusRed",
+};
+
+const OVERALL_TEXT = {
+  0: "text-statusGreen",
+  1: "text-statusYellow",
+  2: "text-statusRed",
+  3: "text-statusRed",
+};
 
 const Field = ({ label, hint, children }) => (
   <label className="block">
@@ -34,6 +54,8 @@ const ConfigPage = () => {
   );
   const { profiles, addProfile, removeProfile } = useRobotProfiles();
   const [profileName, setProfileName] = useState("");
+  const { reportHealth, reportLifecycle, issues, overall, overallLabel } =
+    useSystemDiagnostics();
 
   // Keep the form in sync if settings change elsewhere (e.g. reset from
   // another tab writing to the same localStorage key).
@@ -184,6 +206,63 @@ const ConfigPage = () => {
             />
           </Field>
         </div>
+      </DashboardCard>
+
+      <DashboardCard className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-[RobotoMono] text-[11px] font-bold uppercase tracking-[0.14em] text-themeBlue">
+            Connection diagnostics
+          </p>
+          <div className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${OVERALL_DOT[overall]}`} />
+            <span className={`text-xs font-semibold ${OVERALL_TEXT[overall]}`}>
+              {overallLabel || OVERALL_LABELS[0]}
+            </span>
+          </div>
+        </div>
+        <p className="mt-1 text-sm text-themeTextGray">
+          Same rollup as the Health Centre, so a bad connection setting shows
+          its downstream effect right where you'd fix it.
+        </p>
+
+        {issues.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {issues.map((issue) =>
+              issue.linkTo ? (
+                <Link
+                  key={issue.id}
+                  to={issue.linkTo}
+                  className="rounded-lg border border-borderSubtle bg-bgSurface px-2.5 py-1.5 text-xs text-textWhiteHover hover:border-themeBlue hover:text-themeBlue"
+                >
+                  {issue.message}
+                </Link>
+              ) : (
+                <span
+                  key={issue.id}
+                  className="rounded-lg border border-borderSubtle bg-bgSurface px-2.5 py-1.5 text-xs text-themeTextGray"
+                >
+                  {issue.message}
+                </span>
+              ),
+            )}
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="dashboard-card p-3">
+            <SystemHealth compact onHealthChange={reportHealth} />
+          </div>
+          <div className="dashboard-card p-3">
+            <LifecycleStatus compact onStatesChange={reportLifecycle} />
+          </div>
+        </div>
+
+        <Link
+          to="/health"
+          className="mt-3 inline-block text-xs text-themeBlue hover:underline"
+        >
+          Open full Health Centre →
+        </Link>
       </DashboardCard>
 
       <DashboardCard className="p-4">

@@ -1,32 +1,43 @@
 # Lesson 07 — UI Components in Detail
 
-[Lesson 06](06-the-five-pages.md) covered all five pages at a glance. This
-lesson goes one level deeper on the four panel-based ones — Map, Route,
-Control, and Info (Blocks gets its own deep dive in
-[Lesson 09](09-blockly-programming.md)) — covering every individual panel
-under
-[`web/src/components/`](../../web/src/components/) — what it renders, exactly
-which ROS names it uses (from
+[Lesson 06](06-the-pages.md) toured every page at a glance. This lesson goes
+one level deeper on the shared panels behind Map and Route specifically —
+the two pages built as a composition of smaller panels under
+[`web/src/components/`](../../web/src/components/) — what each one renders,
+exactly which ROS names it uses (from
 [`web/src/shared/constants/index.js`](../../web/src/shared/constants/index.js)
-unless noted), which page(s) render it, and anything about its internal
-behavior that isn't obvious from the name.
+unless noted), which page(s) render it today, and anything about its
+internal behavior that isn't obvious from the name. Programs/Blockly gets its
+own deep dive in [Lesson 09](09-blockly-programming.md) instead, since it
+isn't built this way.
+
+### A note on the old Control page
+
+Earlier versions of this UI had a separate Control page. It's gone now —
+its manual-drive, docking, and telemetry panels were folded directly into
+the Map page (see [Lesson 06](06-the-pages.md#map--mappagejsx)). Several
+components below (`Joystick`, `DockingControl`, `NavStatus`, `SystemAlerts`)
+are exactly the panels that page used to render; only *which page* renders
+them has changed, not what they do or which topics they use. If you're
+reading an older doc, an issue, or a code comment that still says "Control
+page," this is what it's referring to.
 
 ## Quick reference
 
 | Component | Talks to ROS? | Used on |
 | --- | --- | --- |
-| [`Map`](#map--mapjsx) | Yes (indirectly, via NAV2D) | Map, Route, Control |
-| [`MapLayers`](#maplayers--maplayersjsx) | No | Map, Control |
-| [`Camera`](#camera--camerajsx) | No (plain HTTP, not rosbridge) | Map, Info |
-| [`Joystick`](#joystick--joystickjsx) | Yes | Map, Control |
-| [`NavStatus`](#navstatus--navstatusjsx) | Yes | Map, Control |
-| [`RobotState`](#robotstate--robotstatejsx) | Yes | Control, Info |
-| [`SystemHealth`](#systemhealth--systemhealthjsx) | Yes | Control, Info |
-| [`SystemAlerts`](#systemalerts--systemalertsjsx) | Yes | Map, Control |
-| [`LifecycleStatus`](#lifecyclestatus--lifecyclestatusjsx) | Yes | Control |
-| [`DockingControl`](#dockingcontrol--dockingcontroljsx) | Yes | Control |
+| [`Map`](#map--mapjsx) | Yes (indirectly, via NAV2D) | Map, Route |
+| [`MapLayers`](#maplayers--maplayersjsx) | No | Map, Route |
+| [`Camera`](#camera--camerajsx) | No (plain HTTP, not rosbridge) | Map, Status |
+| [`Joystick`](#joystick--joystickjsx) | Yes | Map |
+| [`NavStatus`](#navstatus--navstatusjsx) | Yes | Map |
+| [`RobotState`](#robotstate--robotstatejsx) | Yes | Map (compact), Status |
+| [`SystemHealth`](#systemhealth--systemhealthjsx) | Yes | Status, Health, Fleet (compact), Config (compact) |
+| [`SystemAlerts`](#systemalerts--systemalertsjsx) | Yes | Map |
+| [`LifecycleStatus`](#lifecyclestatus--lifecyclestatusjsx) | Yes | Health, Fleet (compact), Config (compact) |
+| [`DockingControl`](#dockingcontrol--dockingcontroljsx) | Yes | Map (compact) |
 | [`Header`](#header--headerjsx) | Reads status only | Every page (via `AppLayout`) |
-| [`Logs`](#logs--logsjsx) | Yes | Every page (console drawer) |
+| [`Logs`](#logs--logsjsx) | Yes | Every page (floating diagnostics-console drawer — a different thing from the dedicated [Console page](06-the-pages.md#console--consolepagejsx)) |
 | [`TimeModal`, `RouteModal`, `TextInputModal`](#the-route-page-modals) | No (delegate to Route page) | Route |
 | [`ControlSwitcher`, `CircularProgressBar`, `FilesModal`, `Topics`](#components-not-currently-used) | — | None (not wired into any page) |
 
@@ -61,7 +72,7 @@ Purely a settings panel — it holds no ROS connection at all and never calls
 (map, costmap, laser scan, path, goal, waypoints, trail) and call
 `window.NAV2D.setLayerVisible()`/`setLayerOpacity()`, the same global object
 `Map.jsx` initializes. This is a useful contrast to
-[Lesson 06](06-the-five-pages.md#the-pattern-across-all-five)'s "every page
+[Lesson 06](06-the-pages.md#the-pattern-across-every-page)'s "every page
 reads the shared ROS connection" — that's true of *pages*, but individual
 panels inside a page are free to not touch ROS at all when there's nothing
 to publish or subscribe to.
@@ -81,9 +92,9 @@ it's a client-side stream setting, not anything published to ROS.
 Publishes to `AppConfig.CMD_VEL_TOPIC` (`/cmd_vel`) only — no subscriptions.
 While being dragged, it re-publishes the current stick position on a
 100&nbsp;ms interval (not just on movement events), and publishes one final
-zero-velocity message on release. The `maxSpeed` prop (passed in by whichever
-page renders it — Control's speed slider, or a fixed value on Map) scales
-`linear.x`; `angular.z` is always scaled by the fixed
+zero-velocity message on release. The `maxSpeed` prop (passed in by the Map
+page's speed slider) scales `linear.x`; `angular.z` is always scaled by the
+fixed
 `AppConfig.MAX_ANGULAR_SPEED`, which isn't adjustable per instance.
 
 ## NavStatus — `NavStatus.jsx`
@@ -96,9 +107,12 @@ ID so the same finished goal doesn't get logged twice. On success/cancel/fail
 it clears the drawn path (`window.NAV2D.clearPath()`) after 1s and resets the
 status badge after 3s. Its `Cancel` button doesn't call the cancel service
 itself — it calls an `onCancelGoal` callback passed in as a prop, and the
-*page* (Map or Control) owns the actual `ROSLIB.Service` call to
+Map page owns the actual `ROSLIB.Service` call to
 `AppConfig.NAV_CANCEL_GOAL_SERVICE`. That split exists so the cancel-service
-client is created once per page, not once per panel.
+client is created once per page, not once per panel — the same service is
+also what the Map page's top-bar E-STOP button
+([`StatusBar.jsx`](06-the-pages.md#the-chrome-thats-on-every-page)) calls
+from outside this component entirely.
 
 ## RobotState — `RobotState.jsx`
 
@@ -124,8 +138,8 @@ subscribes to `/tf` and `/tf_static` and reconstructs which parent→child
 frame links have been seen, checking three fixed links every second:
 `map->odom`, `odom->base_link`, `base_link->lidar_link`. A topic is marked
 "online" only if a message arrived within its configured timeout; it also
-tracks a rolling Hz estimate shown in the non-compact view. Rendered compact
-on Control, full-detail on Info.
+tracks a rolling Hz estimate shown in the non-compact view. Rendered
+full-detail on Status and Health, compact on Fleet and Config.
 
 ## SystemAlerts — `SystemAlerts.jsx`
 
@@ -134,8 +148,8 @@ when everything is fine, and only appears as a small banner when something
 specific is stale: map, AMCL pose, or plan data, plus rosbridge disconnects.
 Unlike `SystemHealth`'s broad diagnostics, `plan` going stale here is
 `warningOnly` (renders yellow); map/AMCL going stale and rosbridge
-disconnecting are always treated as errors (red). Rendered on Map and
-Control — not Info or Route.
+disconnecting are always treated as errors (red). Rendered on Map only —
+not Route, Status, Health, Fleet, or Config.
 
 ## LifecycleStatus — `LifecycleStatus.jsx`
 
@@ -164,25 +178,32 @@ navigation succeeds or fails, before returning to idle. It keeps a rolling
 
 ## Header — `Header.jsx`
 
-Renders navigation from the `NAV_LINKS` array (see
-[`docs/extending/add-a-ui-panel.md`](../extending/add-a-ui-panel.md) for how
-to add an entry), the rosbridge status dot via `useRosStatus()`, and a
-light/dark theme toggle backed by `localStorage`. The "Console Logs" toggle
+Now reads its nav entries from
+[`web/src/pages/registry.js`](../../web/src/pages/registry.js) — the same
+`PAGE_REGISTRY` array covered in [Lesson 06](06-the-pages.md) — instead of a
+hardcoded list, plus the rosbridge status dot via `useRosStatus()` and a
+light/dark theme toggle backed by `localStorage`. Its **Console** toggle
 button doesn't own its own open/closed state — that state lives in
 [`web/src/layouts/appLayout.jsx`](../../web/src/layouts/appLayout.jsx), which
 passes `showLogs`/`onToggleLogs` down as props, so `Header` stays a pure
 display component.
 
+Don't confuse this with the dedicated [Console page](06-the-pages.md#console--consolepagejsx)
+in the sidebar — same name, two different things. Header's `Console` button
+opens a small floating drawer (`Logs`, below) with a scrollback of UI-level
+messages, available no matter which page you're on. The sidebar's Console
+page is a full page with a live `/rosout` viewer and a topic-echo panel.
+
 ## Logs — `Logs.jsx`
 
-Exported as `RobotLog`, rendered inside `AppLayout`'s collapsible console
-drawer on every page. Subscribes to `AppConfig.UI_MESSAGE_TOPIC` and appends
-each message to a Redux store (see
+Exported as `RobotLog`, rendered inside `AppLayout`'s floating "System
+Diagnostics Console" drawer (opened via Header's `Console` button, above) on
+every page. Subscribes to `AppConfig.UI_MESSAGE_TOPIC` and appends each
+message to a Redux store (see
 [`web/src/stores/index.js`](../../web/src/stores/index.js)) rather than
 local component state — the only component covered in this lesson that
 persists its data centrally instead of with `useState`, which is why the
-console drawer keeps its scrollback even if `Logs` itself unmounts and
-remounts.
+drawer keeps its scrollback even if `Logs` itself unmounts and remounts.
 
 ## The Route page modals
 
@@ -228,13 +249,32 @@ layer above that — the parts of the frontend that have nothing to do with
 ROS and exist purely to wire the React app together.
 
 **Routing.** [`web/src/pages/index.jsx`](../../web/src/pages/index.jsx)
-defines the route table (see
+derives the route table from
+[`pages/registry.js`](../../web/src/pages/registry.js) (see
 [`docs/extending/add-a-ui-panel.md`](../extending/add-a-ui-panel.md) for
 adding to it), all nested under
 [`web/src/layouts/appLayout.jsx`](../../web/src/layouts/appLayout.jsx), which
-renders `Header` plus whichever page is active, and owns the collapsible
-console-log drawer's open/closed state (passed down to `Header` as props —
-see [Header](#header--headerjsx) above).
+renders `Header` plus whichever page is active, and owns the floating
+console drawer's open/closed state (passed down to `Header` as props — see
+[Header](#header--headerjsx) above).
+
+**Always-mounted alongside the active page.** `AppLayout` also renders a
+handful of components that have nothing to do with whichever page is
+currently showing, and stay mounted across every navigation instead of
+belonging to one page: `StatusBar` (battery + E-STOP, see
+[Lesson 06](06-the-pages.md#the-chrome-thats-on-every-page)),
+`NotificationsWatcher` and `EventRecorder` (feed the browser-notification
+and [Events page](06-the-pages.md#events--eventspagejsx) logs respectively,
+regardless of which page triggered the event), `SchedulerRunner` and
+`MissionRunner` (the headless executors behind the
+[Scheduler](06-the-pages.md#scheduler--schedulerpagejsx) and
+[Missions](06-the-pages.md#missions--missionspagejsx) pages — they keep
+firing even if you navigate away from the page that created the
+schedule/mission), the `DemoModeBanner`/`ReplayModeBanner`/`AuthModeBanner`
+trio, and `HelpWidget`/`OnboardingWizard`. None of these hold ROS
+subscriptions of their own beyond what's needed for their one job — they're
+listed here because "why does this keep running when I'm on a different
+page" is exactly the kind of question this lesson exists to answer.
 
 **Providers.** [`web/src/app/App.jsx`](../../web/src/app/App.jsx) is
 exported wrapped in `withProviders`, defined in

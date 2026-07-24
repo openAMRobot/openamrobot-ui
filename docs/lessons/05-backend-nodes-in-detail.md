@@ -92,9 +92,11 @@ file model this node manages.
 
 Beyond route file CRUD, this same node also has mapping-mode functions
 (`build_map_func`, `save_map_func`) that shut down AMCL/map_server/move_base
-lifecycle-wise and launch a separate mapping launch file — functionality not
-currently exposed by any button in the UI today, but present in the node if
-a future panel wants to trigger it.
+lifecycle-wise and launch a separate mapping launch file. These are what the
+Maps page's **Start mapping**/**Save current map** buttons actually trigger
+(see [Lesson 06](06-the-pages.md#maps--mapspagejsx)) — for a long time this
+was functionality present in the node with no button wired to it; it has one
+now.
 
 ## waypoint_nav.py — a second subscriber on the same topic
 
@@ -124,13 +126,13 @@ default — the README notes this, and here's why it's easy to forget: it
 reads a serial port (`/dev/ttyUSB0`) for battery data and publishes
 `Float32` on `battery_status`. If the serial device isn't present (the
 common case off a real battery-equipped robot), it falls back to a simulated
-battery that slowly drains from 100, purely so the Info page's battery panel
-([Lesson 07](07-ui-components.md)) has *something* to show during
-development. This is the concrete mechanism behind that lesson's "no battery
-data just means no node is publishing it" note.
+battery that slowly drains from 100, purely so the Status page's battery
+panel ([Lesson 06](06-the-pages.md#status--infopagejsx)) has *something* to
+show during development. This is the concrete mechanism behind that page's
+"no battery data just means no node is publishing it" behavior.
 
 ## Next
 
-[Lesson 06 — The Five Pages](06-the-five-pages.md) picks the frontend side
-back up, covering what each of the five pages shows and which of these
-backend nodes and topics it depends on.
+[Lesson 06 — A Tour of Every Page](06-the-pages.md) picks the frontend side
+back up, covering what each page shows and which of these backend nodes and
+topics it depends on.
