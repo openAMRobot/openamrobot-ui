@@ -115,6 +115,28 @@ const ConfigPage = () => {
 
       <DashboardCard className="p-4">
         <p className="font-[RobotoMono] text-[11px] font-bold uppercase tracking-[0.14em] text-themeBlue">
+          Demo mode
+        </p>
+        <p className="mt-1 text-sm text-themeTextGray">
+          Explore the whole interface with simulated telemetry — no robot or
+          rosbridge required. Every page shows a permanent "Demo mode" badge
+          while this is on, and nothing simulated is ever labeled as live.
+          Turning it off hands control straight back to the connection
+          settings below.
+        </p>
+        <div className="mt-4 flex items-center gap-3">
+          <Switcher
+            switcherValue={Boolean(config.demoMode)}
+            onChange={(next) => updateConfig({ demoMode: next })}
+          />
+          <span className="text-sm text-textWhiteHover">
+            {config.demoMode ? "Demo mode is on" : "Demo mode is off"}
+          </span>
+        </div>
+      </DashboardCard>
+
+      <DashboardCard className="p-4">
+        <p className="font-[RobotoMono] text-[11px] font-bold uppercase tracking-[0.14em] text-themeBlue">
           Connection
         </p>
         <p className="mt-1 text-sm text-themeTextGray">

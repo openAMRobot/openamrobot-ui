@@ -76,11 +76,13 @@ const normalizeFrame = (frame) => (frame || "").replace(/^\/+/, "");
 const hasTfEdge = (edges, from, to) =>
   edges.has(`${from}->${to}`) || edges.has(`${to}->${from}`);
 
-const SystemHealth = ({ compact = false }) => {
+const SystemHealth = ({ compact = false, onHealthChange }) => {
   const ros = useRos();
   const rosbridgeStatus = useRosStatus();
   const topicStats = useRef({});
   const tfEdges = useRef(new Set());
+  const onHealthChangeRef = useRef(onHealthChange);
+  onHealthChangeRef.current = onHealthChange;
   const [health, setHealth] = useState(() =>
     Object.fromEntries([
       ...STREAMING.map(({ key }) => [key, "unknown"]),
@@ -205,20 +207,20 @@ const SystemHealth = ({ compact = false }) => {
           : edges.size
           ? "offline"
           : "unknown";
-        setStats(
-          Object.fromEntries(
-            STREAMING.map(({ key }) => {
-              const topic = topicStats.current[key];
-              return [
-                key,
-                {
-                  age: topic?.last ? (now - topic.last) / 1000 : null,
-                  hz: topic?.hz || 0,
-                },
-              ];
-            }),
-          ),
+        const nextStats = Object.fromEntries(
+          STREAMING.map(({ key }) => {
+            const topic = topicStats.current[key];
+            return [
+              key,
+              {
+                age: topic?.last ? (now - topic.last) / 1000 : null,
+                hz: topic?.hz || 0,
+              },
+            ];
+          }),
         );
+        setStats(nextStats);
+        onHealthChangeRef.current?.({ health: next, tfLinks: nextLinks, stats: nextStats });
         return next;
       });
     }, 1000);

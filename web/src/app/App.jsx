@@ -21,6 +21,11 @@ import {
 
 import withProviders from "./providers";
 import Routes from "../pages";
+import {
+  installDemoTransport,
+  uninstallDemoTransport,
+  startDemoTicking,
+} from "../shared/demo/demoData";
 
 export const RosContext = createContext(null);
 export const RosStatusContext = createContext("disconnected");
@@ -87,7 +92,15 @@ const App = () => {
   // Depend only on the two connection-relevant fields (not the whole
   // runtimeConfig object) so unrelated settings changes — e.g. a speed
   // limit — don't tear down and reopen the rosbridge connection.
-  const { rosbridgeHost, rosbridgePort } = runtimeConfig;
+  const { rosbridgeHost, rosbridgePort, demoMode } = runtimeConfig;
+
+  // Installed synchronously during render, not in an effect: React fires
+  // child effects before this component's own effects on mount, so a child
+  // like LifecycleStatus would otherwise make its first service call
+  // before the override below existed. See demoData.js for why this needs
+  // to be synchronous and idempotent.
+  if (demoMode) installDemoTransport(ros);
+
   const tryToConnect = useCallback(async () => {
     const host = resolveRosbridgeHost({ rosbridgeHost });
     try {
@@ -97,7 +110,25 @@ const App = () => {
     }
   }, [ros, rosbridgeHost, rosbridgePort]);
 
+  // Demo mode never touches the real connection at all — no ros.connect(),
+  // no reconnect loop. It feeds synthetic telemetry through the same
+  // shared `ros` event emitter every component already subscribes through
+  // (see shared/demo/demoData.js), so switching this off hands control
+  // straight back to the normal connect/reconnect logic below with no
+  // extra bookkeeping here.
   useEffect(() => {
+    if (!demoMode) return undefined;
+    const stopTicking = startDemoTicking(ros);
+    setStatus("connected");
+    return () => {
+      stopTicking();
+      uninstallDemoTransport(ros);
+      setStatus("disconnected");
+    };
+  }, [ros, demoMode]);
+
+  useEffect(() => {
+    if (demoMode) return undefined;
     let reconnectTimeout = null;
 
     const handleConnect = () => {
@@ -134,7 +165,7 @@ const App = () => {
       }
       ros.close();
     };
-  }, [ros, tryToConnect]);
+  }, [ros, tryToConnect, demoMode]);
 
   return (
     <RuntimeConfigContext.Provider value={runtimeConfigValue}>

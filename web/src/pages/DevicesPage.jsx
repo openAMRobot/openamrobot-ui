@@ -6,6 +6,7 @@ import { useRos } from "../app/App";
 import useDevices from "../shared/hooks/useDevices";
 import useDeviceStatuses from "../shared/hooks/useDeviceStatuses";
 import { fetchSerialPorts } from "../features/devices/devicesApi";
+import { CONNECTION_TYPES } from "../features/devices/deviceTypeRegistry";
 import {
   DashboardCard,
   EmptyState,
@@ -13,18 +14,6 @@ import {
   StatusBadge,
 } from "../shared/ui/Dashboard";
 import Button from "../shared/ui/Button";
-
-const CONNECTION_TYPES = [
-  { value: "usb", label: "USB", placeholder: "/dev/ttyUSB0" },
-  { value: "can", label: "CAN bus", placeholder: "can0" },
-  { value: "network", label: "Network", placeholder: "192.168.1.50:11411" },
-  {
-    value: "raspberry-pi",
-    label: "Raspberry Pi (attached)",
-    placeholder: "hostname or IP address",
-  },
-  { value: "other", label: "Other", placeholder: "connection target" },
-];
 
 const connectionLabel = (value) =>
   CONNECTION_TYPES.find((type) => type.value === value)?.label || value;

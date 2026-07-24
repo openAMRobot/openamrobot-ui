@@ -32,7 +32,7 @@ const EXPLANATIONS = {
 
 const normalizeState = (label) => (label || "unknown").toLowerCase();
 
-const LifecycleStatus = ({ compact = false }) => {
+const LifecycleStatus = ({ compact = false, onStatesChange }) => {
   const ros = useRos();
   const clientsRef = useRef({});
   const changeClientsRef = useRef({});
@@ -40,6 +40,8 @@ const LifecycleStatus = ({ compact = false }) => {
     Object.fromEntries(NODES.map(({ name }) => [name, "unknown"])),
   );
   const [showLegend, setShowLegend] = useState(false);
+  const onStatesChangeRef = useRef(onStatesChange);
+  onStatesChangeRef.current = onStatesChange;
 
   useEffect(() => {
     if (!ros || !window.ROSLIB) return;
@@ -73,9 +75,18 @@ const LifecycleStatus = ({ compact = false }) => {
           new window.ROSLIB.ServiceRequest({}),
           (response) => {
             const nextState = normalizeState(response?.current_state?.label);
-            setStates((prev) => ({ ...prev, [name]: nextState }));
+            setStates((prev) => {
+              const next = { ...prev, [name]: nextState };
+              onStatesChangeRef.current?.(next);
+              return next;
+            });
           },
-          () => setStates((prev) => ({ ...prev, [name]: "unknown" })),
+          () =>
+            setStates((prev) => {
+              const next = { ...prev, [name]: "unknown" };
+              onStatesChangeRef.current?.(next);
+              return next;
+            }),
         );
       });
     };

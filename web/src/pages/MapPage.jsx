@@ -367,7 +367,10 @@ const MapPage = () => {
 
         {/* Map + Camera */}
         <section className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row">
-          <div className="h-[360px] min-h-[300px] w-full sm:h-[460px] xl:h-full xl:min-h-[260px] xl:w-[58%]">
+          <div
+            className="h-[360px] min-h-[300px] w-full sm:h-[460px] xl:h-full xl:min-h-[260px] xl:w-[58%]"
+            data-tour="map-canvas"
+          >
             <Map
               ref={mapRef}
               onContextGoal={sendGoalAt}
@@ -383,7 +386,10 @@ const MapPage = () => {
         {/* Controls row */}
         <section className="flex w-full shrink-0 items-stretch gap-3 xl:min-h-[112px]">
           {/* Joystick */}
-          <div className="dashboard-card flex w-[110px] shrink-0 flex-col items-center justify-center gap-1 p-2 sm:w-[124px] 2xl:w-[136px]">
+          <div
+            className="dashboard-card flex w-[110px] shrink-0 flex-col items-center justify-center gap-1 p-2 sm:w-[124px] 2xl:w-[136px]"
+            data-tour="manual-drive"
+          >
             <p className="font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
               Manual
             </p>
@@ -391,7 +397,7 @@ const MapPage = () => {
           </div>
 
           {/* Mode buttons + queue */}
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-2" data-tour="map-actions">
             <div className="flex gap-2">
               {modeBtn(
                 "○ Goal Mode",

@@ -1,0 +1,19 @@
+Fully possible, no new infrastructure needed:
+
+#1 Onboarding wizard — pure frontend.
+#4 System Health Centre — every data source already exists and works.
+#7 Connection diagnostics — same engine as #4, plus rosapi gives real node/topic/freshness checks (/scan exists but silent for 8.4s is a genuine, buildable check, not a mockup).
+#9 Support package export — self-contained data assembly.
+#3/#6 Mission builder's execution step — can dispatch through the same ui_operation mechanism Blockly already uses (robotActions.js), no new backend needed.
+Possible, but each needs real new backend work first (not a quick add):
+
+#5 Recording/replay — Flask can spawn ros2 bag record/play subprocesses (same category of OS access it already uses for xacro processing and serial-port listing), but needs actual process-lifecycle management: start/stop, orphan cleanup, disk space limits, and a decision about what happens to live topics during replay.
+#8 Demo mode — possible, but today every component instantiates ROSLIB.Topic directly; a clean mock mode needs a shared data-access seam first, or every hook grows an if/else, which gets messy fast.
+#10 Extension SDK "without touching core nav" — possible, but Header.jsx's NAV_LINKS and pages/index.jsx's routes are hardcoded arrays today; this needs an actual plugin-registry refactor before any contributor could add a page without editing those files.
+Possible for most of it, but with one real hole — #2 full device pipeline:
+
+Manifest schema, categories, USB/serial config, namespace/topic config, enable/disable, export/import, parent-link + mounting transform (can reuse the URDF tree already parsed for Robot Description) — all genuinely buildable now.
+"Connection test" and "is the expected node/topic alive" — real, via rosapi, same as #7.
+Not possible as literally described: automatic CAN bus interface bring-up (ip link set can0 up type can bitrate ... needs root + kernel modules this Flask process doesn't have) and generic "driver validation" for arbitrary third-party hardware (there's no universal way to verify an unknown vendor's driver is correct — the best available check is "is the node/topic I expect actually present," which is a much narrower, honest claim).
+So: nothing on the list is a dead end, but #5, #8, and #10 each need a short design decision before coding, and #2's CAN/generic-driver-validation pieces should be scoped down to what's honestly checkable rather than promised as-is.
+

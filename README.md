@@ -3,7 +3,11 @@
 OpenAMRobot UI is a browser dashboard for watching and controlling an
 autonomous mobile robot. It gives operators one place to see the live map,
 check where the robot is, drive it with a joystick, send it to saved locations,
-watch the camera view, dock it, and build simple routines without writing code.
+watch the camera view, dock it, build simple routines without writing code,
+inspect its 3D model, register external hardware, check overall system health,
+and record or replay sessions for debugging and demos. A built-in Demo Mode
+and a guided help system let you explore the whole interface with no robot
+connected at all.
 
 https://github.com/user-attachments/assets/a2007c67-8fa3-449c-ae97-f2aaa151666b
 
@@ -31,6 +35,11 @@ Quick start order:
 4. Open the browser at `http://127.0.0.1:5050/control`.
 5. Confirm the UI says ROS is connected before driving or sending goals.
 
+No robot handy yet? Open `/config` and switch on **Demo Mode** — every page
+fills in with believable simulated telemetry (clearly labeled as simulated)
+so you can explore the whole interface first. A first-run guide also offers
+this as a choice the first time the UI loads in a browser.
+
 ![OpenAMRobot UI architecture diagram](docs/assets/openamr_ros_topic_node_schematic.png)
 
 ## What This UI Provides
@@ -46,6 +55,23 @@ Quick start order:
 - Blockly visual robot programming at `/blocks` for building simple robot
   action programs without writing code
 - Map and route file management when the optional UI helper nodes are running
+- A 3D robot model viewer at `/robot`, rendered from the real URDF/Xacro
+  description — a safe, offline "Description Mode" for exploring the model,
+  and a "Live Mode" that overlays real pose, path, and joint telemetry
+- A manual device registry at `/devices` for USB/CAN/network/Raspberry-Pi
+  hardware, with live status wherever a ROS topic is available and real
+  serial-port detection on the host running the backend
+- A System Health Centre at `/health` rolling up the ROS connection, live
+  topics, TF, Nav2 lifecycle, registered devices, and battery into one
+  overall Ready / Warning / Not-ready status, with clickable issues
+- Rosbag recording and replay at `/recordings`, backed by real `ros2 bag
+  record`/`play` processes — useful for debugging, demos, and lessons
+- Demo Mode (toggle on the Config page): explore every page with believable
+  simulated telemetry, no robot or ROS connection required
+- A first-run onboarding guide and an in-app "?" help widget with
+  page-specific tips and a guided tour of the Map page
+- Saved robot connection profiles and an optional `AUTH_MODE` deployment
+  guard that warns when the UI is reachable from outside the local network
 
 ## Repository Layout
 
@@ -615,6 +641,26 @@ The WiFi/router must allow devices to talk to each other. Guest networks,
 client isolation, AP isolation, VPN routing, and local firewalls can block the
 UI even when both devices are connected to the same network.
 
+### Access Model (`AUTH_MODE`)
+
+There is no login by default — `AUTH_MODE` defaults to `open`, meaning anyone
+who can reach the configured ports can view and operate the robot. This is
+intentional for local-network, single-operator, and classroom use. Set the
+`AUTH_MODE` environment variable before launching if you want the UI to warn
+about it explicitly:
+
+```bash
+AUTH_MODE=open ros2 launch openamr_ui_bringup ui.launch.py
+```
+
+The dashboard shows a dismissible warning banner whenever a browser reaches
+it from outside the local network while `AUTH_MODE=open`. `local` and
+`external` are reserved values for future authenticated modes; setting
+either one today falls back to `open` with a loud warning (both in the
+banner and the server log) rather than silently pretending authentication is
+active — check `GET /api/auth/status` to see the effective mode. Don't
+expose these ports to the public internet.
+
 The React development server runs on:
 
 ```text
@@ -639,18 +685,28 @@ fallback IP before running `npm run dev`.
 
 The app has these main routes:
 
-| Page    | URL        | Purpose                                        |
-| ------- | ---------- | ---------------------------------------------- |
-| Map     | `/`        | Map view, robot pose, goals, map layers        |
-| Route   | `/route`   | Route and waypoint management                  |
-| Control | `/control` | Manual driving, docking, robot control, status |
-| Blocks  | `/blocks`  | Blockly visual robot programming               |
-| Info    | `/info`    | System/topic information                       |
+| Page       | URL           | Purpose                                                     |
+| ---------- | ------------- | ------------------------------------------------------------ |
+| Map        | `/`           | Map view, robot pose, goals, map layers                     |
+| Routes     | `/route`      | Route and waypoint management                                |
+| Control    | `/control`    | Manual driving, docking, robot control, status               |
+| Programs   | `/blocks`     | Blockly visual robot programming                              |
+| Status     | `/info`       | Camera, telemetry, battery, and system health                |
+| Robot      | `/robot`      | 3D URDF model viewer — Description Mode and Live Mode         |
+| Devices    | `/devices`    | Manual external-device registry with live status             |
+| Health     | `/health`     | Overall system-readiness rollup with clickable issues         |
+| Recordings | `/recordings` | Rosbag record/replay for debugging, demos, and lessons        |
+| Config     | `/config`     | Connection settings, saved profiles, Demo Mode, safety limits |
 
-For what each page is *for*, its controls, and its screenshots, see
-[Lesson 06 — The Five Pages](docs/lessons/06-the-five-pages.md); Blocks also
-gets a full deep dive of its own in
+Every page also has a "?" help button (bottom-right) with page-specific tips,
+and the Map page includes a short guided tour. For deeper detail on the
+original five core pages, their controls, and screenshots, see
+[Lesson 06 — The Five Pages](docs/lessons/06-the-five-pages.md) (written
+before Robot/Devices/Health/Recordings were added — those are covered by
+their own in-app help); Blocks also gets a full deep dive of its own in
 [Lesson 09 — Blockly Visual Programming](docs/lessons/09-blockly-programming.md).
+The page/nav list itself is data-driven from `web/src/pages/registry.js` — a
+new page is added there, not by editing routing or the sidebar directly.
 
 Typical operating flow:
 

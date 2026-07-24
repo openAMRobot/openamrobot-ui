@@ -1,6 +1,9 @@
 import os
 import json
 import re
+import signal
+import subprocess
+import time
 import ipaddress
 import urllib.request
 import urllib.error
@@ -101,6 +104,18 @@ BLOCK_LOCATIONS_FILE = os.path.join(
 BLOCK_RUN_HISTORY_FILE = os.path.join(
     os.path.expanduser("~"), ".openamr_ui", "block_run_history.json"
 )
+RECORDING_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$")
+RECORDINGS_DIR = os.path.join(os.path.expanduser("~"), ".openamr_ui", "recordings")
+RECORDINGS_INDEX_FILE = os.path.join(RECORDINGS_DIR, "index.json")
+TOPIC_NAME_RE = re.compile(r"^/[A-Za-z0-9_/]{1,255}$")
+
+# In-process only — this Flask server runs as a single Werkzeug process
+# (threaded=True, not multi-worker), so module-level state is safe here.
+# Neither survives a Flask restart: the real `ros2 bag` OS process would
+# keep running orphaned if that happened mid-recording/replay (flagged,
+# not solved — see _reconcile_recordings_on_startup below).
+_recording = {"proc": None, "id": None, "name": None, "started_at": None, "topics": None}
+_replay = {"proc": None, "id": None, "started_at": None, "paused": False, "rate": 1.0}
 DEFAULT_BLOCK_LOCATIONS = {
     "Home": {"x": 0, "y": 0, "yaw": 0},
     "Charging Station": {"x": 0.5, "y": 0, "yaw": 0},
@@ -389,6 +404,79 @@ def parse_float(value, field: str):
         abort(400, f"{field} must be a number.")
 
     return parsed
+
+
+def ensure_recordings_dir():
+    os.makedirs(RECORDINGS_DIR, exist_ok=True)
+
+
+def read_recordings_index():
+    if not os.path.exists(RECORDINGS_INDEX_FILE):
+        return []
+    try:
+        with open(RECORDINGS_INDEX_FILE, "r", encoding="utf-8") as index_file:
+            return json.load(index_file)
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def write_recordings_index(entries):
+    ensure_recordings_dir()
+    with open(RECORDINGS_INDEX_FILE, "w", encoding="utf-8") as index_file:
+        json.dump(entries, index_file, indent=2, sort_keys=True)
+
+
+def dir_size_bytes(path):
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for filename in files:
+            try:
+                total += os.path.getsize(os.path.join(root, filename))
+            except OSError:
+                pass
+    return total
+
+
+def validate_recording_name(name: str):
+    if not RECORDING_NAME_RE.match(name or ""):
+        abort(
+            400,
+            "Recording names must be 1-64 characters and may use letters, numbers, spaces, dots, underscores, or hyphens.",
+        )
+
+
+def validate_topics(topics):
+    if topics is None:
+        return None
+    if not isinstance(topics, list) or not topics:
+        abort(400, "topics must be a non-empty array of topic names, or omitted to record everything.")
+    for topic in topics:
+        if not isinstance(topic, str) or not TOPIC_NAME_RE.match(topic):
+            abort(400, f"Invalid topic name: {topic!r}")
+    return topics
+
+
+def _reconcile_recordings_on_startup():
+    """Any index entry still marked "recording" means Flask restarted
+    mid-recording — the real ros2 bag process, if it's even still alive, is
+    now orphaned and un-trackable (a fresh Python process has no handle to
+    it). Don't guess whether it's fine; mark it honestly as interrupted."""
+    entries = read_recordings_index()
+    changed = False
+    for entry in entries:
+        if entry.get("status") == "recording":
+            entry["status"] = "interrupted"
+            print(
+                f"[openamr_ui_package] WARNING: recording '{entry.get('name')}' was still "
+                "marked active at startup — Flask must have restarted mid-recording. "
+                "Marked interrupted; check whether a leftover ros2 bag process is still running."
+            )
+            changed = True
+    if changed:
+        write_recordings_index(entries)
+
+
+_reconcile_recordings_on_startup()
 
 
 def read_program_file(path: str):
@@ -772,6 +860,240 @@ def list_serial_ports():
         if port.hwid and port.hwid != "n/a"
     ]
     return jsonify({"ports": ports, "supported": True})
+
+
+def _recording_alive():
+    return _recording["proc"] is not None and _recording["proc"].poll() is None
+
+
+def _replay_alive():
+    return _replay["proc"] is not None and _replay["proc"].poll() is None
+
+
+def _finalize_recording(interrupted=False):
+    """Common cleanup for a recording that has stopped, one way or another
+    — clean Stop request, the subprocess exiting on its own (duration/size
+    limit), or a leftover marked interrupted at startup."""
+    entries = read_recordings_index()
+    for entry in entries:
+        if entry.get("id") == _recording["id"]:
+            entry["status"] = "interrupted" if interrupted else "complete"
+            entry["endedAt"] = datetime.now(timezone.utc).isoformat()
+            bag_path = os.path.join(RECORDINGS_DIR, entry["id"])
+            entry["sizeBytes"] = dir_size_bytes(bag_path) if os.path.isdir(bag_path) else 0
+            break
+    write_recordings_index(entries)
+    _recording.update({"proc": None, "id": None, "name": None, "started_at": None, "topics": None})
+
+
+@app.route("/api/recordings", methods=["GET"])
+def list_recordings():
+    # Reap a recording that exited on its own (e.g. hit a size/duration
+    # limit) since the last time anyone asked.
+    if _recording["id"] and not _recording_alive():
+        _finalize_recording()
+    return jsonify({"recordings": read_recordings_index()})
+
+
+@app.route("/api/recordings/status", methods=["GET"])
+def recordings_status():
+    if _recording["id"] and not _recording_alive():
+        _finalize_recording()
+    if _replay["id"] and not _replay_alive():
+        _replay.update({"proc": None, "id": None, "started_at": None, "paused": False, "rate": 1.0})
+
+    recording = None
+    if _recording["id"]:
+        recording = {
+            "id": _recording["id"],
+            "name": _recording["name"],
+            "startedAt": _recording["started_at"],
+            "topics": _recording["topics"],
+        }
+
+    replay = None
+    if _replay["id"]:
+        replay = {
+            "id": _replay["id"],
+            "startedAt": _replay["started_at"],
+            "paused": _replay["paused"],
+            "rate": _replay["rate"],
+        }
+
+    return jsonify({"recording": recording, "replay": replay})
+
+
+@app.route("/api/recordings/start", methods=["POST", "OPTIONS"])
+def start_recording():
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    if _recording["id"] and _recording_alive():
+        abort(409, "A recording is already in progress — stop it before starting another.")
+
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get("name") or "").strip()
+    validate_recording_name(name)
+    topics = validate_topics(payload.get("topics"))
+    description = str(payload.get("description") or "").strip()[:500]
+
+    ensure_recordings_dir()
+    recording_id = f"{re.sub(r'[^A-Za-z0-9]+', '_', name).strip('_') or 'recording'}_{int(time.time())}"
+    bag_path = os.path.join(RECORDINGS_DIR, recording_id)
+
+    cmd = ["ros2", "bag", "record", "-o", bag_path, "--disable-keyboard-controls"]
+    cmd += topics if topics else ["--all-topics"]
+
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        abort(500, "ros2 command not found on this backend — is the ROS environment sourced?")
+
+    started_at = datetime.now(timezone.utc).isoformat()
+    _recording.update(
+        {"proc": proc, "id": recording_id, "name": name, "started_at": started_at, "topics": topics}
+    )
+
+    entries = read_recordings_index()
+    entries.append(
+        {
+            "id": recording_id,
+            "name": name,
+            "description": description,
+            "topics": topics,
+            "status": "recording",
+            "startedAt": started_at,
+            "endedAt": None,
+            "sizeBytes": 0,
+        }
+    )
+    write_recordings_index(entries)
+
+    return jsonify({"id": recording_id, "name": name, "startedAt": started_at}), 201
+
+
+@app.route("/api/recordings/stop", methods=["POST", "OPTIONS"])
+def stop_recording():
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    if not _recording["id"]:
+        abort(409, "No recording is in progress.")
+
+    if _recording_alive():
+        _recording["proc"].send_signal(signal.SIGINT)
+        try:
+            _recording["proc"].wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            _recording["proc"].kill()
+
+    _finalize_recording()
+    return jsonify({"stopped": True})
+
+
+@app.route("/api/recordings/<recording_id>", methods=["DELETE", "OPTIONS"])
+def delete_recording(recording_id):
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    if _recording["id"] == recording_id or _replay["id"] == recording_id:
+        abort(409, "That recording is currently active — stop it first.")
+
+    entries = read_recordings_index()
+    remaining = [entry for entry in entries if entry.get("id") != recording_id]
+    if len(remaining) == len(entries):
+        abort(404, "Recording not found.")
+
+    bag_path = os.path.join(RECORDINGS_DIR, recording_id)
+    if os.path.isdir(bag_path):
+        import shutil
+
+        shutil.rmtree(bag_path, ignore_errors=True)
+
+    write_recordings_index(remaining)
+    return jsonify({"deleted": recording_id})
+
+
+@app.route("/api/recordings/<recording_id>/replay/start", methods=["POST", "OPTIONS"])
+def start_replay(recording_id):
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    if _replay["id"] and _replay_alive():
+        abort(409, "A replay is already in progress — stop it before starting another.")
+
+    entries = read_recordings_index()
+    entry = next((e for e in entries if e.get("id") == recording_id), None)
+    if not entry:
+        abort(404, "Recording not found.")
+    if entry.get("status") not in ("complete", "interrupted"):
+        abort(409, "That recording hasn't finished yet.")
+
+    bag_path = os.path.join(RECORDINGS_DIR, recording_id)
+    if not os.path.isdir(bag_path):
+        abort(404, "Recording files are missing on disk.")
+
+    payload = request.get_json(silent=True) or {}
+    rate = parse_float(payload.get("rate", 1.0), "rate")
+    if rate <= 0 or rate > 10:
+        abort(400, "rate must be between 0 and 10.")
+
+    cmd = ["ros2", "bag", "play", bag_path, "--disable-keyboard-controls", "-r", str(rate)]
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        abort(500, "ros2 command not found on this backend — is the ROS environment sourced?")
+
+    started_at = datetime.now(timezone.utc).isoformat()
+    _replay.update(
+        {"proc": proc, "id": recording_id, "started_at": started_at, "paused": False, "rate": rate}
+    )
+    return jsonify({"id": recording_id, "startedAt": started_at, "rate": rate}), 201
+
+
+@app.route("/api/recordings/replay/stop", methods=["POST", "OPTIONS"])
+def stop_replay():
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    if not _replay["id"]:
+        abort(409, "No replay is in progress.")
+
+    if _replay_alive():
+        if _replay["paused"]:
+            _replay["proc"].send_signal(signal.SIGCONT)
+        _replay["proc"].send_signal(signal.SIGINT)
+        try:
+            _replay["proc"].wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            _replay["proc"].kill()
+
+    _replay.update({"proc": None, "id": None, "started_at": None, "paused": False, "rate": 1.0})
+    return jsonify({"stopped": True})
+
+
+@app.route("/api/recordings/replay/pause", methods=["POST", "OPTIONS"])
+def pause_replay():
+    if request.method == "OPTIONS":
+        return ("", 204)
+    if not _replay["id"] or not _replay_alive():
+        abort(409, "No replay is in progress.")
+    if not _replay["paused"]:
+        _replay["proc"].send_signal(signal.SIGSTOP)
+        _replay["paused"] = True
+    return jsonify({"paused": True})
+
+
+@app.route("/api/recordings/replay/resume", methods=["POST", "OPTIONS"])
+def resume_replay():
+    if request.method == "OPTIONS":
+        return ("", 204)
+    if not _replay["id"] or not _replay_alive():
+        abort(409, "No replay is in progress.")
+    if _replay["paused"]:
+        _replay["proc"].send_signal(signal.SIGCONT)
+        _replay["paused"] = False
+    return jsonify({"paused": False})
 
 
 @app.route("/ros/<path:filename>")

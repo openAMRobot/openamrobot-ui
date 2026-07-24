@@ -49,7 +49,7 @@ const MapLayers = () => {
   }, [visible, opacity]);
 
   return (
-    <div className="dashboard-card px-3 py-2 font-[RobotoMono]">
+    <div className="dashboard-card px-3 py-2 font-[RobotoMono]" data-tour="map-layers">
       <div className="mb-1.5 flex items-center gap-3">
         <p className="shrink-0 text-xs uppercase tracking-wider text-themeTextGray">
           Layers

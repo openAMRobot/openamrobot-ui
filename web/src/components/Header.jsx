@@ -3,23 +3,13 @@ import { NavLink } from "react-router-dom";
 import { ThemeContext, useRosStatus, useRuntimeConfig } from "../app/App";
 import { resolveRosbridgeHost } from "../shared/constants/runtimeConfig";
 import { IconButton, StatusBadge } from "../shared/ui/Dashboard";
+import { PAGE_REGISTRY } from "../pages/registry";
 
 const statusConfig = {
   connected: { label: "Robot connected", pulse: true },
   disconnected: { label: "Robot offline", pulse: false },
   error: { label: "Connection error", pulse: false },
 };
-
-const NAV_LINKS = [
-  { to: "/", label: "Map", icon: "map" },
-  { to: "/route", label: "Routes", icon: "route" },
-  { to: "/control", label: "Control", icon: "control" },
-  { to: "/blocks", label: "Programs", icon: "blocks" },
-  { to: "/info", label: "Status", icon: "status" },
-  { to: "/robot", label: "Robot", icon: "robot" },
-  { to: "/devices", label: "Devices", icon: "devices" },
-  { to: "/config", label: "Config", icon: "config" },
-];
 
 const NavIcon = ({ name }) => {
   const paths = {
@@ -73,6 +63,17 @@ const NavIcon = ({ name }) => {
         <path d="M12.5 19v2" />
       </>
     ),
+    health: (
+      <>
+        <path d="M4 12h4l2-7 4 14 2-7h4" />
+      </>
+    ),
+    recordings: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none" />
+      </>
+    ),
     config: (
       <>
         <circle cx="12" cy="12" r="3" />
@@ -92,7 +93,7 @@ const NavIcon = ({ name }) => {
       className="h-4 w-4"
       aria-hidden="true"
     >
-      {paths[name]}
+      {paths[name] || <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />}
     </svg>
   );
 };
@@ -198,8 +199,9 @@ const Header = ({ showLogs, onToggleLogs }) => {
         <nav
           className="flex flex-1 flex-col gap-1 overflow-y-auto"
           aria-label="Primary navigation"
+          data-tour="nav"
         >
-          {NAV_LINKS.map(({ to, label: navLabel, icon }) => (
+          {PAGE_REGISTRY.map(({ path: to, label: navLabel, icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -233,7 +235,7 @@ const Header = ({ showLogs, onToggleLogs }) => {
             Console
           </button>
 
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2" data-tour="connection-status">
             <StatusBadge status={status} label={label} pulse={pulse} />
             <IconButton
               label={theme === "dark" ? "Use light theme" : "Use dark theme"}
@@ -304,7 +306,7 @@ const Header = ({ showLogs, onToggleLogs }) => {
                 <StatusBadge status={status} label={label} pulse={pulse} />
               </div>
               <nav className="grid gap-1" aria-label="Mobile navigation">
-                {NAV_LINKS.map(({ to, label: navLabel, icon }) => (
+                {PAGE_REGISTRY.map(({ path: to, label: navLabel, icon }) => (
                   <NavLink
                     key={to}
                     to={to}
