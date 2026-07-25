@@ -1,5 +1,14 @@
 # Lesson 08 — The Map and Route File Model
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Mapping operators and backend developers | 10 minutes | [Lesson 05](05-backend-nodes-in-detail.md) |
+
+## What you'll learn
+
+You will learn the group → map → route hierarchy, where files live, and how
+the single active context affects editing and navigation.
+
 [Lesson 07](07-ui-components.md) covered the Route page's modals as UI
 pieces. This lesson covers the file model underneath them — the concept that
 makes the Route page's `Group`/`Map`/`Route` header make sense, and the one
@@ -79,8 +88,21 @@ reverting to `Welcome/Start` for no obvious reason, check
 `current_map_route.yaml` for a stale or foreign absolute path before
 assuming something else is broken.
 
+## Try it
+
+Inspect the current map/route configuration and trace one active route to its
+CSV file without changing it. Confirm which group and map contain it.
+
+**You're ready to continue when:** you can identify the active group, map, and
+route and explain why a route cannot safely be assumed to fit another map.
+
 ## Next
 
 [Lesson 09 — Blockly Visual Programming](09-blockly-programming.md) is the
 deep dive on Blocks, the same way Lesson 07 was the deep dive on
 the components behind Map and Route.
+
+---
+
+[← Lesson 07](07-ui-components.md) · [Lesson index](README.md) ·
+[Next: Lesson 09 →](09-blockly-programming.md)

@@ -1,5 +1,14 @@
 # Lesson 05 — Backend Nodes in Detail
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Backend developers and maintainers | 15 minutes | [Lesson 04](04-data-flow-and-relays.md) |
+
+## What you'll learn
+
+You will learn the responsibilities of the Flask server and optional helper
+nodes, and why frontend assets must be built, synchronized, and installed.
+
 [Lesson 04](04-data-flow-and-relays.md) covered two of the nodes in
 [`ros2/src/openamr_ui_package/openamr_ui_package/`](../../ros2/src/openamr_ui_package/openamr_ui_package/) —
 `map_relay.py` and `nav_relays.py`. This lesson covers the rest of what that
@@ -33,7 +42,8 @@ into
 actually reads from. Editing `web/src` alone changes none of those three
 copies — Flask keeps serving whatever was last installed. This is why every
 frontend change in this workspace needs the full rebuild-and-reinstall flow
-(see the [README](../../README.md#frontend-development)), and why `npm run
+(see the
+[development guide](../development.md#production-frontend-workflow)), and why `npm run
 dev` exists as a separate path entirely: it serves straight from `web/src`
 on port `3000`, bypassing this pipeline (and, as a result, Flask's REST API
 and rosbridge's usual host-based connection logic) for fast iteration.
@@ -131,8 +141,22 @@ panel ([Lesson 06](06-the-pages.md#status--infopagejsx)) has *something* to
 show during development. This is the concrete mechanism behind that page's
 "no battery data just means no node is publishing it" behavior.
 
+## Try it
+
+From the launch files, list which nodes start during normal UI bringup and
+which require `physnode_launch.py`. Then locate where the installed React
+bundle is served from.
+
+**You're ready to continue when:** you can predict which page features remain
+available when the optional map/route helpers are not running.
+
 ## Next
 
 [Lesson 06 — A Tour of Every Page](06-the-pages.md) picks the frontend side
 back up, covering what each page shows and which of these backend nodes and
 topics it depends on.
+
+---
+
+[← Lesson 04](04-data-flow-and-relays.md) · [Lesson index](README.md) ·
+[Next: Lesson 06 →](06-the-pages.md)

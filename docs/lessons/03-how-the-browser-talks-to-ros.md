@@ -1,5 +1,14 @@
 # Lesson 03 — How the Browser Talks to ROS
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Operators and developers | 12 minutes | [Lesson 02](02-ros2-core-concepts.md) |
+
+## What you'll learn
+
+You will learn how Flask, roslibjs, rosbridge, and web_video_server form three
+independent browser communication paths.
+
 A browser tab cannot speak the native ROS 2 middleware protocol directly.
 This UI bridges that gap with a specific, fixed chain of pieces. Understanding
 the chain matters because when something doesn't show up in the UI, the fix
@@ -116,8 +125,21 @@ load at all, suspect Flask. If everything works except the camera, suspect
 `web_video_server` or the selected image topic. Practical troubleshooting
 steps for each are in the main [README](../../README.md#troubleshooting).
 
+## Try it
+
+Open the UI and identify the HTTP page URL, WebSocket rosbridge address, and
+camera HTTP port. Predict which visible features fail if only one path stops.
+
+**You're ready to continue when:** you can explain why a page may load while
+ROS data is disconnected, or ROS data may work while the camera is blank.
+
 ## Next
 
 [Lesson 04 — Data Flow and Relays](04-data-flow-and-relays.md) explains why a
 few robot-side topics get republished under `/ui/*` names before the browser
 ever sees them.
+
+---
+
+[← Lesson 02](02-ros2-core-concepts.md) · [Lesson index](README.md) ·
+[Next: Lesson 04 →](04-data-flow-and-relays.md)

@@ -1,6 +1,16 @@
 # Lesson 13 — Extending the System
 
-If you've read Lessons 01–12, you now have the whole mental model this UI
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Contributors | 8 minutes | [Lesson 10](10-topics-as-the-contract.md) and the relevant page lesson |
+
+## What you'll learn
+
+You will learn how to choose the correct hands-on extension guide and how to
+verify that a new page, device, or Blockly block follows the existing system
+contracts.
+
+If you've read Lessons 00–12, you now have the whole mental model this UI
 runs on:
 
 - A browser dashboard talking to ROS through rosbridge, over one shared
@@ -65,3 +75,18 @@ execution — the same three-stage pipeline from
 
 All three guides assume you're only adding things — none of them ask you to
 modify an existing page's behavior.
+
+## Try it
+
+Choose one small extension idea and write down its user-visible purpose, ROS
+topic/service/action contract, message type, safety impact, persistence needs,
+and the guide you would follow. Do this before creating files.
+
+**You're ready to continue when:** you can identify the smallest applicable
+guide and list how you will verify the change in Demo Mode, simulation, and—if
+appropriate—real hardware.
+
+---
+
+[← Lesson 12](12-debugging-with-ros-cli.md) · [Lesson index](README.md) ·
+[Continue to the extension guides →](../extending/README.md)

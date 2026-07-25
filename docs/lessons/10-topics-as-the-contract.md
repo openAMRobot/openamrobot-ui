@@ -1,5 +1,14 @@
 # Lesson 10 — Topics as the Contract
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Frontend and ROS developers | 8 minutes | [Lesson 03](03-how-the-browser-talks-to-ros.md) |
+
+## What you'll learn
+
+You will learn why topic, service, and action names form a cross-workspace
+contract and why browser code should use centralized constants.
+
 ## There is no compiler checking this
 
 The UI (a JavaScript app) and the robot stack (a collection of independent
@@ -55,10 +64,25 @@ name (`/ui/map`) is different from the robot's original publishing name
 actually subscribes to — the relay is an implementation detail on the ROS
 side that the frontend doesn't need to know about beyond that one string.
 
+## Try it
+
+Choose one constant in `web/src/shared/constants/index.js` and find every
+publisher or subscriber that relies on it. Confirm its message type on both
+sides.
+
+**You're ready to continue when:** you know all files that must change when a
+topic name or message type changes.
+
 ## Next
 
 [Lesson 11 — Failure Modes and Reconnection](11-failure-modes-and-reconnection.md)
 covers what happens when this contract breaks down at runtime — WiFi drops,
-rosbridge restarts, the robot workspace crashes — before
-[Lesson 13 — Extending the System](13-extending-the-system.md) bridges from
-theory to practice.
+rosbridge restarts, the robot workspace crashes.
+[Lesson 12](12-debugging-with-ros-cli.md) then turns those failure modes into
+a debugging method before [Lesson 13](13-extending-the-system.md) bridges from
+theory to practical extension guides.
+
+---
+
+[← Lesson 09](09-blockly-programming.md) · [Lesson index](README.md) ·
+[Next: Lesson 11 →](11-failure-modes-and-reconnection.md)

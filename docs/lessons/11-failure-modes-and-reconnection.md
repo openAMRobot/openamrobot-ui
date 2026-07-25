@@ -1,5 +1,14 @@
 # Lesson 11 — Failure Modes and Reconnection
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Operators and maintainers | 12 minutes | [Lesson 03](03-how-the-browser-talks-to-ros.md) |
+
+## What you'll learn
+
+You will learn what reconnects automatically, what can remain stuck after a
+drop, and why connection state is different from topic freshness.
+
 Every lesson so far described the happy path: robot running, UI running,
 everything connected. On a mobile robot, WiFi drops, processes restart, and
 browsers get refreshed constantly — this lesson covers what actually happens
@@ -85,8 +94,22 @@ tears down and recreates the `ROSLIB.Ros()` connection from scratch, so
 "just refresh the page" genuinely resolves a class of stuck-frontend-state
 issues that no amount of waiting for the 1-second retry loop will.
 
+## Try it
+
+In simulation, stop rosbridge and observe the connection indicator, then
+restart it. Separately stop one robot topic publisher while leaving rosbridge
+running and compare the Health page result.
+
+**You're ready to continue when:** you can tell a WebSocket failure from stale
+robot data and know when an interrupted operation must be restarted manually.
+
 ## Next
 
 [Lesson 12 — Debugging with ROS CLI Tools](12-debugging-with-ros-cli.md)
 turns this into a repeatable method: which command to reach for at each
 layer, in order, before you start guessing.
+
+---
+
+[← Lesson 10](10-topics-as-the-contract.md) · [Lesson index](README.md) ·
+[Next: Lesson 12 →](12-debugging-with-ros-cli.md)

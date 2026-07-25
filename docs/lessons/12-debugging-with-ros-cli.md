@@ -1,5 +1,14 @@
 # Lesson 12 — Debugging with ROS CLI Tools
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Operators and maintainers | 15 minutes | [Lesson 11](11-failure-modes-and-reconnection.md); ROS CLI only for the command sections |
+
+## What you'll learn
+
+You will learn how to move from an operator-visible symptom to the correct
+diagnostic layer, first using the UI and then the ROS CLI when necessary.
+
 [Lesson 11](11-failure-modes-and-reconnection.md) introduced three
 independent layers — browser↔rosbridge, rosbridge/relays↔ROS 2 graph, and the
 robot workspace itself — and the fact that "connected" and "data is fresh"
@@ -19,6 +28,21 @@ Before opening a terminal: the Header's status dot and the
 encode the two signals from Lesson 11 — connection state and per-topic
 freshness — so check those first. They'll usually tell you which of the two
 problems you actually have before you touch a command line.
+
+## Plain-language symptom guide
+
+| What you see | What it usually means | First action |
+| --- | --- | --- |
+| Page does not open | Flask or port `5050` is unavailable | Check the UI launch or Docker logs |
+| Page opens, connection is red | Browser cannot reach rosbridge on `9090` | Check the configured host, port, firewall, and rosbridge process |
+| Connection is green, but map or pose is frozen | rosbridge is reachable but robot topics are stale | Open Health and check topic freshness; do not drive |
+| Map is blank but pose/velocity updates | `/map` or `/ui/map` relay path is missing | Check map server and `map_volatile_relay` |
+| Camera alone is blank | Camera topic or optional web-video server is unavailable | Check the selected image topic and port `8080` |
+| Route/map buttons fail | Optional `physnode_launch.py` helpers are not running | Start the helper launch and retry |
+| A Program or Mission appears stuck after WiFi loss | A one-time callback or browser-side run was interrupted | Stop the run, verify the robot is stationary, reconnect, and restart deliberately |
+
+If motion or localization is uncertain, stop issuing commands and verify the
+physical robot before continuing.
 
 ## Layer 1: browser ↔ rosbridge
 
@@ -85,9 +109,23 @@ status rather than continuing to dig in the UI code.
 | `ros2 topic echo` shows data, panel still blank | Frontend problem: wrong constant, wrong message type, check the browser console — Layer 1 above |
 | `ros2 topic echo` shows nothing | Upstream of this UI workspace entirely — Layer 3 above |
 
+## Try it
+
+With Demo Mode off and no rosbridge connection, identify the symptom in the
+plain-language table. Then start the UI backend and use `ros2 node list` and
+`ros2 topic list` to confirm which layer changed.
+
+**You're ready to continue when:** you can distinguish a page-serving failure,
+a rosbridge failure, and a stale robot-topic failure without guessing.
+
 ## Next
 
 This is the last lesson before the practical guides.
 [Lesson 13 — Extending the System](13-extending-the-system.md) is the bridge
 from everything covered so far to actually adding a panel, a device, or a
 Blockly block.
+
+---
+
+[← Lesson 11](11-failure-modes-and-reconnection.md) · [Lesson index](README.md) ·
+[Next: Lesson 13 →](13-extending-the-system.md)

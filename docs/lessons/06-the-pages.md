@@ -1,5 +1,15 @@
 # Lesson 06 — A Tour of Every Page
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Operators and UI contributors | 25 minutes | [Lesson 00](00-your-first-10-minutes.md) and [Lesson 01](01-what-is-this-ui.md) |
+
+## What you'll learn
+
+You will learn which page to use for a task, which controls can move the
+robot, and which pages depend on optional backend helpers or browser-side
+state.
+
 This UI started with a handful of pages. It has grown a lot since — the
 sidebar now lists 18 of them. That sounds like a lot to learn, but almost
 every page follows the same shape described in
@@ -33,7 +43,8 @@ the page itself, so every screenshot below shows them:
   ("Connected"/"Disconnected"), and the light/dark theme toggle.
 - The status strip right under it (`StatusBar.jsx`) — live battery
   percentage and a big red **E-STOP** button that zeroes `/cmd_vel` and
-  cancels the active Nav2 goal from anywhere, not just the Map page.
+  cancels the active Nav2 goal from anywhere, not just the Map page. This is a
+  non-latched software stop and does not replace a physical emergency stop.
 - Whichever banner applies: a purple **Demo Mode** banner when
   [Demo Mode](#config--configpagejsx) is on, a replay banner while a
   [recording](#recordings--recordingspagejsx) is playing back, or an
@@ -48,6 +59,19 @@ the page itself, so every screenshot below shows them:
 | Keep an eye on it | [Status](#status--infopagejsx), [Robot](#robot--robotdescriptionpagejsx), [Devices](#devices--devicespagejsx), [Health](#health--healthpagejsx), [Metrics](#metrics--metricspagejsx), [Recordings](#recordings--recordingspagejsx), [Events](#events--eventspagejsx) |
 | Under the hood | [Console](#console--consolepagejsx), [Parameters](#parameters--paramspagejsx), [Fleet](#fleet--fleetpagejsx), [Config](#config--configpagejsx) |
 | Extending it | [Notes](#notes--example-plugin) |
+
+## I want to...
+
+| Task | Start here | Check before acting |
+| --- | --- | --- |
+| Drive manually or send one goal | [Map](#map--mappagejsx) | Physical E-stop, clear area, fresh pose and map |
+| Build or run a reusable route | [Routes](#routes--routepagejsx) | Correct group/map/route and optional helper launch |
+| Change or create a map | [Maps](#maps--mapspagejsx) | Current localization state and map-server ownership |
+| Automate a sequence | [Programs](#programs--blockspagejsx), [Scheduler](#scheduler--schedulerpagejsx), or [Missions](#missions--missionspagejsx) | Tab remains open, connection is fresh, motion area is clear |
+| Understand a warning | [Health](#health--healthpagejsx), [Events](#events--eventspagejsx), then [Console](#console--consolepagejsx) | Connection state and topic freshness are separate |
+| Change robot parameters | [Parameters](#parameters--paramspagejsx) | Correct robot and node; record the old value first |
+| Switch robots | [Fleet](#fleet--fleetpagejsx) | Which physical robot this browser will command |
+| Practice without hardware | [Config](#config--configpagejsx) → Demo Mode | Purple Demo Mode banner is visible |
 
 ## Map — `MapPage.jsx`
 
@@ -473,9 +497,24 @@ mounted in `AppLayout` so they keep working even if you navigate away from
 the page that created them). The underlying rule is identical either way:
 one shared connection, no page or runner creates its own.
 
+## Try it
+
+In Demo Mode, use the task table to visit Map, Health, Config, and one
+automation page. On each page, identify whether its data comes from ROS, the
+backend REST API, or browser-local storage.
+
+**You're ready to continue when:** you can choose the correct page for a
+single goal, reusable route, map change, health warning, and automated
+mission—and identify which of those can move real hardware.
+
 ## Next
 
 [Lesson 07 — UI Components in Detail](07-ui-components.md) drills into the
 individual panels behind Map and Route specifically — what each one
 renders, exactly which topics/services it uses, and how its internal state
 works.
+
+---
+
+[← Lesson 05](05-backend-nodes-in-detail.md) · [Lesson index](README.md) ·
+[Next: Lesson 07 →](07-ui-components.md)

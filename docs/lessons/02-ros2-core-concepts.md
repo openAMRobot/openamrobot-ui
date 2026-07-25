@@ -1,5 +1,14 @@
 # Lesson 02 — ROS 2 Core Concepts
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| ROS 2 newcomers | 15 minutes | [Lesson 01](01-what-is-this-ui.md) |
+
+## What you'll learn
+
+You will learn the six ROS 2 concepts used throughout this UI: nodes, topics,
+messages, services, actions, and launch files.
+
 This lesson defines the vocabulary used everywhere else in these lessons and
 in the codebase. Each concept links to a real example already in this
 repository so the idea has a concrete anchor.
@@ -82,7 +91,8 @@ for the feedback/status side, and the cancel-goal service call in
 [`web/src/pages/MapPage.jsx`](../../web/src/pages/MapPage.jsx) (also called
 directly by the E-STOP button in
 [`web/src/components/StatusBar.jsx`](../../web/src/components/StatusBar.jsx),
-visible on every page).
+visible on every page). That dashboard button is a non-latched software stop,
+not a physical or safety-rated emergency stop.
 
 Concretely, that one navigation looks like three separate messages over
 time: a goal pose sent once ("go to x=2, y=1"), a stream of feedback
@@ -106,7 +116,21 @@ terminal. This workspace has a small, deliberate layering:
 - [`ros2/src/openamr_ui_package/launch/physnode_launch.py`](../../ros2/src/openamr_ui_package/launch/physnode_launch.py) —
   optional helper nodes for map/route file management, started separately.
 
+## Try it
+
+For `/cmd_vel`, identify the node that publishes, the topic name, and the
+message type. Then explain why cancelling navigation is better represented by
+a service or action operation than a continuous topic stream.
+
+**You're ready to continue when:** you can classify a UI interaction as a
+topic, service, or action and explain what a launch file starts.
+
 ## Next
 
 [Lesson 03 — How the Browser Talks to ROS](03-how-the-browser-talks-to-ros.md)
 walks through the actual chain that connects a browser tab to this graph.
+
+---
+
+[← Lesson 01](01-what-is-this-ui.md) · [Lesson index](README.md) ·
+[Next: Lesson 03 →](03-how-the-browser-talks-to-ros.md)

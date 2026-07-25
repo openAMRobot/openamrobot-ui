@@ -1,13 +1,14 @@
 # OpenAMRobot UI — Lessons
 
-These lessons explain how this UI actually works, in order — read them
-top to bottom the first time. For install/build/run/troubleshoot steps, see
+These lessons explain how this UI actually works, in order. First-time
+operators should always begin with Lesson 00. For install/build/run/troubleshoot steps, see
 the [top-level README](../../README.md). For hands-on "add a thing" guides,
 see [`docs/extending/`](../extending/README.md). For a quick term lookup
 instead of a full lesson, see the [glossary](glossary.md).
 
 | # | Lesson | Covers |
 | --- | --- | --- |
+| 00 | [Your First 10 Minutes](00-your-first-10-minutes.md) | Demo Mode, shared controls, readiness, a safe first session, and software-stop limitations |
 | 01 | [What Is This UI?](01-what-is-this-ui.md) | What the UI is/isn't, the two-workspace model, and a safety note on the lack of authentication |
 | 02 | [ROS 2 Core Concepts](02-ros2-core-concepts.md) | Node, topic, message, service, action, launch file |
 | 03 | [How the Browser Talks to ROS](03-how-the-browser-talks-to-ros.md) | The roslibjs → rosbridge chain, Flask, the camera path |
@@ -22,19 +23,21 @@ instead of a full lesson, see the [glossary](glossary.md).
 | 12 | [Debugging with ROS CLI Tools](12-debugging-with-ros-cli.md) | Which command to reach for at which layer |
 | 13 | [Extending the System](13-extending-the-system.md) | Bridge to the hands-on guides |
 
-Each lesson links forward to the next at the bottom, and cross-links back to
-specific files in the repo rather than pasting code — the lessons explain
-*why*; the actual source is always one click away.
+Each lesson identifies its audience, approximate reading time, prerequisites,
+and learning goal. A small exercise and readiness checkpoint make it clear
+when to continue. Source links point to the implementation rather than copying
+code that can become stale.
 
 ## Reading paths by role
 
-The full 01–13 order is the default and the safest first pass, but if
+The full 00–13 order is the default and the safest first pass, but if
 you're short on time, these narrower paths cover what each role actually
 needs:
 
-- **Just operating the robot day to day:** 01, 06, 11, 12. Skip the
-  backend/build internals unless something breaks.
-- **Automating routine tasks (Scheduler, Missions, Programs):** 01, then
+- **Just operating the robot day to day:** 00, 01, 06, 11, then the
+  plain-language part of 12. Skip backend/build internals unless something
+  breaks.
+- **Automating routine tasks (Scheduler, Missions, Programs):** 00, 01, then
   [Lesson 06](06-the-pages.md)'s Scheduler/Missions/Programs sections, then
   [Lesson 09](09-blockly-programming.md) if Programs specifically is the
   goal.

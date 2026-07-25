@@ -1,5 +1,15 @@
 # Lesson 01 — What Is This UI?
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Operators, developers, and maintainers | 8 minutes | [Lesson 00](00-your-first-10-minutes.md) for operators |
+
+## What you'll learn
+
+You will learn what this repository owns, what remains in the robot or
+simulation workspace, and why network and physical safety must be handled
+outside the browser as well as inside it.
+
 ## The one-sentence version
 
 OpenAMRobot UI is a browser dashboard: a React app that lets a person see and
@@ -86,8 +96,32 @@ control here: don't put these ports on an untrusted network, and treat
 `docker-compose.yml`'s `network_mode: host` or any port-forwarding change
 as a decision with real consequences, not just a networking convenience.
 
+## A safety note: the dashboard stop is not a physical E-stop
+
+The red dashboard control publishes one zero `Twist` and asks Nav2 to cancel
+the active goal. It is useful for normal operator intervention, but it is not
+latched, safety-rated, or independent of WiFi, the browser, rosbridge, or the
+robot controller. Another publisher may also continue sending motion
+commands. Keep a tested physical emergency stop within reach and follow the
+platform's safety procedure for real hardware.
+
+## Try it
+
+Name one process owned by the robot workspace and one process owned by this UI
+workspace. Then identify which network ports allow a browser to view and
+command the robot.
+
+**You're ready to continue when:** you can explain why stopping the UI does
+not stop the robot platform and why a green browser connection does not prove
+that robot telemetry is fresh.
+
 ## Next
 
 [Lesson 02 — ROS 2 Core Concepts](02-ros2-core-concepts.md) explains the
 vocabulary (node, topic, message, service, action, launch file) used
 throughout the rest of these lessons.
+
+---
+
+[← Lesson 00](00-your-first-10-minutes.md) · [Lesson index](README.md) ·
+[Next: Lesson 02 →](02-ros2-core-concepts.md)

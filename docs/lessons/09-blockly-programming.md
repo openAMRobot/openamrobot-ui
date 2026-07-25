@@ -1,5 +1,14 @@
 # Lesson 09 — Blockly Visual Programming
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Operators and Blockly contributors | 20 minutes | [Lesson 00](00-your-first-10-minutes.md) and the Programs section of [Lesson 06](06-the-pages.md) |
+
+## What you'll learn
+
+You will learn how blocks become validated robot actions, which state is
+stored in the browser or backend, and how to test plans without unsafe motion.
+
 [Lesson 06](06-the-pages.md#programs--blockspagejsx) introduced this page
 (the sidebar calls it "Programs") at a glance. This lesson is the deep dive
 on it specifically:
@@ -216,9 +225,23 @@ For setup requirements (browser support, secure-origin microphone rules, API
 key), the exact wake-word behavior, and troubleshooting, see
 [Voice Command in the practical guide](../../web/src/features/blocks/README.md#voice-command).
 
+## Try it
+
+In Demo Mode, load a template, inspect its generated plan and validation
+warnings, then run it and review the run-history result. Do not repeat on real
+hardware until the operating area and physical emergency stop are ready.
+
+**You're ready to continue when:** you can trace one block from workspace to
+generated action and identify the topic, service, or browser wait it uses.
+
 ## Next
 
 [Lesson 10 — Topics as the Contract](10-topics-as-the-contract.md) steps back
 from individual pages and pipelines to explain why the topic *names* used
 throughout every page — including the ones Blockly publishes to — are the
 real interface between the UI and the robot.
+
+---
+
+[← Lesson 08](08-map-and-route-model.md) · [Lesson index](README.md) ·
+[Next: Lesson 10 →](10-topics-as-the-contract.md)

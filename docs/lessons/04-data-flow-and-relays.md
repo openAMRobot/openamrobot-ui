@@ -1,5 +1,14 @@
 # Lesson 04 — Data Flow and Relays
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| ROS developers and maintainers | 10 minutes | [Lesson 03](03-how-the-browser-talks-to-ros.md) |
+
+## What you'll learn
+
+You will learn why QoS compatibility can require a relay and how `/ui/*`
+topics expose browser-friendly copies without changing robot-side publishers.
+
 This is the most important lesson for anyone planning to connect a new
 external device, sensor, or actuator to the UI (see
 [`docs/extending/connect-external-device.md`](../extending/connect-external-device.md)).
@@ -91,6 +100,15 @@ anyone reading a topic list can tell at a glance which topics are
 browser-facing relays versus original robot-side topics. Follow it when
 adding a new relay.
 
+## Try it
+
+Compare `/map` and `/ui/map` with `ros2 topic info -v` while the system is
+running. Identify the publisher, subscriber, durability, and reliability at
+each side of the relay.
+
+**You're ready to continue when:** you can explain why a relay may be needed
+even when the topic name and message contents look correct.
+
 ## Next
 
 [Lesson 05 — Backend Nodes in Detail](05-backend-nodes-in-detail.md) finishes
@@ -98,3 +116,8 @@ the ROS-side tour — the rest of what `openamr_ui_package` runs beyond the two
 relays — before [Lesson 06 — A Tour of Every Page](06-the-pages.md) walks
 through what each page actually shows, and which topics (relayed or direct)
 it depends on.
+
+---
+
+[← Lesson 03](03-how-the-browser-talks-to-ros.md) · [Lesson index](README.md) ·
+[Next: Lesson 05 →](05-backend-nodes-in-detail.md)

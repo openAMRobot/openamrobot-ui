@@ -1,5 +1,14 @@
 # Lesson 07 — UI Components in Detail
 
+| Audience | Time | Prerequisites |
+| --- | --- | --- |
+| Frontend developers | 20 minutes | [Lesson 03](03-how-the-browser-talks-to-ros.md) and [Lesson 06](06-the-pages.md) |
+
+## What you'll learn
+
+You will learn how shared components consume the ROS connection, how the app
+shell keeps background features mounted, and where component state lives.
+
 [Lesson 06](06-the-pages.md) toured every page at a glance. This lesson goes
 one level deeper on the shared panels behind Map and Route specifically —
 the two pages built as a composition of smaller panels under
@@ -112,7 +121,8 @@ Map page owns the actual `ROSLIB.Service` call to
 client is created once per page, not once per panel — the same service is
 also what the Map page's top-bar E-STOP button
 ([`StatusBar.jsx`](06-the-pages.md#the-chrome-thats-on-every-page)) calls
-from outside this component entirely.
+from outside this component entirely. This is a one-shot software intervention,
+not a latched or safety-rated physical emergency stop.
 
 ## RobotState — `RobotState.jsx`
 
@@ -312,6 +322,14 @@ won't trigger it.
 [Lesson 03](03-how-the-browser-talks-to-ros.md), just carrying UI
 preference instead of a ROS connection.
 
+## Try it
+
+Choose one Map panel and trace its page import, ROS topic constant,
+subscription or publisher, cleanup function, and rendered status.
+
+**You're ready to continue when:** you can add a read-only panel without
+creating a second ROS connection or leaking a subscription.
+
 ## Next
 
 [Lesson 08 — The Map and Route File Model](08-map-and-route-model.md) goes
@@ -320,3 +338,8 @@ hierarchy behind everything `RoutePage.jsx` and `folders_handler.py` do —
 before [Lesson 09 — Blockly Visual Programming](09-blockly-programming.md)
 covers the fifth page, Blocks, the same way this lesson covered the other
 four.
+
+---
+
+[← Lesson 06](06-the-pages.md) · [Lesson index](README.md) ·
+[Next: Lesson 08 →](08-map-and-route-model.md)
