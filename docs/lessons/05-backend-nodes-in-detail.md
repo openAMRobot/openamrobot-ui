@@ -79,9 +79,12 @@ opt-in fix for that, not a separate system.
 
 Executable `handler`, started only by
 [`physnode_launch.py`](../../ros2/src/openamr_ui_package/launch/physnode_launch.py)
-(the optional helper launch), ROS node name `ui_folders`. This is what
-actually reads and writes map/route files when you use `Save`, `Rename`,
-`Delete`, `Change`, or `Create` on the Route page.
+(the optional helper launch). The class defaults to ROS node name
+`ui_folders` internally, but `physnode_launch.py` overrides that to
+`folders_handler` — that's the name you'll actually see in `ros2 node
+list`/`ros2 node info` when it's running. This is what actually reads and
+writes map/route files when you use `Save`, `Rename`, `Delete`, `Change`, or
+`Create` on the Route page.
 
 It listens on one topic, `ui_operation`, but the messages on it aren't
 free-form — they're a lightweight command format: the string before the
@@ -110,8 +113,10 @@ now.
 
 ## waypoint_nav.py — a second subscriber on the same topic
 
-Executable `nav`, also started only by `physnode_launch.py`, ROS node name
-`Way_points_handler`. This is the optional route-*following* helper — it
+Executable `nav`, also started only by `physnode_launch.py`. The class
+defaults to ROS node name `Way_points_handler` internally, but
+`physnode_launch.py` overrides that to `waypoint_nav` — same pattern as
+`folders_handler.py` above. This is the optional route-*following* helper — it
 reads the same active route CSV and drives the robot through it point by
 point using Nav2's `BasicNavigator` (`nav2_simple_commander`) directly,
 rather than publishing to `/goal_pose` the way every panel covered in
@@ -129,17 +134,24 @@ safely because their command vocabularies never collide — if you're adding a
 new `ui_operation` command (for either node), check both files, not just the
 one you're editing.
 
-## battery.py — not started by the standard launch
+## battery.py — no launch path exists yet
 
-Executable not wired into `new_ui_launch.py` or `physnode_launch.py` by
-default — the README notes this, and here's why it's easy to forget: it
-reads a serial port (`/dev/ttyUSB0`) for battery data and publishes
-`Float32` on `battery_status`. If the serial device isn't present (the
-common case off a real battery-equipped robot), it falls back to a simulated
-battery that slowly drains from 100, purely so the Status page's battery
-panel ([Lesson 06](06-the-pages.md#status--infopagejsx)) has *something* to
-show during development. This is the concrete mechanism behind that page's
-"no battery data just means no node is publishing it" behavior.
+This one is more than "off by default": there is currently no way to start
+it at all short of writing your own launch entry or `rclpy` script.
+`setup.py`'s `console_scripts` registers `flask`, `handler`, `nav`,
+`map_relay`, and `nav_relay` — `battery.py`'s `main()` isn't one of them, so
+`ros2 run openamr_ui_package battery` doesn't exist. It also has no
+`if __name__ == "__main__":` guard at the bottom of the file, so running
+`python3 battery.py` directly does nothing either — `main()` is defined but
+never called. If it were wired up, it would read a serial port
+(`/dev/ttyUSB0`) for battery data and publish `Float32` on `battery_status`;
+absent the serial device (the common case off a real battery-equipped
+robot), it falls back to a simulated battery that slowly drains from 100,
+purely so the Status page's battery panel
+([Lesson 06](06-the-pages.md#status--infopagejsx)) has *something* to show
+during development. This is the concrete mechanism behind that page's "no
+battery data just means no node is publishing it" behavior — currently,
+that's every deployment, since nothing starts this node yet.
 
 ## Try it
 

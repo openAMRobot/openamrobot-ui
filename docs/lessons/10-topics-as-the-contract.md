@@ -31,8 +31,8 @@ to be manual.
 
 ## Why centralizing the names matters
 
-Every topic, service, and action name this frontend depends on is collected
-in one file:
+Nearly every topic, service, and action name this frontend depends on is
+collected in one file:
 [`web/src/shared/constants/index.js`](../../web/src/shared/constants/index.js)
 (plus the small `LIFECYCLE_NODES` and `CAMERA_TOPIC_OPTIONS` lists in the
 same file for the handful of places that need more than a single name). This
@@ -54,6 +54,22 @@ inline — see how
 [`web/src/components/SystemHealth.jsx`](../../web/src/components/SystemHealth.jsx)
 reference `AppConfig.GOAL_POSE_TOPIC`, `AppConfig.SCAN_TOPIC`, and so on
 instead of the literal topic strings.
+
+The discipline isn't perfect: `/rosout`
+([`RosoutConsole.jsx`](../../web/src/components/RosoutConsole.jsx)),
+`/reinitialize_global_localization`
+([`LocalizationStatus.jsx`](../../web/src/components/LocalizationStatus.jsx)),
+and `/diagnostics`
+([`useSystemDiagnostics.js`](../../web/src/shared/hooks/useSystemDiagnostics.js))
+are hardcoded string literals rather than `AppConfig` entries — a handful of
+exceptions worth knowing about before you trust `AppConfig` as a truly
+exhaustive list, and worth fixing the next time you're in one of those
+files. It's also one-sided: the Python backend nodes covered in
+[Lesson 05](05-backend-nodes-in-detail.md) (`/map`, `/amcl_pose`,
+`ui_operation`, `/WayPoints_topic`, and more) have no equivalent shared
+constants module — every backend file hardcodes its own topic strings ad
+hoc. The contract this lesson describes is only centrally documented on the
+frontend side of it.
 
 ## Relays are part of the same contract
 

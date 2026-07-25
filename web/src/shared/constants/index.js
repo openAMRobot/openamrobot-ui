@@ -41,7 +41,14 @@ export const AppConfig = {
   NAV_DATA_REQ_TOPIC: "/nav_data_req",
   NAV_DATA_RESP_TOPIC: "/nav_data_resp",
   NEW_WAYPOINT_TOPIC: "/new_way_point",
-  COMPUTE_PATH_SERVICE: "/compute_path_to_pose",
+  // compute_path_to_pose is a ROS2 action, not a service — there is no
+  // "/compute_path_to_pose" service on the graph to call directly. Every
+  // ROS2 action implicitly exposes a goal-submission and a result-retrieval
+  // service (the same pattern NAV_FEEDBACK_TOPIC/NAV_CANCEL_GOAL_SERVICE
+  // above already rely on for navigate_to_pose), so planning goes through
+  // these two instead.
+  COMPUTE_PATH_SEND_GOAL_SERVICE: "/compute_path_to_pose/_action/send_goal",
+  COMPUTE_PATH_GET_RESULT_SERVICE: "/compute_path_to_pose/_action/get_result",
 
   MAX_LINEAR_SPEED: 0.2,
   MAX_ANGULAR_SPEED: 2,

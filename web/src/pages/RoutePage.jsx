@@ -465,102 +465,110 @@ const RoutePage = () => {
       removePointFromCanvas();
 
       toast.info("Requesting path from Nav2 planner...");
-      const nav2Client = new window.ROSLIB.Service({
-        ros,
-        name: AppConfig.COMPUTE_PATH_SERVICE,
-        serviceType: "nav2_msgs/srv/ComputePathToPose",
-      });
 
-      const request = new window.ROSLIB.ServiceRequest({
+      const toPoseStamped = (pose) => ({
+        header: { frame_id: "map", stamp: { secs: 0, nsecs: 0 } },
         pose: {
-          header: {
-            frame_id: "map",
-            stamp: { secs: 0, nsecs: 0 },
-          },
-          pose: {
-            position: {
-              x: goalPose.position.x,
-              y: goalPose.position.y,
-              z: 0.0,
-            },
-            orientation: {
-              z: goalPose.orientation.z,
-              w: goalPose.orientation.w,
-            },
-          },
+          position: { x: pose.position.x, y: pose.position.y, z: 0.0 },
+          orientation: { z: pose.orientation.z, w: pose.orientation.w },
         },
-        start: {
-          header: {
-            frame_id: "map",
-            stamp: { secs: 0, nsecs: 0 },
-          },
-          pose: {
-            position: {
-              x: startPose.position.x,
-              y: startPose.position.y,
-              z: 0.0,
-            },
-            orientation: {
-              z: startPose.orientation.z,
-              w: startPose.orientation.w,
-            },
-          },
-        },
-        planner_id: "",
-        use_start: true,
       });
 
-      nav2Client.callService(
-        request,
-        (result) => {
-          if (
-            result &&
-            result.path &&
-            Array.isArray(result.path.poses) &&
-            result.path.poses.length > 0
-          ) {
-            const poses = result.path.poses;
-            toast.success(
-              `Successfully planned path with ${poses.length} points!`,
-            );
+      const handlePlannedPath = (poses) => {
+        toast.success(`Successfully planned path with ${poses.length} points!`);
 
-            const downsampled = downsamplePath(poses, 1.0);
+        const downsampled = downsamplePath(poses, 1.0);
 
-            const wayPointTopic = new window.ROSLIB.Topic({
-              ros,
-              name: AppConfig.NEW_WAYPOINT_TOPIC,
-              messageType: "geometry_msgs/PoseWithCovarianceStamped",
-            });
+        const wayPointTopic = new window.ROSLIB.Topic({
+          ros,
+          name: AppConfig.NEW_WAYPOINT_TOPIC,
+          messageType: "geometry_msgs/PoseWithCovarianceStamped",
+        });
 
-            downsampled.forEach((wp) => {
-              const sendDataArray = new Array(36).fill(0.0);
-              sendDataArray[0] = 3; // "navigate" type
+        downsampled.forEach((wp) => {
+          const sendDataArray = new Array(36).fill(0.0);
+          sendDataArray[0] = 3; // "navigate" type
 
-              const messageObject = {
-                header: { frame_id: "map" },
-                pose: {
-                  pose: {
-                    position: {
-                      x: wp.pose.position.x,
-                      y: wp.pose.position.y,
-                      z: 0.0,
-                    },
-                    orientation: {
-                      z: wp.pose.orientation.z,
-                      w: wp.pose.orientation.w,
-                    },
-                  },
-                  covariance: sendDataArray,
+          const messageObject = {
+            header: { frame_id: "map" },
+            pose: {
+              pose: {
+                position: {
+                  x: wp.pose.position.x,
+                  y: wp.pose.position.y,
+                  z: 0.0,
                 },
-              };
+                orientation: {
+                  z: wp.pose.orientation.z,
+                  w: wp.pose.orientation.w,
+                },
+              },
+              covariance: sendDataArray,
+            },
+          };
 
-              wayPointTopic.publish(new window.ROSLIB.Message(messageObject));
-            });
-          } else {
-            toast.error(
-              "Nav2 failed to plan a path: empty or invalid response.",
-            );
+          wayPointTopic.publish(new window.ROSLIB.Message(messageObject));
+        });
+      };
+
+      // compute_path_to_pose is a ROS2 action, so there's no plain service
+      // to call directly. Every ROS2 action implicitly exposes a
+      // "send_goal" service (submit the goal, get back whether it was
+      // accepted) and a "get_result" service (fetch the outcome once it's
+      // done) — the same low-level pattern this app already relies on for
+      // navigate_to_pose's feedback/cancel topics. Planning is fast/local,
+      // so we call get_result immediately after an accepted send_goal
+      // rather than also wringing the status/feedback topics.
+      const goalId = { uuid: Array.from({ length: 16 }, () => Math.floor(Math.random() * 256)) };
+
+      const sendGoalClient = new window.ROSLIB.Service({
+        ros,
+        name: AppConfig.COMPUTE_PATH_SEND_GOAL_SERVICE,
+        serviceType: "nav2_msgs/action/ComputePathToPose_SendGoal",
+      });
+
+      const sendGoalRequest = new window.ROSLIB.ServiceRequest({
+        goal_id: goalId,
+        goal: {
+          goal: toPoseStamped(goalPose),
+          start: toPoseStamped(startPose),
+          planner_id: "",
+          use_start: true,
+        },
+      });
+
+      sendGoalClient.callService(
+        sendGoalRequest,
+        (sendGoalResult) => {
+          if (!sendGoalResult || !sendGoalResult.accepted) {
+            toast.error("Nav2 planner rejected the path request.");
+            return;
           }
+
+          const getResultClient = new window.ROSLIB.Service({
+            ros,
+            name: AppConfig.COMPUTE_PATH_GET_RESULT_SERVICE,
+            serviceType: "nav2_msgs/action/ComputePathToPose_GetResult",
+          });
+
+          getResultClient.callService(
+            new window.ROSLIB.ServiceRequest({ goal_id: goalId }),
+            (getResult) => {
+              const poses = getResult?.result?.path?.poses;
+              if (Array.isArray(poses) && poses.length > 0) {
+                handlePlannedPath(poses);
+              } else {
+                toast.error(
+                  getResult?.result?.error_msg ||
+                    "Nav2 failed to plan a path: empty or invalid response.",
+                );
+              }
+            },
+            (error) => {
+              console.error("Nav2 get_result service error:", error);
+              toast.error("Failed to retrieve the planned path from Nav2.");
+            },
+          );
         },
         (error) => {
           console.error("Nav2 planning service error:", error);

@@ -72,12 +72,6 @@ need an answer, not a stream. Two examples used in this UI:
   `current_state` field whose `label` is a string like `"active"`,
   `"inactive"`, or `"unconfigured"` — that string is exactly what the
   Lifecycle panel's colored dot reflects.
-- The Route page asks Nav2 to plan a path with the
-  `/compute_path_to_pose` service — see the planning logic in
-  [`web/src/pages/RoutePage.jsx`](../../web/src/pages/RoutePage.jsx). The
-  request carries a `start` pose and a `goal` pose; the one reply carries the
-  full planned `path` (a list of poses) or an empty one if planning failed —
-  there's no partial or streaming reply, just the one final answer.
 
 ## Action
 
@@ -101,6 +95,17 @@ counts down), and one final status update when it's done (a numeric status
 code — the UI treats `4` as succeeded, `5`/`6` as canceled/failed). A service
 could not represent the "stream of feedback while it's still running" part;
 that's precisely what makes this an action instead of a service.
+
+Nav2's `compute_path_to_pose` (used by the Route page's "Plan" button, in
+[`web/src/pages/RoutePage.jsx`](../../web/src/pages/RoutePage.jsx)) is also
+an action, not a service, even though it behaves like a one-shot
+request/response from the UI's point of view — there's no meaningful partial
+result to stream while the planner runs. Every ROS2 action, including this
+one, implicitly exposes a `_action/send_goal` service (submit the goal,
+learn whether it was accepted) and a `_action/get_result` service (fetch the
+outcome once it's done); calling those two in sequence is how the Route page
+gets a planned path without needing a plain `/compute_path_to_pose` service
+that doesn't actually exist on the ROS graph.
 
 ## Launch file
 

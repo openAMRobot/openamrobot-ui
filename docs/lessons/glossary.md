@@ -12,14 +12,41 @@ cancelable work, such as `navigate_to_pose`. See
 Route page, tracked in one file, `current_map_route.yaml`. See
 [Lesson 08](08-map-and-route-model.md#the-active-context-one-file-always-current).
 
+**AMCL (Adaptive Monte Carlo Localization)** — The Nav2 node that estimates
+the robot's position on the map by matching live LIDAR scans against it,
+publishing `/amcl_pose`. Rendered as the "AMCL" position badge on the Map,
+Status, and Robot pages, and as the localization check on the Health page.
+See [`RobotState`](07-ui-components.md#robotstate--robotstatejsx) and
+[`SystemHealth`](07-ui-components.md#systemhealth--systemhealthjsx).
+
 **`AppConfig`** — The exported object in
 `web/src/shared/constants/index.js` holding every topic/service/action name
 the frontend depends on. See
 [Lesson 10](10-topics-as-the-contract.md).
 
+**Behavior Tree (`bt_navigator`)** — The Nav2 lifecycle node that
+orchestrates navigation as a tree of conditional steps — compute a path,
+follow it, run a recovery behavior if something goes wrong — rather than a
+single fixed algorithm. One of the five nodes the Lifecycle panel tracks —
+see the **Lifecycle node** entry below and
+[`LifecycleStatus`](07-ui-components.md#lifecyclestatus--lifecyclestatusjsx).
+
 **Contract (topics as the contract)** — The idea that a topic name plus a
 message type is the entire, compiler-unchecked interface between the UI and
 the robot. See [Lesson 10](10-topics-as-the-contract.md).
+
+**Costmap** — A grid overlaid on the map where each cell's value reflects
+how close it is to an obstacle; Nav2 plans paths that avoid high-cost cells.
+Nav2 keeps a "global" costmap (the whole map) and a "local" costmap (just
+around the robot), rendered as the Map page's Costmap G/Costmap L layers.
+See [`MapLayers`](07-ui-components.md#maplayers--maplayersjsx).
+
+**DDS (Data Distribution Service)** — The pub/sub middleware ROS 2 is built
+on. It's what lets nodes discover each other and exchange topics, services,
+and actions without a central broker, and it's why a node that restarts
+typically rejoins the graph on its own — distinct from the browser's own
+rosbridge WebSocket reconnect, which is a separate, application-level retry
+this UI implements itself. See [Lesson 11](11-failure-modes-and-reconnection.md).
 
 **Durability (QoS)** — The ROS 2 Quality of Service setting controlling
 whether a late-joining subscriber gets the last published message
@@ -57,6 +84,14 @@ way. See [`LifecycleStatus`](07-ui-components.md#lifecyclestatus--lifecyclestatu
 
 **Message** — The typed data structure carried on a topic (e.g.
 `geometry_msgs/Twist`). See [Lesson 02](02-ros2-core-concepts.md#message).
+
+**Nav2** — The ROS 2 Navigation stack: the family of lifecycle nodes
+(`map_server`, `amcl`, `controller_server`, `planner_server`,
+`bt_navigator`) that turns a goal pose into an obstacle-avoiding driven
+path. Referenced throughout as the thing behind `navigate_to_pose`,
+`compute_path_to_pose`, and the Lifecycle panel. See
+[Lesson 02](02-ros2-core-concepts.md#action) and
+[`LifecycleStatus`](07-ui-components.md#lifecyclestatus--lifecyclestatusjsx).
 
 **Node** — One running ROS 2 process with one job, discovered and connected
 to others by the ROS 2 middleware. See
@@ -118,20 +153,33 @@ subscribe, and call services via `roslibjs`. See
 synchronous from the caller's point of view. See
 [Lesson 02](02-ros2-core-concepts.md#service).
 
-**Topic** — A named, typed stream of messages that any node can publish to
-or subscribe to. See [Lesson 02](02-ros2-core-concepts.md#topic).
+**TF (transform tree)** — ROS 2's mechanism for tracking how coordinate
+frames relate to each other over time — e.g. where the LIDAR sits relative
+to the robot's base, and where the robot's base sits relative to the map.
+The Health and Status pages check one specific chain,
+`map → odom → base_link → lidar_link`; a broken link anywhere in it means
+localization and navigation can't work. See
+[`SystemHealth`](07-ui-components.md#systemhealth--systemhealthjsx).
 
-**Two-stage build pipeline** — Why editing `web/src` alone doesn't change
+**Three-stage build pipeline** — Why editing `web/src` alone doesn't change
 what Flask serves: `npm run build` compiles it to `web/build/`,
 `sync_frontend_to_ros.sh` copies that into the ROS package source, and
 `colcon build` installs it to the share directory Flask actually reads
 from. See
 [Lesson 05](05-backend-nodes-in-detail.md#flask_apppy--two-unrelated-jobs-in-one-process).
 
+**Topic** — A named, typed stream of messages that any node can publish to
+or subscribe to. See [Lesson 02](02-ros2-core-concepts.md#topic).
+
 **Two-workspace model** — The split between the robot/simulation workspace
 (owns the robot, Nav2, sensors) and this UI workspace (owns the dashboard,
 rosbridge, relays). See
 [Lesson 01](01-what-is-this-ui.md#the-two-workspace-model).
+
+**URDF (Unified Robot Description Format)** — The XML file format
+describing a robot's physical structure — links, joints, geometry — that
+the Robot page's 3D viewer renders. See
+[Robot — `RobotDescriptionPage.jsx`](06-the-pages.md#robot--robotdescriptionpagejsx).
 
 **`useRos()` / `useRosStatus()`** — The two hooks exported from `App.jsx`
 that every panel uses to reach the shared connection and its status, instead

@@ -13,7 +13,7 @@ instead of a full lesson, see the [glossary](glossary.md).
 | 02 | [ROS 2 Core Concepts](02-ros2-core-concepts.md) | Node, topic, message, service, action, launch file |
 | 03 | [How the Browser Talks to ROS](03-how-the-browser-talks-to-ros.md) | The roslibjs → rosbridge chain, Flask, the camera path |
 | 04 | [Data Flow and Relays](04-data-flow-and-relays.md) | Why `map_relay`/`nav_relays` exist; the relay pattern |
-| 05 | [Backend Nodes in Detail](05-backend-nodes-in-detail.md) | `flask_app.py`, `folders_handler.py`, `waypoint_nav.py`, `battery.py`, and why the two-stage build exists |
+| 05 | [Backend Nodes in Detail](05-backend-nodes-in-detail.md) | `flask_app.py`, `folders_handler.py`, `waypoint_nav.py`, `battery.py`, and why the three-stage build exists |
 | 06 | [A Tour of Every Page](06-the-pages.md) | All 18 pages — Map, Routes, Maps, Programs, Scheduler, Missions, Status, Robot, Devices, Health, Metrics, Recordings, Events, Console, Parameters, Fleet, Config, Notes — purpose and topics, one real screenshot each |
 | 07 | [UI Components in Detail](07-ui-components.md) | Every panel behind Map and Route under `web/src/components/`, plus the app shell (routing, providers, Redux, theme, always-mounted background components) |
 | 08 | [The Map and Route File Model](08-map-and-route-model.md) | The group → map → route file hierarchy |
