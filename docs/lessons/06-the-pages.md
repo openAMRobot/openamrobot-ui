@@ -85,13 +85,19 @@ telemetry panels now live here — see the note in
 - The map panel shows the occupancy grid, robot pose, and optional overlays
   (costmaps, laser, path, goal, waypoints, keep-out zones, trail) via the
   `LAYERS` row, each with its own opacity slider.
-- **Goal Mode** publishes a navigation goal — click to send the robot there,
-  drag before releasing to set a heading. **Set Pose** publishes a one-shot
-  `/initialpose` correction (use this after localization drifts or resets).
-  **Add Waypoint** queues up several goals to run in order via **Execute
-  Queue**. **Go Home** sends the robot to `(0, 0)`.
+- **Send Goal** (labeled "Goal Mode" in earlier versions of this UI)
+  publishes a navigation goal — click to send the robot there, drag before
+  releasing to set a heading. **Correct Robot's Position** (labeled "Set
+  Pose" in earlier versions) publishes a one-shot `/initialpose` correction
+  (use this after localization drifts or resets) — it's deliberately named
+  and styled to read as a different kind of action from the two navigation
+  modes next to it, since it corrects the robot's own self-localization
+  rather than sending it anywhere. **Add Waypoint** queues up several goals
+  to run in order via **Execute Queue**. **Go Home** sends the robot to
+  `(0, 0)`.
 - Right-clicking the map is a shortcut for the same three actions (send a
-  goal, save a waypoint, set pose) without switching modes first.
+  goal, save a waypoint, correct the robot's position) without switching
+  modes first.
 - The controls row combines a manual joystick with its own **STOP** button, a
   max-speed slider with quick presets, live velocity/position (`RobotState`,
   compact), dock/undock controls and status (`DockingControl`, compact), and
@@ -112,11 +118,14 @@ sequences for a given map, as opposed to Map's one-off goals.
   sense for the map it was drawn on (see
   [Lesson 08](08-map-and-route-model.md)).
 - **Create** starts a new route; click the map to drop waypoints. **Edit**
-  reopens the current route for changes. **Change** picks a different saved
-  route. **Change map** switches which map you're routing on. **Auto-plan**
-  asks Nav2 to compute a path between two points and turns it into
-  waypoints automatically. **Save**, **Rename**, and **Delete** act on the
-  current route; **Clear points** wipes the in-progress editor only.
+  reopens the current route for changes. **Switch route** (labeled "Change"
+  in earlier versions) picks a different saved route. **Switch map**
+  (labeled "Change map") switches which map you're routing on — the two
+  are now named distinctly on purpose, since switching the map is a much
+  bigger change than switching the route. **Auto-plan** asks Nav2 to compute
+  a path between two points and turns it into waypoints automatically.
+  **Save**, **Rename**, and **Delete** act on the current route; **Clear
+  waypoints** (labeled "Clear points") wipes the in-progress editor only.
 - Exchanges file state with the `folders_handler` backend node over
   `/nav_data_req`, `/nav_data_resp`, and `/ui_operation` — this only works
   if the optional
@@ -130,12 +139,12 @@ loaded, and organize saved maps into groups.
 
 ![OpenAMR UI Maps page: build-a-new-map and save-current-map panels, plus a saved-maps list grouped by folder](<../assets/Maps/Maps.png>)
 
-- **Start mapping** launches SLAM and stops navigation/localization — drive
-  the robot around the space (with the joystick on the Map page, for
-  example), then come back here and use **Save current map** once you're
-  done.
+- **Start mapping** launches mapping mode (SLAM) and stops
+  navigation/localization — drive the robot around the space (with the
+  joystick on the Map page, for example), then come back here and use
+  **Save current map** once you're done.
 - The saved-maps list lets you **Switch** the active map (reloads it on the
-  running `map_server` — set the initial pose again afterward, since old
+  robot immediately — set the initial pose again afterward, since old
   localization won't match a new map), **Rename**, or **Delete** it, and add
   or delete groups.
 - This is the same `folders_handler` node and `/ui_operation` protocol the
@@ -156,7 +165,8 @@ writing code, then press `Run`.
 - The left toolbox groups blocks into `Program`, `Navigation`, `Motion`,
   `Docking`, and `Robot State`. Only blocks connected below `start robot
   program` run.
-- The right panel covers connection status, `Run`/`Stop`, **Voice Command**
+- The right panel covers connection status ("Robot connected"/"Robot
+  offline"), `Run`/`Stop`, **Voice Command**
   (speak a command after the wake word "Monsieur"), **Program Templates**
   (ready-made starter programs), **Run History**, **Backend Programs**
   (save/load workspaces on the server, not just in this browser), **Named
@@ -291,9 +301,9 @@ aggregating signals that are otherwise scattered across several pages.
 
 ![OpenAMR UI Health Centre: overall status banner, system health, lifecycle, devices, battery, robot description, diagnostics, and recent faults](<../assets/health/health.png>)
 
-- The banner at the top rolls everything up into one label — nominal,
-  warnings, or partially/not connected — with a short reason underneath
-  when it isn't simply "Ready."
+- The banner at the top rolls everything up into one label — Ready, Ready
+  with warnings, Needs attention, or Not ready — with a short reason
+  underneath when it isn't simply "Ready."
 - Below that: `SystemHealth` (topics/TF), `LifecycleStatus` (Nav2 lifecycle
   nodes), a Devices summary (with a link to [Devices](#devices--devicespagejsx)
   to fix anything offline), Battery, whether the robot's URDF is available
@@ -321,7 +331,8 @@ publishes, no extra instrumentation needed.
 
 - Counters (distance, goal/dock outcomes, peak speed) accumulate across
   page reloads — they're kept in the browser, not reset just because you
-  refreshed. **Reset** zeroes them explicitly.
+  refreshed. **Reset counters** zeroes them explicitly, with a confirmation
+  first since it can't be undone.
 - Distance and speed integrate the robot's own odometry; goal/dock outcomes
   come from watching the same navigation-status and docking-status topics
   covered in [Lesson 07](07-ui-components.md).
@@ -418,18 +429,20 @@ shared with other operators or persisted on the robot itself.
 ![OpenAMR UI Config page: Demo mode toggle](<../assets/configuration/demomode.png>)
 
 - **Demo mode** — explore the whole interface with simulated telemetry, no
-  robot or rosbridge required. Every page shows a permanent badge while
-  it's on, and nothing simulated is ever presented as live. (Every
+  robot or robot connection required. Every page shows a permanent badge
+  while it's on, and nothing simulated is ever presented as live. (Every
   screenshot in this lesson was taken with Demo Mode on.)
 
   ![OpenAMR UI Config page: connection host/port fields resolving to a ws:// address](<../assets/configuration/connection.png>)
 
-- **Connection** — the rosbridge host/port and camera stream port. Leave the
-  host blank to auto-use whichever address the page itself was loaded from
-  (the normal case once this is deployed on the robot). A **Connection
-  diagnostics** card right below mirrors the Health Centre rollup, so a bad
-  setting shows its effect right where you'd go to fix it — including its
-  "Ready with warnings" state, not just the nominal one.
+- **Connection** — the "Robot address override"/"Robot connection port"
+  fields (backed by rosbridge host/port under the hood) and the camera
+  stream port. Leave the address blank to auto-use whichever address the
+  page itself was loaded from (the normal case once this is deployed on the
+  robot). A **Connection diagnostics** card right below mirrors the Health
+  Centre rollup, so a bad setting shows its effect right where you'd go to
+  fix it — including its "Ready with warnings" state, not just the nominal
+  one.
 
   ![OpenAMR UI Config page: Connection diagnostics card showing a "Ready with warnings" state with a stale costmap topic flagged](<../assets/configuration/connection%20diagnostics.png>)
 

@@ -5,11 +5,11 @@ import "react-toastify/dist/ReactToastify.css";
 import Button from "../../shared/ui/Button";
 
 const TimeModal = ({ modalHandler }) => {
-  const [hoursValue, setHoursValue] = useState("");
-  const [minutesValue, setMinutesValue] = useState("");
+  const [hoursValue, setHoursValue] = useState(0);
+  const [minutesValue, setMinutesValue] = useState(0);
 
   const handleSubmitClick = () => {
-    if (!hoursValue && !minutesValue) {
+    if (hoursValue === "" && minutesValue === "") {
       toast.warn("Enter hours and minutes");
       return;
     }
@@ -52,6 +52,11 @@ const TimeModal = ({ modalHandler }) => {
         >
           Waypoint wait time
         </h2>
+
+        <p className="text-sm leading-6 text-themeTextGray">
+          How long should the robot pause here before continuing? Leave both
+          at 0 for no pause.
+        </p>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <input

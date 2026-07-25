@@ -86,7 +86,7 @@ const OnboardingWizard = ({ open, onClose, onRequestTour }) => {
                   Connect a robot
                 </p>
                 <p className="mt-1 text-xs text-themeTextGray">
-                  Point this UI at a real robot&apos;s rosbridge connection.
+                  Point this UI at a real robot&apos;s connection.
                 </p>
               </button>
               <button
@@ -196,7 +196,7 @@ const OnboardingWizard = ({ open, onClose, onRequestTour }) => {
             <ol className="mt-3 space-y-2.5 text-sm text-themeTextGray">
               <li>
                 <span className="font-semibold text-textWhiteHover">
-                  1. Configure the ROS bridge —
+                  1. Configure the connection —
                 </span>{" "}
                 set the host and port on the Config page.
               </li>

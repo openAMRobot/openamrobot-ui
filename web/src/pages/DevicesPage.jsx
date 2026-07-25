@@ -124,7 +124,7 @@ const DevicesPage = () => {
         </p>
         <p className="mt-1 text-sm text-themeTextGray">
           Real serial ports (e.g. USB-serial adapters, Arduino-style boards)
-          currently exposed on the machine running this backend. This won&apos;t
+          currently exposed on this robot&apos;s computer. This won&apos;t
           see CAN interfaces, network devices, or hardware attached to a
           different Raspberry Pi than the one hosting this UI.
         </p>
@@ -134,7 +134,7 @@ const DevicesPage = () => {
             <p className="text-xs text-themeTextGray opacity-70">Checking…</p>
           ) : !serialPortsSupported ? (
             <p className="text-xs text-themeTextGray opacity-70">
-              Serial port detection isn&apos;t available on this backend.
+              Serial port detection isn&apos;t available on this robot&apos;s computer.
             </p>
           ) : serialPorts.length === 0 ? (
             <p className="text-xs text-themeTextGray opacity-70">
@@ -200,7 +200,7 @@ const DevicesPage = () => {
 
           <Field
             label="Connection target"
-            hint="Serial path, CAN interface name, or host:port — whatever identifies it."
+            hint="Wherever the device shows up — e.g. a USB port path, network address, or vehicle-bus name. (Serial path, CAN interface name, or host:port — whatever identifies it.)"
           >
             <input
               type="text"
@@ -213,7 +213,7 @@ const DevicesPage = () => {
 
           <Field
             label="Status topic (optional)"
-            hint="A topic this device's driver publishes to when alive."
+            hint="The status channel this device's software reports to when it's running (ask your integrator if unsure)."
           >
             <input
               type="text"
@@ -226,7 +226,7 @@ const DevicesPage = () => {
 
           <Field
             label="Status message type (optional)"
-            hint="Defaults to std_msgs/String if left blank."
+            hint="Leave blank unless your device's status messages use a non-text format."
           >
             <input
               type="text"
@@ -303,9 +303,18 @@ const DevicesPage = () => {
                       pulse={state === "online"}
                     />
                     <button
-                      onClick={() => removeDevice(device.id)}
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            `Remove "${device.name}" from the device list?`,
+                          )
+                        )
+                          return;
+                        removeDevice(device.id);
+                      }}
                       className="text-themeTextGray hover:text-statusRed"
                       aria-label={`Remove ${device.name}`}
+                      title={`Remove ${device.name}`}
                     >
                       ×
                     </button>

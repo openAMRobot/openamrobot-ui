@@ -32,6 +32,16 @@ const EventsPage = () => {
     [events, type, severity],
   );
 
+  const handleClear = () => {
+    if (
+      !window.confirm(
+        "This permanently deletes all recorded events, even if you're currently viewing a filtered list. This can't be undone. Continue?",
+      )
+    )
+      return;
+    clearEvents();
+  };
+
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(events, null, 2)], {
       type: "application/json",
@@ -74,11 +84,11 @@ const EventsPage = () => {
               Export
             </button>
             <button
-              onClick={clearEvents}
+              onClick={handleClear}
               disabled={events.length === 0}
               className="rounded-lg border border-borderSubtle px-3 py-1.5 text-xs text-themeTextGray transition-colors hover:border-statusRed/50 hover:text-statusRed disabled:opacity-40"
             >
-              Clear
+              Clear all events
             </button>
           </div>
         }

@@ -34,6 +34,11 @@ const MetricsPage = () => {
   const { metrics, speed, reset } = useRobotMetrics();
   const [now, setNow] = useState(() => Date.now());
 
+  const handleReset = () => {
+    if (!window.confirm("Reset all totals below back to zero? This can't be undone.")) return;
+    reset();
+  };
+
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
@@ -60,13 +65,13 @@ const MetricsPage = () => {
             <StatusBadge
               status={connected ? "connected" : "disconnected"}
               pulse={connected}
-              label={connected ? "live" : "offline"}
+              label={connected ? "Online" : "Offline"}
             />
             <button
-              onClick={reset}
+              onClick={handleReset}
               className="rounded-lg border border-borderSubtle px-3 py-1.5 text-xs text-themeTextGray transition-colors hover:border-statusRed/50 hover:text-statusRed"
             >
-              Reset
+              Reset counters
             </button>
           </div>
         }
@@ -89,7 +94,7 @@ const MetricsPage = () => {
           value={fmtDuration(now - metrics.since)}
         />
         <MetricCard
-          label="Goals run"
+          label="Trips completed"
           value={totalGoals}
           meta={successRate === null ? "no goals yet" : `${successRate}% success`}
         />
@@ -98,12 +103,12 @@ const MetricsPage = () => {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <DashboardCard className="p-4 font-[RobotoMono]">
           <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-themeBlue">
-            Navigation goals
+            Trips
           </p>
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>
               <p className="text-2xl font-semibold text-statusGreen">{metrics.goalsSucceeded}</p>
-              <p className="text-xs text-themeTextGray">Succeeded</p>
+              <p className="text-xs text-themeTextGray">Completed</p>
             </div>
             <div>
               <p className="text-2xl font-semibold text-statusRed">{metrics.goalsFailed}</p>
@@ -111,7 +116,7 @@ const MetricsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-semibold text-themeTextGray">{metrics.goalsCanceled}</p>
-              <p className="text-xs text-themeTextGray">Canceled</p>
+              <p className="text-xs text-themeTextGray">Stopped early</p>
             </div>
           </div>
         </DashboardCard>

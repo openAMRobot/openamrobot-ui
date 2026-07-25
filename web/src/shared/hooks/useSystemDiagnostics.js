@@ -3,8 +3,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRos, useRosStatus, useRuntimeConfig } from "../../app/App";
 import { AppConfig, LIFECYCLE_NODES } from "../constants";
 import { fetchRobotDescriptionManifest } from "../../features/robotDescription/api/robotDescriptionApi";
+import { FRIENDLY_NAMES as LIFECYCLE_FRIENDLY_NAMES } from "../../components/LifecycleStatus";
 import useDevices from "./useDevices";
 import useDeviceStatuses from "./useDeviceStatuses";
+
+// Plain-language names for the topic-health keys SystemHealth already
+// computes, so an issue pill reads "Localization has gone silent" instead
+// of "amcl topic has gone silent".
+const TOPIC_FRIENDLY_NAMES = {
+  odom: "Odometry",
+  scan: "Laser scan",
+  map: "Map",
+  amcl: "Localization",
+  nav2: "Navigation",
+  costmap: "Global costmap",
+  plan: "Path plan",
+};
 
 // Topics this app's own pages already depend on being alive — a reasonable,
 // honest definition of "expected", since it's exactly what SystemHealth,
@@ -13,8 +27,8 @@ const EXPECTED_TOPICS = [
   { topic: AppConfig.SCAN_TOPIC, label: "Laser scan" },
   { topic: AppConfig.ROBOT_POSE_TOPIC, label: "Odometry" },
   { topic: AppConfig.MAP_TOPIC, label: "Map" },
-  { topic: AppConfig.AMCL_POSE_TOPIC, label: "AMCL pose" },
-  { topic: AppConfig.NAV_STATUS_TOPIC, label: "Nav status" },
+  { topic: AppConfig.AMCL_POSE_TOPIC, label: "Localization" },
+  { topic: AppConfig.NAV_STATUS_TOPIC, label: "Navigation" },
   { topic: AppConfig.BATTERY_TOPIC, label: "Battery" },
   { topic: AppConfig.JOINT_STATES_TOPIC, label: "Joint states" },
 ];
@@ -26,7 +40,7 @@ const DIAGNOSTIC_LEVEL_LABEL = { 1: "WARN", 2: "ERROR", 3: "STALE" };
 export const OVERALL_LABELS = {
   0: "Ready",
   1: "Ready with warnings",
-  2: "Partially connected",
+  2: "Needs attention",
   3: "Not ready",
 };
 
@@ -184,7 +198,7 @@ export default function useSystemDiagnostics() {
       list.push({
         id: "rosbridge",
         severity: 3,
-        message: "Rosbridge is disconnected — nothing else here can be verified.",
+        message: "Robot connection is offline — nothing else here can be verified.",
         linkTo: "/config",
       });
     }
@@ -193,27 +207,35 @@ export default function useSystemDiagnostics() {
       list.push({
         id: "tf-chain",
         severity: 2,
-        message: "TF chain is broken (map → odom → base_link → lidar_link) — localization and navigation can't work without it.",
+        message: "Position tracking is broken — the robot doesn't know where it is. Navigation won't work until this is fixed.",
         linkTo: "/info",
       });
     }
 
     Object.entries(health).forEach(([key, state]) => {
       if (key === "tfChain" || state !== "offline") return;
+      const name = TOPIC_FRIENDLY_NAMES[key] || key;
       list.push({
         id: `topic-${key}`,
         severity: CRITICAL_TOPIC_KEYS.has(key) ? 2 : 1,
-        message: `${key} topic has gone silent.`,
+        message: `${name} has gone silent.`,
         linkTo: "/info",
       });
     });
 
+    const LIFECYCLE_STATE_LABELS = {
+      inactive: "paused",
+      unconfigured: "not set up yet",
+      unknown: "not responding",
+    };
     Object.entries(lifecycle).forEach(([name, state]) => {
       if (state === "active") return;
+      const friendlyName = LIFECYCLE_FRIENDLY_NAMES[name] || name;
+      const friendlyState = LIFECYCLE_STATE_LABELS[state] || state;
       list.push({
         id: `lifecycle-${name}`,
         severity: state === "inactive" ? 1 : 2,
-        message: `${name} lifecycle node is ${state}.`,
+        message: `${friendlyName} is ${friendlyState}.`,
         linkTo: "/health",
       });
     });
@@ -269,7 +291,7 @@ export default function useSystemDiagnostics() {
       list.push({
         id: `missing-${topic}`,
         severity: 1,
-        message: `${label} (${topic}) isn't currently in the ROS graph.`,
+        message: `${label} isn't sending data right now.`,
         linkTo: "/info",
       });
     });

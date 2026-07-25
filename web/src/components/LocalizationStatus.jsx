@@ -24,7 +24,7 @@ const classify = (posStd, yawStdDeg) => {
       color: "text-statusGreen",
       dot: "bg-statusGreen",
       explain:
-        "AMCL's particle cloud has converged — the robot knows where it is with high confidence.",
+        "The robot is confident about its position — its location estimate has converged and is reliable.",
     };
   }
   if (posStd <= 0.6 && yawStdDeg <= 20) {
@@ -43,7 +43,7 @@ const classify = (posStd, yawStdDeg) => {
     color: "text-statusRed",
     dot: "bg-statusRed",
     explain:
-      "The particle cloud is spread wide — the robot does not reliably know where it is. Re-localize globally, then drive to help it converge, or set the initial pose on the map.",
+      "The robot isn't sure exactly where it is yet. Tell it to figure out its position from scratch, then drive around to help it narrow down — or set its position manually on the map.",
   };
 };
 
@@ -167,7 +167,7 @@ const LocalizationStatus = ({ onSetPoseMode }) => {
           <button
             onClick={reLocalize}
             disabled={relocalizing}
-            title="Scatter AMCL particles across the map and re-converge (drive to help)"
+            title="Have the robot search the whole map for its position again (drive to help it converge)"
             className={`rounded-lg border px-3 py-1 text-xs transition-colors ${
               isLost
                 ? "border-statusRed text-statusRed hover:bg-statusRed hover:text-white"
@@ -184,8 +184,8 @@ const LocalizationStatus = ({ onSetPoseMode }) => {
           {band
             ? band.explain
             : lastUpdate == null
-              ? "No /amcl_pose received yet. AMCL may not be running, or the robot hasn't been given an initial pose."
-              : "AMCL has stopped publishing a pose estimate — the last reading is stale. Check that the amcl node is alive on the Health page."}
+              ? "No position data received yet. The localization system may not be running, or the robot hasn't been told where it currently is."
+              : "The robot has stopped sending a position estimate — the last reading is stale. Check that localization is still running, on the Health page."}
         </p>
       )}
     </div>

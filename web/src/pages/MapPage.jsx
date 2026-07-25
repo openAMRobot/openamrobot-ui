@@ -110,7 +110,7 @@ const MapPage = () => {
     amclTopic.subscribe(() => {
       if (!pendingInitialPoseRef.current) return;
       pendingInitialPoseRef.current = false;
-      toast.success("Localization updated from AMCL");
+      toast.success("Robot's position estimate updated");
     });
 
     return () => amclTopic.unsubscribe();
@@ -189,7 +189,7 @@ const MapPage = () => {
   const sendGoalAt = (pose) => {
     publishGoal(pose);
     toast.success(
-      `Goal: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(2)})`,
+      `Goal: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(2)}) m`,
     );
   };
 
@@ -226,7 +226,7 @@ const MapPage = () => {
     window.NAV2D?.clearTrail?.();
     window.NAV2D?.clearGoalPose?.();
     toast.success(
-      `Initial pose set: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(2)})`,
+      `Initial pose set: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(2)}) m`,
     );
   };
 
@@ -255,7 +255,7 @@ const MapPage = () => {
         toast.success(
           `Goal: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(
             2,
-          )})`,
+          )}) m`,
         );
       } else if (m === "pose") {
         if (!initialPoseTopic.current) return;
@@ -282,7 +282,7 @@ const MapPage = () => {
         toast.success(
           `Initial pose set: (${pose.position.x.toFixed(
             2,
-          )}, ${pose.position.y.toFixed(2)})`,
+          )}, ${pose.position.y.toFixed(2)}) m`,
         );
         deactivateMode();
       } else if (m === "waypoint") {
@@ -359,7 +359,7 @@ const MapPage = () => {
       position: { x: 0, y: 0, z: 0 },
       orientation: { x: 0, y: 0, z: 0, w: 1 },
     });
-    toast.info("Navigating to home position (0, 0)");
+    toast.info("Navigating to home position (0, 0) m");
   }, []);
 
   const executeQueue = useCallback(() => {
@@ -504,18 +504,18 @@ const MapPage = () => {
           <div className="flex min-w-0 flex-1 flex-col gap-2" data-tour="map-actions">
             <div className="flex gap-2">
               {modeBtn(
-                "○ Goal Mode",
+                "○ Send Goal",
                 "Goal",
                 "goal",
-                "● Goal Mode ON",
+                "● Click to Send Goal",
                 "● Goal",
               )}
               {modeBtn(
-                "⊕ Set Pose",
-                "Pose",
+                "⊕ Correct Robot's Position",
+                "Fix Position",
                 "pose",
-                "● Click to Set Pose",
-                "● Pose",
+                "● Click to Correct Position",
+                "● Fixing",
               )}
               {modeBtn(
                 "＋ Add Waypoint",
@@ -537,7 +537,7 @@ const MapPage = () => {
               {mode === "goal" &&
                 "Click map to navigate. Drag before releasing to set heading."}
               {mode === "pose" &&
-                "Click map to set AMCL initial pose. Drag to set heading. One-shot."}
+                "Click the map to tell the robot where it currently is. Drag to set heading. One-shot."}
               {mode === "waypoint" &&
                 "Each click adds a waypoint. Drag to set heading. Execute all below."}
               {!mode && "Select a mode above to interact with the map."}
@@ -570,7 +570,7 @@ const MapPage = () => {
                       }`}
                     >
                       {i + 1}: ({wp.position.x.toFixed(1)},{" "}
-                      {wp.position.y.toFixed(1)})
+                      {wp.position.y.toFixed(1)}) m
                     </span>
                   ))}
                 </div>

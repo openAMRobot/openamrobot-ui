@@ -6,9 +6,14 @@ import { DashboardCard, EmptyState } from "../../../shared/ui/Dashboard";
 const fmt = (n, digits = 4) => (typeof n === "number" ? n.toFixed(digits).replace(/\.?0+$/, (m) => (m === "." ? "" : m)) : "—");
 const fmtVec = (v, digits = 4) => (v ? `${fmt(v.x ?? v[0], digits)}, ${fmt(v.y ?? v[1], digits)}, ${fmt(v.z ?? v[2], digits)}` : "—");
 
-const Row = ({ label, children }) => (
+const Row = ({ label, title, children }) => (
   <>
-    <dt className="text-[11px] font-semibold uppercase tracking-wide text-themeTextGray/70">{label}</dt>
+    <dt
+      className="text-[11px] font-semibold uppercase tracking-wide text-themeTextGray/70"
+      title={title}
+    >
+      {label}
+    </dt>
     <dd className="min-w-0 break-words text-[12px] text-textWhiteHover">{children}</dd>
   </>
 );
@@ -71,10 +76,13 @@ const JointInfo = ({ joint }) => {
         {!isFixed && joint.limit.effort ? `${fmt(joint.limit.effort, 4)} N·m` : "not specified in URDF"}
       </Row>
       <Row label="Origin position">{fmtVec(joint.position, 4)} m</Row>
-      <Row label="Origin orientation (rpy)">
+      <Row label="Origin orientation (rpy)" title="Roll, pitch, yaw — rotation around each axis">
         {fmt(rpy.x, 4)}, {fmt(rpy.y, 4)}, {fmt(rpy.z, 4)} rad
       </Row>
-      <Row label="Mimic relationship">
+      <Row
+        label="Mimic relationship"
+        title="This joint automatically follows another joint's movement"
+      >
         {isMimic
           ? `mimics "${joint.mimicJoint}" (value = ${fmt(joint.multiplier, 3)} × source + ${fmt(joint.offset, 3)})`
           : joint.mimicJoints?.length
@@ -149,7 +157,10 @@ const LinkFields = ({ link, meshesReady }) => {
       <Row label="Collision geometry">{describeGeometryGroup(collisionGroup, meshesReady)}</Row>
       <Row label="Mass">{mass ? `${fmt(mass, 4)} kg` : "not specified"}</Row>
       <Row label="Centre of mass">{mass ? `${fmtVec(origin.xyz, 4)} m` : "not specified"}</Row>
-      <Row label="Inertia (ixx, iyy, izz)">
+      <Row
+        label="Inertia (ixx, iyy, izz)"
+        title="How mass is distributed around each axis — used for physics simulation"
+      >
         {mass
           ? `${fmt(inertia.ixx, 6)}, ${fmt(inertia.iyy, 6)}, ${fmt(inertia.izz, 6)} kg·m²`
           : "not specified"}

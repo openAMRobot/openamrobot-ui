@@ -615,7 +615,7 @@ const Map = forwardRef(
                     }}
                     className="rounded-lg px-3 py-2 text-left text-xs text-textWhiteHover hover:bg-bgSurface"
                   >
-                    Set pose here
+                    Correct robot's position here
                   </button>
                 )}
               </div>

@@ -23,14 +23,14 @@ const ConsolePage = () => {
           <StatusBadge
             status={connected ? "connected" : "disconnected"}
             pulse={connected}
-            label={connected ? "rosbridge connected" : "rosbridge offline"}
+            label={connected ? "Robot connected" : "Robot offline"}
           />
         }
       />
 
       {!connected && (
         <p className="dashboard-card px-4 py-2 font-[RobotoMono] text-xs text-themeTextGray">
-          Not connected to rosbridge — logs and topic echo will start streaming
+          Not connected to the robot — logs and topic echo will start streaming
           once the connection is live. Check the host/port on the Config page.
         </p>
       )}

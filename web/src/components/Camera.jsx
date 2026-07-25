@@ -115,7 +115,7 @@ const Camera = () => {
         ) : (
           <EmptyState
             title="Camera is paused"
-            description="Start the configured MJPEG stream when visual monitoring is needed."
+            description="Start the video feed to see what the robot sees."
             icon={
               <svg
                 viewBox="0 0 24 24"

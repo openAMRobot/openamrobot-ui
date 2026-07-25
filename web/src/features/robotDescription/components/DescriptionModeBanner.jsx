@@ -58,10 +58,26 @@ const DescriptionModeBanner = ({
             status={liveConnected ? "success" : "idle"}
             label={liveConnected ? "Joint states live" : "No joint states yet"}
           />
-          <StatusBadge
-            status={poseSource ? "success" : "idle"}
-            label={poseSource ? `Pose: ${poseSource.toUpperCase()}` : "No pose yet"}
-          />
+          <span
+            title={
+              poseSource === "amcl"
+                ? "AMCL — position corrected against the map"
+                : poseSource === "odom"
+                ? "Odometry — estimated from wheel movement only, not yet corrected against the map"
+                : undefined
+            }
+          >
+            <StatusBadge
+              status={poseSource ? "success" : "idle"}
+              label={
+                poseSource === "amcl"
+                  ? "Pose: Map-corrected"
+                  : poseSource === "odom"
+                  ? "Pose: Estimated"
+                  : "No pose yet"
+              }
+            />
+          </span>
           <StatusBadge
             status={pathPointCount ? "success" : "idle"}
             label={pathPointCount ? `Path: ${pathPointCount} pts` : "No path"}

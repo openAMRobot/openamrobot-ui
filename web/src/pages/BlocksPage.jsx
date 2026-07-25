@@ -59,6 +59,7 @@ import {
   saveBlockRunHistory,
 } from "../features/blocks/backendRunHistory";
 import { AppConfig } from "../shared/constants";
+import { StatusBadge } from "../shared/ui/Dashboard";
 
 const STORAGE_KEY = "openamr_blockly_workspace";
 
@@ -804,16 +805,11 @@ const BlocksPage = () => {
 
       <aside className="dashboard-card flex min-h-0 flex-col overflow-y-auto p-3 lg:h-full">
         <div className="mb-3">
-          <p className="font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
-            ROSBridge
-          </p>
-          <p
-            className={`font-[RobotoMono] text-sm font-semibold ${
-              rosStatus === "connected" ? "text-statusGreen" : "text-statusRed"
-            }`}
-          >
-            {rosStatus}
-          </p>
+          <StatusBadge
+            status={rosStatus === "connected" ? "connected" : "disconnected"}
+            pulse={rosStatus === "connected"}
+            label={rosStatus === "connected" ? "Robot connected" : "Robot offline"}
+          />
         </div>
 
         <div className="mb-3 grid grid-cols-2 gap-2 font-[RobotoMono] text-sm">

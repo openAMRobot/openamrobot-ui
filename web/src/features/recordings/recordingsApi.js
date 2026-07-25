@@ -3,7 +3,7 @@ const API_BASE = window.location.port === "3000" ? "http://127.0.0.1:5050" : "";
 const readJsonResponse = async (response) => {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.message || data.description || "Backend request failed");
+    throw new Error(data.message || data.description || "Something went wrong talking to the robot. Try again.");
   }
   return data;
 };

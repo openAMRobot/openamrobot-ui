@@ -74,6 +74,9 @@ const TopicEcho = () => {
         <h2 className="mr-1 text-sm font-semibold uppercase tracking-wider text-themeBlue">
           Topic Echo
         </h2>
+        <p className="w-full text-[11px] text-themeTextGray">
+          For advanced troubleshooting only — ask your integrator for the exact topic names to type here.
+        </p>
         <input
           value={topicName}
           onChange={(e) => setTopicName(e.target.value)}

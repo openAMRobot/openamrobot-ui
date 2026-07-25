@@ -54,7 +54,7 @@ export const PAGE_HELP = {
     summary:
       "A 3D model of the robot from its real URDF description — Description Mode is a safe, offline visualization; Live Mode overlays real robot data.",
     tips: [
-      "Description Mode needs no ROS connection — joint sliders here only move the on-screen model, nothing is published anywhere.",
+      "Description Mode needs no robot connection — joint sliders here only move the on-screen model, nothing is published anywhere.",
       "Live Mode positions the model at its real map-frame pose and draws Nav2's planned path — but joint sliders become read-only telemetry, since this robot only has /cmd_vel (no per-joint position command).",
       "The kinematic tree and layer toggles (TF axes, joint axes, link names, centre-of-mass, footprint) work in both modes.",
     ],
@@ -96,7 +96,7 @@ export const PAGE_HELP = {
     tips: [
       "Demo mode lets you explore the whole app with simulated data and no robot at all — flip it on here any time.",
       "Save a named connection profile once you've set a host/port, so switching robots later is a single click.",
-      "Changing the rosbridge host or port reconnects immediately.",
+      "Changing the robot's address or port reconnects immediately.",
     ],
   },
 };

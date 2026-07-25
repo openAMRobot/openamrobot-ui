@@ -36,7 +36,7 @@ toolbox. If your page looks different, compare it with the labels below.
 | Loose blocks                  | Blocks placed on the workspace but not connected to the start chain     | Useful while building, but they do not run until connected under `start robot program`                           |
 | Zoom controls                 | Plus, minus, and center controls on the right edge of the workspace     | Zoom in/out or recenter the block workspace                                                                      |
 | Trash can                     | Delete area in the bottom-right of the workspace                        | Drag unwanted blocks to the trash, or select blocks and delete them                                              |
-| ROSBridge status              | Connection state in the right panel                                     | `connected` means the browser can talk to ROS through rosbridge; `disconnected` means Run will be disabled       |
+| Connection status             | Connection state in the right panel                                     | `Robot connected` means the browser can talk to ROS through rosbridge; `Robot offline` means Run will be disabled |
 | Run and Stop                  | Execution buttons in the right panel                                    | Run executes the Generated Plan; Stop sends an emergency stop command                                            |
 | Voice Command                 | Mic button and live transcript in the right panel                       | Tap the mic and say "Monsieur" followed by a command; Claude turns it into blocks in the workspace for you to review before Run |
 | Program Templates             | Ready-made example programs in the right panel                          | Load a safe starter program, navigation example, docking sequence, patrol route, or low-battery routine          |
@@ -133,7 +133,7 @@ You need:
 - An Anthropic API key, only if you want to use the `Voice Command` panel (see
   [Voice Command](#voice-command))
 
-The UI can open without a robot, but `Run` needs ROSBridge to be connected.
+The UI can open without a robot, but `Run` needs the robot to be connected.
 
 Check the basic tools:
 
@@ -844,7 +844,7 @@ http://127.0.0.1:5050/blocks
 4. Confirm the right panel says:
 
 ```text
-ROSBRIDGE connected
+Robot connected
 ```
 
 5. Keep one `start robot program` block in the workspace.
@@ -863,7 +863,7 @@ angular 0.3
 11. Watch the robot and the Generated Plan while it runs.
 12. Press `Stop` if the robot should stop immediately.
 
-The `Run` button is disabled when ROSBridge is disconnected, when there are no
+The `Run` button is disabled when the robot isn't connected, when there are no
 generated steps, or when a program is already running.
 
 If the plan contains direct motion, docking, undocking, emergency stop, or
@@ -892,8 +892,8 @@ Expected result:
 - The robot moves forward slowly for one second.
 - The robot stops automatically.
 
-If this does not work, do not test larger programs yet. Check ROSBridge,
-`/cmd_vel`, robot motor enable state, and the robot/simulation bringup.
+If this does not work, do not test larger programs yet. Check the connection
+status, `/cmd_vel`, robot motor enable state, and the robot/simulation bringup.
 
 ## Important Values
 
@@ -1175,7 +1175,7 @@ Recommended beginner flow:
 1. Load `Safe Motion Test`.
 2. Check `Generated Plan`.
 3. Confirm `Plan Checks` has no errors.
-4. Press `Run` only after ROSBridge is connected and the robot area is clear.
+4. Press `Run` only after the status shows `Robot connected` and the robot area is clear.
 5. Save the edited program through `Backend Programs` if you want to reuse it.
 
 Templates are defined in:
@@ -1515,10 +1515,10 @@ cd ~/openamrobot-ui/web
 npm run build
 ```
 
-### ROSBridge Says Disconnected
+### Status Shows Robot Offline
 
-The browser can render the page, but it cannot command the robot until ROSBridge
-is connected.
+The browser can render the page, but it cannot command the robot until the
+robot connection is established.
 
 Check:
 
@@ -1534,12 +1534,12 @@ program.
 
 Check:
 
-- ROSBridge status says `connected`.
+- The connection status shows `Robot connected`.
 - The Generated Plan has at least one step.
 - A program is not already running.
 - Blocks are connected below `start robot program`.
 
-If ROSBridge is disconnected, start or restart the UI launch and confirm
+If the status shows `Robot offline`, start or restart the UI launch and confirm
 `rosbridge_websocket` is running. If the Generated Plan has `0 steps`, check the
 next troubleshooting section.
 
@@ -1602,7 +1602,7 @@ Always test direct velocity commands in an open area.
 
 If the program runs but the robot does not move, check:
 
-- ROSBridge is connected.
+- The connection status shows `Robot connected`.
 - The robot or simulation stack is running.
 - `/cmd_vel` reaches the robot controller.
 - Motors or simulation control are enabled.

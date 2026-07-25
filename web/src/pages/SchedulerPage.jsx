@@ -10,6 +10,7 @@ import {
 import { getMissions, subscribeMissions } from "../shared/missions/missions";
 import useSavedWaypoints from "../shared/hooks/useSavedWaypoints";
 import { DashboardCard, EmptyState, SectionHeader } from "../shared/ui/Dashboard";
+import Switcher from "../shared/ui/Switcher";
 
 const EMPTY = { name: "", time: "08:00", repeat: "daily", target: "home" };
 
@@ -45,7 +46,7 @@ const SchedulerPage = () => {
   };
 
   const describe = (s) => {
-    if (s.action?.type === "home") return "Go home (0, 0)";
+    if (s.action?.type === "home") return "Go home";
     if (s.action?.type === "mission") {
       const mission = missions.find((m) => m.id === s.action?.missionId);
       return mission ? `Run mission "${mission.name}"` : "Run mission (missing)";
@@ -81,16 +82,15 @@ const SchedulerPage = () => {
                     {describe(s)} · {s.repeat}
                   </p>
                 </div>
-                <button
-                  onClick={() => updateSchedule(s.id, { enabled: !s.enabled })}
-                  className={`rounded-lg border px-3 py-1 text-xs transition-colors ${
-                    s.enabled
-                      ? "border-statusGreen/50 text-statusGreen"
-                      : "border-borderSubtle text-themeTextGray"
-                  }`}
-                >
-                  {s.enabled ? "Enabled" : "Disabled"}
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Switcher
+                    switcherValue={Boolean(s.enabled)}
+                    onChange={(next) => updateSchedule(s.id, { enabled: next })}
+                  />
+                  <span className={`text-xs ${s.enabled ? "text-statusGreen" : "text-themeTextGray"}`}>
+                    {s.enabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
                 <button
                   onClick={() => removeSchedule(s.id)}
                   aria-label={`Delete ${s.name}`}

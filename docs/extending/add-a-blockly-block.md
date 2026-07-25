@@ -90,8 +90,8 @@ source install/setup.bash
 
 Restart the UI launch, hard-refresh the browser (`Ctrl+Shift+R`), open
 `/blocks`, and confirm the new block appears in its category, connects under
-`start robot program`, shows up correctly in the Generated Plan, and (with
-rosbridge connected) actually publishes when run.
+`start robot program`, shows up correctly in the Generated Plan, and (once
+the page shows "Robot connected") actually publishes when run.
 
 Full setup, build-mode notes, and troubleshooting for the Blocks page live in
 [`web/src/features/blocks/README.md`](../../web/src/features/blocks/README.md).

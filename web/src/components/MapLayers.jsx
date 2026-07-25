@@ -20,10 +20,15 @@ const DEFAULT_OPACITY = {
   robotTrail: 0.65,
 };
 
+const COSTMAP_GLOBAL_TITLE =
+  "Global costmap — obstacle map covering the whole area";
+const COSTMAP_LOCAL_TITLE =
+  "Local costmap — obstacle map covering the area right around the robot";
+
 const TOGGLES = [
   ["map", "Map"],
-  ["costmap", "Costmap G"],
-  ["costmapLocal", "Costmap L"],
+  ["costmap", "Obstacles (wide)", COSTMAP_GLOBAL_TITLE],
+  ["costmapLocal", "Obstacles (near)", COSTMAP_LOCAL_TITLE],
   ["scan", "Laser"],
   ["path", "Path"],
   ["goal", "Goal"],
@@ -33,8 +38,8 @@ const TOGGLES = [
 ];
 
 const OPACITY = [
-  ["costmap", "Costmap G"],
-  ["costmapLocal", "Costmap L"],
+  ["costmap", "Obstacles (wide)", COSTMAP_GLOBAL_TITLE],
+  ["costmapLocal", "Obstacles (near)", COSTMAP_LOCAL_TITLE],
   ["scan", "Laser"],
   ["path", "Path"],
   ["robotTrail", "Trail"],
@@ -61,9 +66,10 @@ const MapLayers = () => {
           Layers
         </p>
         <div className="grid min-w-0 flex-1 grid-cols-3 gap-1.5 sm:grid-cols-5 xl:grid-cols-9">
-          {TOGGLES.map(([key, label]) => (
+          {TOGGLES.map(([key, label, title]) => (
             <label
               key={key}
+              title={title}
               className={`flex min-h-[24px] items-center gap-1.5 rounded-md px-2 py-0.5 text-xs ${
                 visible[key]
                   ? "bg-themeBlue/10 text-themeBlue"
@@ -94,8 +100,12 @@ const MapLayers = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 xl:grid-cols-4">
-        {OPACITY.map(([key, label]) => (
-          <label key={key} className="text-[10px] uppercase text-themeTextGray">
+        {OPACITY.map(([key, label, title]) => (
+          <label
+            key={key}
+            title={title}
+            className="text-[10px] uppercase text-themeTextGray"
+          >
             <div className="flex justify-between">
               <span>{label}</span>
               <span>{Math.round(opacity[key] * 100)}%</span>

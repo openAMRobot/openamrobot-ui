@@ -132,6 +132,19 @@ const FleetPage = () => {
     return "bg-themeTextGray";
   };
 
+  const dotTitleFor = (r) => {
+    if (isActive(r)) {
+      return rosStatus === "connected"
+        ? `Connected — full status: ${overallLabel || OVERALL_LABELS[0]}`
+        : "Connecting…";
+    }
+    const state = reach[r.id];
+    if (state === "checking") return "Checking reachability…";
+    if (state === true) return "Reachable — can connect";
+    if (state === false) return "Unreachable — can't reach this robot";
+    return "Not checked yet";
+  };
+
   return (
     <div className="sectionHeight space-y-5 py-4 sm:py-6">
       <SectionHeader
@@ -161,11 +174,9 @@ const FleetPage = () => {
           </div>
         </div>
         <p className="mt-1 text-sm text-themeTextGray">
-          Full Health Centre rollup for whichever robot this browser is
-          currently connected to — this app only holds one live rosbridge
-          connection at a time, so other robots below show reachability only
-          (a raw WebSocket ping), not a full diagnostics rollup, until you
-          connect to them.
+          Detailed health info is only available for the robot you're
+          currently connected to. Other robots below just show whether they
+          can be reached — click Connect to see their full status.
         </p>
 
         {issues.length > 0 && (
@@ -212,7 +223,7 @@ const FleetPage = () => {
         {fleet.length === 0 ? (
           <EmptyState
             title="No robots added"
-            description="Add a robot below with its rosbridge host and port."
+            description="Add a robot below with its address and port."
           />
         ) : (
           <ul className="divide-y divide-borderSubtle/30 font-[RobotoMono]">
@@ -220,7 +231,10 @@ const FleetPage = () => {
               const active = isActive(r);
               return (
                 <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotFor(r)}`} />
+                  <span
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotFor(r)}`}
+                    title={dotTitleFor(r)}
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-textWhiteHover">
                       {r.name}
@@ -231,7 +245,9 @@ const FleetPage = () => {
                       )}
                     </p>
                     <p className="text-xs text-themeTextGray">
-                      ws://{r.host}:{r.port}
+                      <span title={`ws://${r.host}:${r.port}`}>
+                        {r.host}:{r.port}
+                      </span>
                       {active && rosStatus === "connected" && (
                         <>
                           {" · "}
@@ -242,7 +258,12 @@ const FleetPage = () => {
                         </>
                       )}
                       {reach[r.id] === false && !active && " · unreachable"}
-                      {reach[r.id] === true && !active && " · reachable only (ping)"}
+                      {reach[r.id] === true && !active && (
+                        <span title="A quick network check, not a full status check.">
+                          {" "}
+                          · reachable, but not fully checked
+                        </span>
+                      )}
                     </p>
                   </div>
                   <button

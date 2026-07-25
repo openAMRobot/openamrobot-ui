@@ -50,7 +50,7 @@ const SystemAlerts = () => {
       const now = Date.now();
       const next = [];
       if (rosbridgeStatus !== "connected") {
-        next.push({ label: "Rosbridge disconnected", severity: "error" });
+        next.push({ label: "Robot connection lost", severity: "error" });
       }
       WATCHED.forEach((item) => {
         const last = seen.current[item.key];

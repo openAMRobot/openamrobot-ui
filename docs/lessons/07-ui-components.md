@@ -128,10 +128,11 @@ not a latched or safety-rated physical emergency stop.
 
 Renders two stat cards, Velocity and Position, exported as `State` from this
 file. Velocity always comes from `AppConfig.ROBOT_POSE_TOPIC` (`/odom`).
-Position prefers `AppConfig.AMCL_POSE_TOPIC` (badge shows `AMCL`) but falls
-back to odometry's own position field (badge shows `ODOM`) until the first
-AMCL message arrives — useful to know because the badge itself is a live
-signal of whether localization is publishing at all. It pulls in the `three`
+Position prefers `AppConfig.AMCL_POSE_TOPIC` (badge shows "Map-corrected",
+with "AMCL" in a hover tooltip) but falls back to odometry's own position
+field (badge shows "Estimated", tooltip "Odometry") until the first AMCL
+message arrives — useful to know because the badge itself is a live signal
+of whether localization is publishing at all. It pulls in the `three`
 (Three.js) package, but only for its `Euler`/`Quaternion` classes as a
 quaternion-to-yaw-angle math utility — there's no 3D rendering happening
 here.
@@ -165,13 +166,21 @@ not Route, Status, Health, Fleet, or Config.
 
 Polls `get_state` every 3 seconds for each node in the `LIFECYCLE_NODES`
 list (`map_server`, `amcl`, `controller_server`, `planner_server`,
-`bt_navigator`), and separately builds a `change_state` service client per
-node for the four action buttons. The buttons call `change_state` on *all
-five* nodes at once with a fixed transition ID (`configure=1`, `cleanup=2`,
-`activate=3`, `deactivate=4` — the real `lifecycle_msgs` transition IDs) and
-don't wait for or react to the individual responses — the displayed state
-only updates on the next 3-second poll, so there's a brief delay between
-clicking a button and seeing the result.
+`bt_navigator` — shown in the UI as "Map data", "Position tracking",
+"Driving control", "Path planning", and "Navigation logic" respectively,
+with the raw node name available as a hover tooltip), and separately builds
+a `change_state` service client per node for the four action buttons
+(labeled "Prepare"/"Start"/"Pause"/"Reset" in the UI). The buttons call
+`change_state` on *all five* nodes at once with a fixed transition ID
+(`configure=1`, `cleanup=2`, `activate=3`, `deactivate=4` — the real
+`lifecycle_msgs` transition IDs) and don't wait for or react to the
+individual responses — the displayed state only updates on the next
+3-second poll, so there's a brief delay between clicking a button and
+seeing the result. Because Pause/Reset can stop navigation outright, those
+two ask for a `window.confirm()` before firing; Prepare/Start don't, since
+they're constructive. A "?" toggle in both the compact and full views shows
+a plain-language legend for what each state (`active`/`inactive`/
+`unconfigured`/`unknown`) means.
 
 ## DockingControl — `DockingControl.jsx`
 

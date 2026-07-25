@@ -19,7 +19,7 @@ const inputClass =
 
 const STEP_TYPES = [
   { value: "waypoint", label: "Go to waypoint" },
-  { value: "home", label: "Go home (0, 0)" },
+  { value: "home", label: "Go home" },
   { value: "wait", label: "Wait" },
   { value: "dock", label: "Dock" },
   { value: "undock", label: "Undock" },
@@ -39,7 +39,7 @@ const describeStep = (step, waypoints) => {
       return `Go to "${wp?.name || "(missing waypoint)"}"`;
     }
     case "home":
-      return "Go home (0, 0)";
+      return "Go home";
     case "wait":
       return `Wait ${step.seconds}s`;
     case "dock":
@@ -145,11 +145,14 @@ const MissionsPage = () => {
                       </button>
                     ) : (
                       <button
-                        onClick={() => requestStart(m.id)}
+                        onClick={() => {
+                          if (!window.confirm("This will start moving the robot through this mission's steps. Continue?")) return;
+                          requestStart(m.id);
+                        }}
                         disabled={!m.steps.length || run?.status === "running"}
                         className="rounded-lg border border-themeBlue px-3 py-1 text-xs text-themeBlue transition-colors hover:bg-themeBlue hover:text-white disabled:opacity-40"
                       >
-                        Run
+                        Run (moves robot)
                       </button>
                     )}
                     <button

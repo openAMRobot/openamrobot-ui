@@ -84,7 +84,10 @@ const State = ({ compact = false }) => {
         value={linear}
         unit="m/s"
         meta={
-          <span className="font-[RobotoMono]">
+          <span
+            className="font-[RobotoMono]"
+            title="Radians per second — how fast the robot is turning in place"
+          >
             Angular{" "}
             <strong className="font-semibold text-textWhiteHover">
               {angular}
@@ -97,20 +100,33 @@ const State = ({ compact = false }) => {
         compact={compact}
         label="Map position"
         value={`${xCoord}, ${yCoord}`}
-        unit="x / y"
+        unit="m"
         meta={
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-[RobotoMono]">
-              Heading{" "}
-              <strong className="font-semibold text-textWhiteHover">
-                {orientation}
-                {orientation !== "—" ? "°" : ""}
-              </strong>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] text-themeTextGray/70">
+              X / Y coordinates
             </span>
-            <StatusBadge
-              status={amclActive ? "online" : "info"}
-              label={amclActive ? "AMCL" : "ODOM"}
-            />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-[RobotoMono]">
+                Heading{" "}
+                <strong className="font-semibold text-textWhiteHover">
+                  {orientation}
+                  {orientation !== "—" ? "°" : ""}
+                </strong>
+              </span>
+              <span
+                title={
+                  amclActive
+                    ? "AMCL — position corrected against the map"
+                    : "Odometry — estimated from wheel movement only, not yet corrected against the map"
+                }
+              >
+                <StatusBadge
+                  status={amclActive ? "online" : "info"}
+                  label={amclActive ? "Map-corrected" : "Estimated"}
+                />
+              </span>
+            </div>
           </div>
         }
       />

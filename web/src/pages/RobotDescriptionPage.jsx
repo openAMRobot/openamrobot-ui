@@ -98,7 +98,7 @@ const RobotDescriptionPage = () => {
       <SectionHeader
         eyebrow={manifest ? manifest.displayName : "Digital twin"}
         title="Robot description"
-        description="Inspect the robot's kinematic structure and geometry from its URDF/Xacro description — no physical robot required."
+        description="Explore a 3D model of the robot's parts and joints, built from its design files — no robot connection needed. (Technically: its URDF/Xacro description.)"
       />
 
       {manifestError ? (

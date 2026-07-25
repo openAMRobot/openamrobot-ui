@@ -289,7 +289,10 @@ export default function useRobotScene({ manifest, layers, selected, onSelect, po
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.text().catch(() => "");
-          throw new Error(`Failed to fetch URDF (${res.status}): ${body.slice(0, 300)}`);
+          console.error(`Failed to fetch URDF (${res.status}): ${body.slice(0, 300)}`);
+          throw new Error(
+            "Couldn't load the 3D model. Try refreshing, or check with your integrator if this keeps happening.",
+          );
         }
         return res.text();
       })

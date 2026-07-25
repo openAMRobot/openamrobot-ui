@@ -77,7 +77,7 @@ const HealthPage = () => {
       <SectionHeader
         eyebrow="System overview"
         title="Health Centre"
-        description="One place to answer: is the whole robot ready? Aggregated from the ROS bridge, live topics, TF, Nav2 lifecycle, registered devices, battery, and the robot description."
+        description="Combines connection status, sensor data, navigation health, hardware, battery, and robot model into one ready/not-ready check."
         action={<SupportPackageButton health={{ overall, overallLabel, issues }} />}
       />
 
@@ -227,8 +227,8 @@ const HealthPage = () => {
                 !urdf.checked
                   ? "Checking…"
                   : urdf.available
-                  ? "URDF available"
-                  : "URDF unavailable"
+                  ? "Model available"
+                  : "Model missing"
               }
             />
           </div>
@@ -241,8 +241,11 @@ const HealthPage = () => {
         </DashboardCard>
 
         <DashboardCard className="p-4">
-          <p className="mb-2 font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
-            Diagnostics (/diagnostics)
+          <p
+            className="mb-2 font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray"
+            title="/diagnostics"
+          >
+            Diagnostics
           </p>
           {diagnosticsMsgs.length === 0 ? (
             <p className="text-xs text-themeTextGray opacity-70">
@@ -275,7 +278,7 @@ const HealthPage = () => {
             <p className="text-xs text-themeTextGray opacity-70">
               {rosbridgeStatus === "connected"
                 ? "All expected topics are present in the ROS graph."
-                : "Checked once rosbridge is connected."}
+                : "Checked once the robot connection is established."}
             </p>
           ) : (
             <div className="space-y-1.5">

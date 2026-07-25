@@ -24,16 +24,58 @@ import {
 import Button from "../shared/ui/Button";
 
 const TOPIC_CHOICES = [
-  { topic: AppConfig.SCAN_TOPIC, label: "Laser scan" },
-  { topic: AppConfig.ROBOT_POSE_TOPIC, label: "Odometry" },
-  { topic: AppConfig.MAP_TOPIC, label: "Map" },
-  { topic: AppConfig.AMCL_POSE_TOPIC, label: "AMCL pose" },
-  { topic: AppConfig.NAV_STATUS_TOPIC, label: "Nav status" },
-  { topic: AppConfig.BATTERY_TOPIC, label: "Battery" },
-  { topic: AppConfig.JOINT_STATES_TOPIC, label: "Joint states" },
-  { topic: AppConfig.TF_TOPIC, label: "TF" },
-  { topic: AppConfig.TF_STATIC_TOPIC, label: "TF static" },
+  {
+    topic: AppConfig.SCAN_TOPIC,
+    label: "Laser scan",
+    description: "Raw distance readings from the robot's laser sensor",
+  },
+  {
+    topic: AppConfig.ROBOT_POSE_TOPIC,
+    label: "Odometry",
+    description: "The robot's estimated position and speed from its wheels/motors",
+  },
+  {
+    topic: AppConfig.MAP_TOPIC,
+    label: "Map",
+    description: "The map the robot is navigating on",
+  },
+  {
+    topic: AppConfig.AMCL_POSE_TOPIC,
+    label: "AMCL pose",
+    description: "Where the robot thinks it is",
+  },
+  {
+    topic: AppConfig.NAV_STATUS_TOPIC,
+    label: "Nav status",
+    description: "Navigation progress and outcome",
+  },
+  {
+    topic: AppConfig.BATTERY_TOPIC,
+    label: "Battery",
+    description: "Battery charge level and status",
+  },
+  {
+    topic: AppConfig.JOINT_STATES_TOPIC,
+    label: "Joint states",
+    description: "Position of movable robot parts",
+  },
+  {
+    topic: AppConfig.TF_TOPIC,
+    label: "TF",
+    description: "How the robot's parts are positioned relative to each other",
+  },
+  {
+    topic: AppConfig.TF_STATIC_TOPIC,
+    label: "TF static",
+    description: "Fixed robot geometry (rarely changes)",
+  },
 ];
+
+const STATUS_LABELS = {
+  recording: "Recording",
+  complete: "Complete",
+  interrupted: "Didn't finish cleanly",
+};
 
 const Field = ({ label, hint, children }) => (
   <label className="block">
@@ -140,6 +182,7 @@ const RecordingsPage = () => {
   };
 
   const handleDelete = async (id, name) => {
+    if (!window.confirm("Delete this recording? This can't be undone.")) return;
     try {
       await deleteRecording(id);
       toast.success(`Deleted "${name}"`);
@@ -205,7 +248,7 @@ const RecordingsPage = () => {
       <SectionHeader
         eyebrow="Debugging & lessons"
         title="Recordings"
-        description="Record rosbag sessions for later replay — useful for debugging, demos, and dataset collection. Replayed telemetry is always clearly labeled; it's never presented as a live robot."
+        description="Record a session of everything the robot sensed and did, so you can play it back later — useful for debugging, demos, and training data. Replayed telemetry is always clearly labeled; it's never presented as a live robot."
       />
 
       <DashboardCard className="p-4">
@@ -267,17 +310,25 @@ const RecordingsPage = () => {
 
               {!allTopics && (
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {TOPIC_CHOICES.map(({ topic, label }) => (
+                  {TOPIC_CHOICES.map(({ topic, label, description }) => (
                     <label
                       key={topic}
-                      className="flex items-center gap-2 text-xs text-themeTextGray"
+                      className="flex items-start gap-2 text-xs text-themeTextGray"
                     >
                       <input
                         type="checkbox"
                         checked={selectedTopics.includes(topic)}
                         onChange={() => toggleTopic(topic)}
+                        className="mt-0.5"
                       />
-                      {label}
+                      <span>
+                        {label}
+                        {description ? (
+                          <span className="block text-[10px] text-themeTextGray/60">
+                            {description}
+                          </span>
+                        ) : null}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -320,7 +371,7 @@ const RecordingsPage = () => {
                 onBtnClick={handleStopReplay}
               >
                 {stoppingReplay
-                  ? "Stopping… (ros2 bag play takes a few seconds)"
+                  ? "Stopping… this can take a few seconds."
                   : "Stop replay"}
               </Button>
             </div>
@@ -360,7 +411,7 @@ const RecordingsPage = () => {
                             ? "active"
                             : "warning"
                         }
-                        label={entry.status}
+                        label={STATUS_LABELS[entry.status] || entry.status}
                       />
                     </div>
                     <p className="mt-0.5 font-[RobotoMono] text-xs text-themeTextGray">
@@ -399,6 +450,7 @@ const RecordingsPage = () => {
                       disabled={isActive}
                       className="text-themeTextGray hover:text-statusRed disabled:opacity-30"
                       aria-label={`Delete ${entry.name}`}
+                      title={`Delete ${entry.name}`}
                     >
                       ×
                     </button>

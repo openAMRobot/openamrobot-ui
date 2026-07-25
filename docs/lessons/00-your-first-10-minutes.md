@@ -69,7 +69,7 @@ other robot topics are fresh. The Health page checks those separately.
 In Demo Mode:
 
 1. Toggle map layers and identify the simulated robot pose.
-2. Select **Goal Mode** and place a practice goal.
+2. Select **Send Goal** and place a practice goal.
 3. Open the saved-waypoint area and inspect its actions.
 4. Move the joystick briefly and release it.
 5. Press the red software-stop control once to learn where it is.

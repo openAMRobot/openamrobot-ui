@@ -81,8 +81,8 @@ or action-related topic) bound to that shared connection, and either
 `.publish()`s messages to it or `.subscribe()`s to receive them. This is the
 same publish/subscribe model described in
 [Lesson 02](02-ros2-core-concepts.md) — roslibjs is just the JavaScript-side
-client for it. Concretely: when you click the map in Goal Mode, the Map page
-builds a message matching `geometry_msgs/PoseStamped` from the click
+client for it. Concretely: when you click the map in Send Goal mode, the Map
+page builds a message matching `geometry_msgs/PoseStamped` from the click
 coordinates and publishes it on the `/goal_pose` topic name; roslibjs turns
 that into a JSON message and sends it down the WebSocket; rosbridge turns it
 back into a real ROS 2 message and publishes it on the actual `/goal_pose`

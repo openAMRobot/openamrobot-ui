@@ -56,6 +56,30 @@ const ParamsPage = () => {
   const patch = (id, fields) =>
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...fields } : r)));
 
+  // Best-effort plain-English hint inferred from the parameter name. Returns
+  // null (renders nothing) when the name doesn't hint at anything specific,
+  // rather than guessing a unit that might be wrong.
+  const paramHint = (param) => {
+    if (!param) return null;
+    const p = param.toLowerCase();
+    if (p.includes("theta") || p.includes("angular") || p.includes("yaw")) {
+      return "Top turning speed (rad/s)";
+    }
+    if (p.includes("accel")) {
+      return "Acceleration limit (m/s²)";
+    }
+    if (p.includes("vel")) {
+      return "Top driving speed (m/s)";
+    }
+    if (p.includes("tolerance")) {
+      return "How close counts as close enough (m)";
+    }
+    if (p.includes("radius") || p.includes("distance")) {
+      return "Distance (m)";
+    }
+    return null;
+  };
+
   const readRow = (row) => {
     if (!ros || !window.ROSLIB) return;
     patch(row.id, { status: "reading" });
@@ -78,6 +102,7 @@ const ParamsPage = () => {
 
   const applyRow = (row) => {
     if (!ros || !window.ROSLIB) return;
+    if (!window.confirm(`Set ${row.param} to ${row.value} on the robot right now?`)) return;
     patch(row.id, { status: "applying" });
     svc(row.node, "set").callService(
       new window.ROSLIB.ServiceRequest({
@@ -129,7 +154,7 @@ const ParamsPage = () => {
       <SectionHeader
         eyebrow="Tuning"
         title="Parameters"
-        description="Read and set Nav2 parameters on running nodes. Runtime-only — values revert when a node restarts."
+        description="Nav2 is the robot's navigation software — these settings control things like how fast it drives and how close it gets to obstacles before adjusting course. Read and set Nav2 parameters on running nodes. Runtime-only — values revert when the related software restarts."
         action={statusBadge}
       />
 
@@ -154,21 +179,26 @@ const ParamsPage = () => {
                 onChange={(e) => patch(row.id, { node: e.target.value })}
                 placeholder="/node"
               />
-              <input
-                className={inputClass}
-                value={row.param}
-                onChange={(e) => patch(row.id, { param: e.target.value })}
-                placeholder="param.name"
-              />
+              <div className="flex flex-col gap-0.5">
+                <input
+                  className={inputClass}
+                  value={row.param}
+                  onChange={(e) => patch(row.id, { param: e.target.value })}
+                  placeholder="param.name"
+                />
+                {paramHint(row.param) && (
+                  <p className="text-xs text-themeTextGray">{paramHint(row.param)}</p>
+                )}
+              </div>
               <select
                 className={inputClass}
                 value={row.type}
                 onChange={(e) => patch(row.id, { type: e.target.value })}
               >
-                <option value="double">double</option>
-                <option value="int">int</option>
-                <option value="bool">bool</option>
-                <option value="string">string</option>
+                <option value="double">Decimal number</option>
+                <option value="int">Whole number</option>
+                <option value="bool">On/Off</option>
+                <option value="string">Text</option>
               </select>
               <input
                 className={inputClass}

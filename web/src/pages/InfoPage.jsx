@@ -148,7 +148,10 @@ const InfoPage = () => {
                 {batteryHistory.length > 1 && (
                   <div>
                     <p className="mb-1 text-[10px] uppercase tracking-wider text-themeTextGray">
-                      Recent trend
+                      Recent trend{" "}
+                      <span className="normal-case tracking-normal text-themeTextGray/60">
+                        (last ~10 min)
+                      </span>
                     </p>
                     <Sparkline
                       values={batteryHistory}

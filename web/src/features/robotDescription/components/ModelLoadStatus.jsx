@@ -30,10 +30,13 @@ const ModelLoadStatus = ({ manifest, status }) => {
           Model load status
         </p>
         <p className="mt-2 text-sm text-statusRed">
-          The robot description isn't installed on this backend (no{" "}
-          <code>robot_description/openamrobot</code> share directory found).
-          Rebuild <code>openamr_ui_package</code> with the vendored URDF in
-          place.
+          This robot's 3D model isn't available right now. Contact your
+          integrator or IT support.
+        </p>
+        <p className="mt-1 text-[11px] text-themeTextGray/60">
+          No <code>robot_description/openamrobot</code> share directory
+          found. Rebuild <code>openamr_ui_package</code> with the vendored
+          URDF in place.
         </p>
       </DashboardCard>
     );

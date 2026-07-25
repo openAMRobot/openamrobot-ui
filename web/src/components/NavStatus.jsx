@@ -13,7 +13,7 @@ const STATUS_CODES = {
     label: "Accepted",
     color: "text-statusBlue",
     dot: "bg-statusBlue",
-    explain: "Nav2 accepted the goal and is about to start planning and moving.",
+    explain: "The robot's navigation system accepted the goal and is about to start planning and moving.",
   },
   2: {
     label: "Navigating",
@@ -31,7 +31,7 @@ const STATUS_CODES = {
     label: "Succeeded",
     color: "text-statusGreen",
     dot: "bg-statusGreen",
-    explain: "The robot reached the goal within Nav2's tolerance.",
+    explain: "The robot reached the goal — within the distance that counts as \"close enough.\"",
   },
   5: {
     label: "Canceled",
@@ -43,7 +43,7 @@ const STATUS_CODES = {
     label: "Failed",
     color: "text-statusRed",
     dot: "bg-statusRed",
-    explain: "Nav2 couldn't complete the goal — usually no valid path was found, recovery behaviors were exhausted, or localization was too poor to navigate safely. Check that AMCL is well-localized and the goal isn't inside an obstacle, then retry.",
+    explain: "The robot's navigation system couldn't complete the goal — usually no valid path was found, it tried to recover and couldn't, or the robot wasn't sure enough of its position to navigate safely. Check that the robot's position estimate looks accurate and the goal isn't inside an obstacle, then retry.",
   },
 };
 

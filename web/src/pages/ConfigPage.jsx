@@ -91,6 +91,12 @@ const ConfigPage = () => {
   };
 
   const handleReset = () => {
+    if (
+      !window.confirm(
+        "Reset connection address/port, camera port, speed limits, and the low-battery alert back to defaults? If you're currently connected to a robot at a custom address, this will disconnect you.",
+      )
+    )
+      return;
     setForm(DEFAULT_RUNTIME_CONFIG);
     updateConfig(DEFAULT_RUNTIME_CONFIG);
     toast.info("Settings reset to defaults");
@@ -142,9 +148,9 @@ const ConfigPage = () => {
         </p>
         <p className="mt-1 text-sm text-themeTextGray">
           Explore the whole interface with simulated telemetry — no robot or
-          rosbridge required. Every page shows a permanent "Demo mode" badge
-          while this is on, and nothing simulated is ever labeled as live.
-          Turning it off hands control straight back to the connection
+          robot connection required. Every page shows a permanent "Demo mode"
+          badge while this is on, and nothing simulated is ever labeled as
+          live. Turning it off hands control straight back to the connection
           settings below.
         </p>
         <div className="mt-4 flex items-center gap-3">
@@ -167,13 +173,13 @@ const ConfigPage = () => {
           <code className="rounded bg-bgSurface px-1.5 py-0.5 text-textWhiteHover">
             ws://{resolvedHost}:{form.rosbridgePort}
           </code>
-          . Changing these fields reconnects the ROS bridge.
+          . Changing these fields reconnects to the robot.
         </p>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field
-            label="Rosbridge host override"
-            hint='Leave blank to auto-use this page’s own host (the normal case once deployed on the robot).'
+            label="Robot address override"
+            hint="This is the network address the app uses to talk to the robot. Leave blank to auto-use this page’s own host (the normal case once deployed on the robot)."
           >
             <input
               type="text"
@@ -184,7 +190,7 @@ const ConfigPage = () => {
             />
           </Field>
 
-          <Field label="Rosbridge port">
+          <Field label="Robot connection port">
             <input
               type="number"
               min="1"
@@ -195,7 +201,7 @@ const ConfigPage = () => {
             />
           </Field>
 
-          <Field label="Camera stream port" hint="web_video_server port used by the Camera panel.">
+          <Field label="Camera stream port" hint="Port used to stream the camera feed.">
             <input
               type="number"
               min="1"
@@ -412,11 +418,15 @@ const ConfigPage = () => {
         <p className="font-[RobotoMono] text-[11px] font-bold uppercase tracking-[0.14em] text-themeBlue">
           Keep-out zones
         </p>
-        <p className="mb-3 mt-1 text-sm text-themeTextGray">
+        <p className="mb-3 mt-1 text-sm font-semibold text-statusYellow">
+          ⚠ These zones are markers only — they do not stop the robot by
+          themselves. Ask your integrator whether obstacle-avoidance is
+          turned on for this robot.
+        </p>
+        <p className="mb-3 text-sm text-themeTextGray">
           Rectangular no-go areas drawn on the map (centre + size in map
           metres). Toggle their visibility with the &quot;Zones&quot; layer on
-          the Map page. Visual aid only — enforcement needs a Nav2
-          keepout_filter on the robot.
+          the Map page.
         </p>
         <KeepoutZones />
       </DashboardCard>

@@ -7,7 +7,8 @@ const API_BASE =
 export async function fetchRobotDescriptionManifest() {
   const res = await fetch(`${API_BASE}/api/robot-description/manifest`);
   if (!res.ok) {
-    throw new Error(`Manifest request failed (${res.status})`);
+    console.error(`Manifest request failed (${res.status})`);
+    throw new Error("This robot's 3D model isn't available right now.");
   }
   return res.json();
 }

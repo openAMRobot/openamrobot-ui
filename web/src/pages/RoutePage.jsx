@@ -433,7 +433,7 @@ const RoutePage = () => {
 
   const onPlanRouteClick = () => {
     if (!ros) {
-      toast.error("ROS connection is offline!");
+      toast.error("Robot connection is offline!");
       return;
     }
 
@@ -447,7 +447,7 @@ const RoutePage = () => {
     const startPose = window.NAV2D.currentPose;
     if (!startPose) {
       toast.error(
-        "Waiting for robot pose (TF map -> base_link or /amcl_pose) to start planning...",
+        "Waiting for the robot's current position — make sure it's localized on the map, then try again.",
       );
       return;
     }
@@ -464,7 +464,7 @@ const RoutePage = () => {
       // Remove the goal marker we just placed temporarily
       removePointFromCanvas();
 
-      toast.info("Requesting path from Nav2 planner...");
+      toast.info("Calculating a route...");
 
       const toPoseStamped = (pose) => ({
         header: { frame_id: "map", stamp: { secs: 0, nsecs: 0 } },
@@ -560,7 +560,7 @@ const RoutePage = () => {
               } else {
                 toast.error(
                   getResult?.result?.error_msg ||
-                    "Nav2 failed to plan a path: empty or invalid response.",
+                    "Couldn't find a route to that point.",
                 );
               }
             },
@@ -573,7 +573,7 @@ const RoutePage = () => {
         (error) => {
           console.error("Nav2 planning service error:", error);
           toast.error(
-            "Failed to contact Nav2 planning service. Is Nav2 running?",
+            "Couldn't reach the robot's navigation system — is it turned on?",
           );
         },
       );
@@ -762,12 +762,19 @@ const RoutePage = () => {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
-            ["Group", selectedFile.group],
+            [
+              "Group",
+              selectedFile.group,
+              "The map group this route belongs to — set on the Maps page",
+            ],
             ["Map", selectedFile.map],
             ["Current route", selectedFile.route],
-          ].map(([label, value]) => (
+          ].map(([label, value, caption]) => (
             <DashboardCard key={label} className="min-w-0 px-4 py-3">
-              <p className="font-[RobotoMono] text-[10px] font-bold uppercase tracking-[0.14em] text-themeTextGray">
+              <p
+                className="font-[RobotoMono] text-[10px] font-bold uppercase tracking-[0.14em] text-themeTextGray"
+                title={caption}
+              >
                 {label}
               </p>
               <p
@@ -794,7 +801,7 @@ const RoutePage = () => {
               </p>
               <p className="mt-2 text-sm leading-6 text-themeTextGray">
                 {pointsSettable
-                  ? "Click the map to add or adjust points, then save your changes."
+                  ? "Click the map to add or adjust waypoints, then save your changes."
                   : "Choose an operation to begin editing the current route or create a new one."}
               </p>
             </div>
@@ -823,14 +830,14 @@ const RoutePage = () => {
                 type={pointsSettable ? "disabled" : ""}
               >
                 <span className="iconCharge" aria-hidden="true" />
-                <span>Change</span>
+                <span>Switch route</span>
               </Button>
               <Button
                 onBtnClick={onChangeMapClick}
                 type={pointsSettable ? "disabled" : ""}
               >
                 <span className="iconMap" aria-hidden="true" />
-                <span>Change map</span>
+                <span>Switch map</span>
               </Button>
               <Button onBtnClick={onPlanRouteClick}>
                 <span className="iconMap" aria-hidden="true" />
@@ -852,7 +859,7 @@ const RoutePage = () => {
                 type={!pointsSettable ? "disabled" : "danger"}
               >
                 <span className="iconTrash" aria-hidden="true" />
-                <span>Clear points</span>
+                <span>Clear waypoints</span>
               </Button>
               <Button
                 onBtnClick={onDeleteRouteClick}

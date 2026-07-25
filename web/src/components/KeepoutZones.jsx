@@ -27,11 +27,12 @@ const KeepoutZones = () => {
     setForm(EMPTY);
   };
 
-  const input = (k, ph) => (
+  const input = (k, ph, title) => (
     <input
       value={form[k]}
       onChange={set(k)}
       placeholder={ph}
+      title={title}
       inputMode="decimal"
       className="w-full rounded-lg border border-borderSubtle bg-bgCard px-2 py-1 text-xs text-textWhiteHover placeholder:text-themeTextGray"
     />
@@ -65,10 +66,10 @@ const KeepoutZones = () => {
 
       <div className="grid grid-cols-5 gap-1.5">
         {input("name", "name")}
-        {input("cx", "cx")}
-        {input("cy", "cy")}
-        {input("w", "w")}
-        {input("h", "h")}
+        {input("cx", "center X (m)", "Center X, in map meters")}
+        {input("cy", "center Y (m)", "Center Y, in map meters")}
+        {input("w", "width (m)", "Width, in meters")}
+        {input("h", "height (m)", "Height, in meters")}
       </div>
       <button
         onClick={add}

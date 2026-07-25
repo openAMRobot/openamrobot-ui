@@ -14,9 +14,10 @@ Route page, tracked in one file, `current_map_route.yaml`. See
 
 **AMCL (Adaptive Monte Carlo Localization)** — The Nav2 node that estimates
 the robot's position on the map by matching live LIDAR scans against it,
-publishing `/amcl_pose`. Rendered as the "AMCL" position badge on the Map,
-Status, and Robot pages, and as the localization check on the Health page.
-See [`RobotState`](07-ui-components.md#robotstate--robotstatejsx) and
+publishing `/amcl_pose`. Rendered as the "Map-corrected" position badge (with
+"AMCL" as a hover tooltip) on the Map, Status, and Robot pages, and as the
+localization check on the Health page. See
+[`RobotState`](07-ui-components.md#robotstate--robotstatejsx) and
 [`SystemHealth`](07-ui-components.md#systemhealth--systemhealthjsx).
 
 **`AppConfig`** — The exported object in
@@ -38,8 +39,10 @@ the robot. See [Lesson 10](10-topics-as-the-contract.md).
 **Costmap** — A grid overlaid on the map where each cell's value reflects
 how close it is to an obstacle; Nav2 plans paths that avoid high-cost cells.
 Nav2 keeps a "global" costmap (the whole map) and a "local" costmap (just
-around the robot), rendered as the Map page's Costmap G/Costmap L layers.
-See [`MapLayers`](07-ui-components.md#maplayers--maplayersjsx).
+around the robot), rendered as the Map page's "Obstacles (wide)" and
+"Obstacles (near)" layer toggles (labeled "Costmap G"/"Costmap L" in earlier
+versions of this UI). See
+[`MapLayers`](07-ui-components.md#maplayers--maplayersjsx).
 
 **DDS (Data Distribution Service)** — The pub/sub middleware ROS 2 is built
 on. It's what lets nodes discover each other and exchange topics, services,

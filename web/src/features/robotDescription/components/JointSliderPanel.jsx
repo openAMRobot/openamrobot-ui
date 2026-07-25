@@ -23,12 +23,9 @@ const JointSliderPanel = ({ robot, jointValues, onSetJointValue, onReset, mode, 
         <EmptyState className="min-h-[100px] px-0" title="No movable joints" description="Every joint in this model is fixed." />
       ) : (
         <>
-          <div className="mt-2 grid flex-none grid-cols-2 gap-2">
+          <div className="mt-2 flex-none">
             <Button type={readOnly ? "disabled" : undefined} onBtnClick={onReset}>
-              Reset joints
-            </Button>
-            <Button type={readOnly ? "disabled" : undefined} onBtnClick={onReset}>
-              Home position
+              Reset to home position
             </Button>
           </div>
           {readOnly ? (

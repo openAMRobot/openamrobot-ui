@@ -36,7 +36,8 @@ person could otherwise only do by publishing ROS messages by hand.
 
 The left toolbox groups blocks into `Program`, `Navigation`, `Motion`,
 `Docking`, and `Robot State`. The center workspace is where blocks are
-assembled. The right panel shows ROSBridge connection status, Run/Stop
+assembled. The right panel shows connection status ("Robot connected"/"Robot
+offline"), Run/Stop
 buttons, Voice Command, program templates, run history, backend saved
 programs, named locations, plan checks, and the Generated Plan created from
 the connected blocks (some of these sit further down the panel than the
