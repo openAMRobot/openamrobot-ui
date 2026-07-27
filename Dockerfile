@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-rosbridge-server \
     ros-${ROS_DISTRO}-rosidl-default-generators \
     ros-${ROS_DISTRO}-web-video-server \
+    ros-${ROS_DISTRO}-xacro \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace

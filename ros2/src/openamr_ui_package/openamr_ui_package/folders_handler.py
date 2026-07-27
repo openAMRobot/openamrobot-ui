@@ -29,8 +29,8 @@ class UIFoldersHandler(Node):
         config_file = os.path.join(get_package_share_directory('openamr_ui_package'), 'param', 'config.yaml')
         with open(config_file, 'r') as file:
             data = yaml.safe_load(file) or {}
-        self.local_ip = data["flask_app"]["ros__parameters"]["appAddress"]
-        self.local_port = data["flask_app"]["ros__parameters"]["portApp"]
+        self.local_ip = data["ui/flask_app"]["ros__parameters"]["appAddress"]
+        self.local_port = data["ui/flask_app"]["ros__parameters"]["portApp"]
 
         self.odomsub = self.create_subscription(Odometry, "/odom", self.odom_callback, 10)
         self.uiopsub = self.create_subscription(String, "ui_operation", self.ui_callback, 10)

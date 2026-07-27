@@ -2,22 +2,31 @@ import React from "react";
 
 const Button = ({ children, onBtnClick, type }) => {
   let cls = "";
+  const disabled = type === "disabled";
   switch (type) {
     case "disabled":
       cls =
         "opacity-30 cursor-not-allowed border border-borderSubtle text-themeTextGray bg-bgSurface";
       break;
     case "danger":
+      // Errors, destructive operations, emergency controls — red, reserved.
       cls =
-        "bg-statusRed hover:bg-red-600 active:bg-red-700 text-white border border-statusRed";
+        "bg-statusRed hover:brightness-110 active:brightness-95 text-white border border-statusRed";
       break;
     case "success":
       cls =
-        "bg-statusGreen hover:bg-green-500 active:bg-green-600 text-white border border-statusGreen";
+        "bg-statusGreen hover:brightness-110 active:brightness-95 text-white border border-statusGreen";
+      break;
+    case "gradient":
+      // Reserved for the single highest-emphasis action on a screen (e.g. a
+      // primary "Run"/"Save") — the violet-to-pink accent gradient, not for
+      // routine buttons.
+      cls =
+        "bg-[image:var(--gradient-primary)] hover:brightness-110 active:brightness-95 text-white border border-white/10 shadow-lg shadow-black/30";
       break;
     case "orange":
       cls =
-        "bg-themeMediumBlue hover:bg-themeDarkBlue text-white border border-themeMediumBlue";
+        "bg-themeBlue hover:bg-themeMediumBlue text-white border border-themeBlue";
       break;
     default:
       cls =
@@ -26,8 +35,10 @@ const Button = ({ children, onBtnClick, type }) => {
 
   return (
     <button
-      className={`px-3 py-2 ${cls} flex w-full items-center justify-center gap-2 rounded-lg font-[RobotoMono] text-base`}
-      onClick={type !== "disabled" ? onBtnClick : () => {}}
+      type="button"
+      disabled={disabled}
+      className={`min-h-[42px] px-3 py-2 ${cls} flex w-full items-center justify-center gap-2 rounded-xl font-[RobotoMono] text-xs font-semibold`}
+      onClick={onBtnClick}
     >
       {children}
     </button>

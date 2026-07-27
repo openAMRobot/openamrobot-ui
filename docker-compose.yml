@@ -11,6 +11,8 @@ services:
       ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
       RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
       OPENAMR_REBUILD_ON_START: ${OPENAMR_REBUILD_ON_START:-0}
+      AUTH_MODE: ${AUTH_MODE:-open}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - openamr_ui_data:/root/.openamr_ui
     restart: unless-stopped

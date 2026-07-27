@@ -1,5 +1,5 @@
 .iconArrow {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   min-width: 25px;
   height: 28px;
   -webkit-mask-image: url("../../assets/icons/icon-map-arrow.svg");
@@ -7,7 +7,7 @@
 }
 
 .iconPlus {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   height: 30px;
   min-width: 30px;
   -webkit-mask-image: url("../../assets/icons/icon-plus.svg");
@@ -15,7 +15,7 @@
 }
 
 .iconMinus {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   min-width: 30px;
   height: 4px;
   -webkit-mask-image: url("../../assets/icons/icon-minus.svg");
@@ -23,7 +23,7 @@
 }
 
 .iconSave {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   min-width: 32px;
   height: 32px;
   -webkit-mask-image: url("../../assets/icons/icon-save.svg");
@@ -31,7 +31,7 @@
 }
 
 .iconMap {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   min-width: 30px;
   height: 30px;
   -webkit-mask-image: url("../../assets/icons/icon-map.svg");
@@ -39,7 +39,7 @@
 }
 
 .iconGroup {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   min-width: 30px;
   height: 30px;
   -webkit-mask-image: url("../../assets/icons/icon-group.svg");
@@ -47,7 +47,7 @@
 }
 
 .iconHome {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   min-width: 30px;
   height: 30px;
   -webkit-mask-image: url("../../assets/icons/icon-home.svg");
@@ -55,7 +55,7 @@
 }
 
 .iconCharge {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   min-width: 30px;
   height: 30px;
   -webkit-mask-image: url("../../assets/icons/icon-charge.svg");
@@ -63,7 +63,7 @@
 }
 
 .iconPoint {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   min-width: 30px;
   height: 30px;
   -webkit-mask-image: url("../../assets/icons/icon-point.svg");
@@ -71,7 +71,7 @@
 }
 
 .iconTrash {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   min-width: 30px;
   height: 30px;
   -webkit-mask-image: url("../../assets/icons/icon-trash.svg");
@@ -79,7 +79,7 @@
 }
 
 .iconInfo {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
   min-width: 32px;
   height: 32px;
   -webkit-mask-image: url("../../assets/icons/icon-info.svg");
@@ -113,5 +113,5 @@
 .functionalButton.disabled:active .iconInfo,
 .functionalButton.disabled:active .iconPoint,
 .functionalButton.disabled:active .iconTrash {
-  background-color: #22b7fc;
+  background-color: rgb(var(--color-theme-blue));
 }

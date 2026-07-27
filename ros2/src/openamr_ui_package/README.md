@@ -15,7 +15,12 @@ build commands, run commands, ports, topics, and troubleshooting.
   waypoint route-following helper nodes.
 - `launch/map_server_launch.py`: deprecated compatibility launch, namespaced
   under `ui_legacy` to avoid conflicting with the platform map server.
-- The remaining launch files are legacy or compatibility launch helpers.
+- `launch/mapping_launch.py` (includes `gmapping_launch.py` +
+  `move_base_launch.py`) and `launch/navigation_launch.py` (includes
+  `move_base_launch.py` + `amcl_launch.py`): not legacy — `folders_handler.py`
+  launches these directly for the web UI's Maps page **Start mapping** and
+  **Save current map** buttons (SLAM while mapping, then back to
+  localization/navigation once saved).
 
 ## Runtime Pieces
 
@@ -26,6 +31,9 @@ build commands, run commands, ports, topics, and troubleshooting.
 - `folders_handler.py`: handles map, group, route, and waypoint file commands.
 - `waypoint_nav.py`: optional route-following helper using Nav2 Simple
   Commander.
+- `battery.py`: optional battery-percentage publisher (reads a serial port;
+  falls back to a simulated drain if none is present). Not started by
+  `new_ui_launch.py` or `physnode_launch.py` by default.
 
 ## Voice Command API Key
 
@@ -86,5 +94,5 @@ ros2 launch openamr_ui_bringup ui.launch.py
 Open the browser at:
 
 ```text
-http://127.0.0.1:5050/control
+http://127.0.0.1:5050/
 ```

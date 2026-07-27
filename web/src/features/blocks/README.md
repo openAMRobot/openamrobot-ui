@@ -1,15 +1,12 @@
 # OpenAMR Blockly Guide
 
-This guide explains how to use and develop the Blockly robot programming page in
-OpenAMR UI. It is written for beginners, so it starts from the basics and then
-shows practical robot programs you can build with blocks.
+This guide is the practical reference for the Blockly robot programming page:
+setup, the full block-by-block reference, example programs, and
+troubleshooting. For the conceptual side — what Blockly is, how a block
+becomes a robot action, and how Voice Command fits together — see
+[Lesson 09 — Blockly Visual Programming](../../../../docs/lessons/09-blockly-programming.md).
 
-## What Blockly Is
-
-Blockly is a visual programming editor. Instead of writing code by hand, you
-drag blocks onto a workspace and connect them together.
-
-In this project, the Blockly page lets you create a robot action program like:
+The Blockly page lets you create a robot action program like:
 
 ```text
 start robot program
@@ -21,7 +18,7 @@ start robot program
 The UI converts those blocks into a robot plan, then sends ROS commands through
 rosbridge when you press `Run`.
 
-![Complete Blockly page with workspace, program templates, run history, backend programs, named locations, plan checks, and generated plan](../../../../docs/assets/completeuiimage.png)
+![Complete Blockly page with workspace, program templates, run history, backend programs, named locations, plan checks, and generated plan](../../../../docs/assets/programs/blockly.png)
 
 ## Blockly Page Areas
 
@@ -30,7 +27,7 @@ toolbox. If your page looks different, compare it with the labels below.
 
 | Area                          | What It Shows                                                           | How To Use It                                                                                                    |
 | ----------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Top navigation                | The main UI pages: Map, Route, Control, Blocks, and Info                | Click `Blocks` to open the Blockly robot-programming page                                                        |
+| Sidebar navigation            | Every top-level page (Map, Routes, Maps, Programs, Scheduler, Missions, Status, Robot, Devices, Health, Metrics, Recordings, Events, Console, Parameters, Fleet, Config, Notes) | Click `Programs` to open the Blockly robot-programming page (the file and code still call it "Blocks") |
 | Page title                    | `Blockly Robot Program` and a short description                         | Confirms you are on the correct page                                                                             |
 | Save/Load/Import/Export/Reset | Program storage buttons in the top right of the Blockly panel           | Save and Load use browser storage; Import and Export move Blockly JSON files; Reset restores the default program |
 | Left toolbox                  | Block categories: Program, Navigation, Motion, Docking, and Robot State | Click a category, then drag blocks from the flyout into the workspace                                            |
@@ -39,7 +36,7 @@ toolbox. If your page looks different, compare it with the labels below.
 | Loose blocks                  | Blocks placed on the workspace but not connected to the start chain     | Useful while building, but they do not run until connected under `start robot program`                           |
 | Zoom controls                 | Plus, minus, and center controls on the right edge of the workspace     | Zoom in/out or recenter the block workspace                                                                      |
 | Trash can                     | Delete area in the bottom-right of the workspace                        | Drag unwanted blocks to the trash, or select blocks and delete them                                              |
-| ROSBridge status              | Connection state in the right panel                                     | `connected` means the browser can talk to ROS through rosbridge; `disconnected` means Run will be disabled       |
+| Connection status             | Connection state in the right panel                                     | `Robot connected` means the browser can talk to ROS through rosbridge; `Robot offline` means Run will be disabled |
 | Run and Stop                  | Execution buttons in the right panel                                    | Run executes the Generated Plan; Stop sends an emergency stop command                                            |
 | Voice Command                 | Mic button and live transcript in the right panel                       | Tap the mic and say "Monsieur" followed by a command; Claude turns it into blocks in the workspace for you to review before Run |
 | Program Templates             | Ready-made example programs in the right panel                          | Load a safe starter program, navigation example, docking sequence, patrol route, or low-battery routine          |
@@ -136,7 +133,7 @@ You need:
 - An Anthropic API key, only if you want to use the `Voice Command` panel (see
   [Voice Command](#voice-command))
 
-The UI can open without a robot, but `Run` needs ROSBridge to be connected.
+The UI can open without a robot, but `Run` needs the robot to be connected.
 
 Check the basic tools:
 
@@ -298,34 +295,11 @@ source install/setup.bash
 
 ## How A Block Runs
 
-Blockly uses this flow:
-
-```text
-Block in toolbox
-  -> block definition in blockDefinitions.js
-  -> action object in Generated Plan
-  -> execution logic in robotActions.js
-  -> ROS topic/service through roslibjs
-```
-
-For example:
-
-```text
-drive linear speed 0.1 for 2 seconds
-```
-
-becomes:
-
-```js
-{
-  type: "drive_for",
-  linear: 0.1,
-  seconds: 2
-}
-```
-
-Then `robotActions.js` publishes `/cmd_vel`, waits 2 seconds, and publishes zero
-velocity.
+Every block goes through the same pipeline before anything reaches the
+robot: block definition → action object in the Generated Plan → execution
+logic → ROS topic/service. See
+[Lesson 09 — The pipeline](../../../../docs/lessons/09-blockly-programming.md#the-pipeline-block--action--execution--ros)
+for the full explanation of why it's split this way.
 
 ## Current Block Categories
 
@@ -394,12 +368,11 @@ If no battery message is received, the nested blocks are skipped.
 
 ## Category Screenshots And Detailed Block Reference
 
-The next sections explain every block shown in the saved category screenshots.
-Each example is written as a block chain you can build in the Blockly workspace.
+The next sections explain every block in each toolbox category (visible in the
+left sidebar in the screenshot above). Each example is written as a block
+chain you can build in the Blockly workspace.
 
 ### Program Blocks
-
-![Program category showing start, repeat, and log blocks](../../../../docs/assets/program.png)
 
 Program blocks control the shape of your Blockly program. They do not directly
 move the robot unless robot action blocks are connected below or inside them.
@@ -482,8 +455,6 @@ What happens:
 - The second log appears after navigation finishes.
 
 ### Navigation Blocks
-
-![Navigation category showing coordinate navigation, named location, wait for navigation, and patrol blocks](../../../../docs/assets/navigation.png)
 
 Navigation blocks publish map-frame goals or wait for Nav2-style navigation
 status. They are best used when the robot is localized and the map is correct.
@@ -609,8 +580,6 @@ What happens:
 Use patrol only when both points are reachable on the current map.
 
 ### Motion Blocks
-
-![Motion category showing wait, speed, drive, rotate, stop movement, and emergency stop blocks](../../../../docs/assets/motion.png)
 
 Motion blocks publish direct velocity commands or wait for time. These do not
 plan around obstacles. Use them carefully on a real robot.
@@ -745,8 +714,6 @@ stop.
 
 ### Docking Blocks
 
-![Docking category showing dock and undock blocks](../../../../docs/assets/docking.png)
-
 Docking blocks publish trigger messages. The robot stack must provide the real
 docking and undocking behavior.
 
@@ -794,8 +761,6 @@ What happens:
 Use a small speed and short time until the undocking behavior is verified.
 
 ### Robot State Blocks
-
-![Robot State category showing battery condition and mode blocks](../../../../docs/assets/robotstate.png)
 
 Robot State blocks use robot state or publish a selected mode command.
 
@@ -879,7 +844,7 @@ http://127.0.0.1:5050/blocks
 4. Confirm the right panel says:
 
 ```text
-ROSBRIDGE connected
+Robot connected
 ```
 
 5. Keep one `start robot program` block in the workspace.
@@ -898,14 +863,16 @@ angular 0.3
 11. Watch the robot and the Generated Plan while it runs.
 12. Press `Stop` if the robot should stop immediately.
 
-The `Run` button is disabled when ROSBridge is disconnected, when there are no
+The `Run` button is disabled when the robot isn't connected, when there are no
 generated steps, or when a program is already running.
 
 If the plan contains direct motion, docking, undocking, emergency stop, or
 validation warnings, the page asks for confirmation before running. Confirm only
 after checking that the robot area is clear.
 
-![Plan Checks and Generated Plan panels showing validation feedback and generated robot steps](../../../../docs/assets/planchecksandgeneratedplan.png)
+![Plan Checks panel showing configured speed limits and a "Ready. No validation warnings." result](../../../../docs/assets/programs/planchecks.png)
+
+![Generated Plan panel listing queued steps built from the connected blocks](../../../../docs/assets/programs/generatedplan.png)
 
 The `Stop` button calls the same emergency stop behavior used by the
 `emergency stop` block: it publishes zero velocity and cancels navigation.
@@ -925,8 +892,8 @@ Expected result:
 - The robot moves forward slowly for one second.
 - The robot stops automatically.
 
-If this does not work, do not test larger programs yet. Check ROSBridge,
-`/cmd_vel`, robot motor enable state, and the robot/simulation bringup.
+If this does not work, do not test larger programs yet. Check the connection
+status, `/cmd_vel`, robot motor enable state, and the robot/simulation bringup.
 
 ## Important Values
 
@@ -969,7 +936,7 @@ locations as a fallback.
 
 The `Named Locations` panel in the right sidebar lets you manage locations:
 
-![Named Locations panel showing location name, saved locations, x, y, yaw, save, and delete controls](../../../../docs/assets/namedlocations.png)
+![Named Locations panel showing location name, saved locations, x, y, yaw, save, and delete controls](../../../../docs/assets/programs/named-location.png)
 
 | Control       | Meaning                                               |
 | ------------- | ----------------------------------------------------- |
@@ -1145,71 +1112,17 @@ Use this only if the ROS side listens to the UI operation topic.
 
 ## Adding A New Block
 
-Adding a block usually requires three edits.
-
-### 1. Define The Block
-
-Edit:
-
-```text
-web/src/features/blocks/blockDefinitions.js
-```
-
-Add a JSON block definition:
-
-```js
-{
-  type: "openamr_beep",
-  message0: "beep robot",
-  previousStatement: null,
-  nextStatement: null,
-  colour: "#8b5cf6",
-  tooltip: "Trigger a robot beep.",
-}
-```
-
-Then convert it into an action in `blockToAction`:
-
-```js
-case "openamr_beep":
-  return { type: "beep" };
-```
-
-### 2. Add It To The Toolbox
-
-Edit:
-
-```text
-web/src/features/blocks/toolbox.js
-```
-
-Add:
-
-```js
-{ kind: "block", type: "openamr_beep" }
-```
-
-### 3. Execute The Action
-
-Edit:
-
-```text
-web/src/features/blocks/robotActions.js
-```
-
-Add a case:
-
-```js
-case "beep":
-  // Publish to your beep topic here.
-  return;
-```
-
-Then rebuild the frontend and ROS package.
+See
+[`docs/extending/add-a-blockly-block.md`](../../../../docs/extending/add-a-blockly-block.md)
+for the full step-by-step guide: defining the block, registering it in the
+toolbox, wiring its execution, and the rebuild/reinstall flow needed before
+Flask serves it.
 
 ## ROS Topics Used By Blockly
 
-The block executor uses topics and services configured in:
+See [Lesson 10 — Topics as the Contract](../../../../docs/lessons/10-topics-as-the-contract.md)
+for why centralizing these names matters. The block executor uses topics and
+services configured in:
 
 ```text
 web/src/shared/constants/index.js
@@ -1242,7 +1155,7 @@ The `Program Templates` panel in the right sidebar loads ready-made Blockly
 programs into the workspace. Templates are useful for first-time users, demos,
 and quick robot checks.
 
-![Program Templates panel showing template selection and Load Template button](../../../../docs/assets/programtemplate.png)
+![Program Templates panel showing template selection and Load Template button](../../../../docs/assets/programs/program-templates.png)
 
 Loading a template clears the current workspace and replaces it with the
 selected example. Save your current program first if you want to keep it.
@@ -1262,7 +1175,7 @@ Recommended beginner flow:
 1. Load `Safe Motion Test`.
 2. Check `Generated Plan`.
 3. Confirm `Plan Checks` has no errors.
-4. Press `Run` only after ROSBridge is connected and the robot area is clear.
+4. Press `Run` only after the status shows `Robot connected` and the robot area is clear.
 5. Save the edited program through `Backend Programs` if you want to reuse it.
 
 Templates are defined in:
@@ -1278,33 +1191,16 @@ returns Blockly workspace JSON.
 ## Voice Command
 
 The `Voice Command` panel lets you speak a command instead of dragging
-blocks. The browser captures your speech, sends the transcript to the Flask
-backend, which calls the Claude API to translate it into a robot action plan.
-The UI then converts that plan into real Blockly blocks in the workspace so
-you can review them before running.
+blocks — the browser captures speech, the Flask backend calls Claude to turn
+it into a plan, and the UI converts that plan into real Blockly blocks for
+you to review before running. For how that pipeline works and why voice
+can't run anything or invent an action type outside the normal blocks, see
+[Voice Command in Lesson 09](../../../../docs/lessons/09-blockly-programming.md#voice-command).
 
 You must say the wake word "Monsieur" before your command (see
 [Wake Word](#wake-word)); speech before it is ignored.
 
-![Voice Command panel showing the wake word requirement and voice-to-plan flow](../../../../docs/assets/voicecommand.png)
-
-Flow:
-
-```text
-You speak
-  -> browser Web Speech API transcript
-  -> strip everything up to and including "Monsieur"
-  -> POST /api/voice-plan (Flask backend)
-  -> Claude API (claude-sonnet-5) returns a structured action plan
-  -> planToWorkspace() builds Blockly JSON
-  -> Blockly.serialization.workspaces.load() populates the workspace
-  -> Generated Plan and Plan Checks update automatically
-  -> you review, then press Run
-```
-
-Voice input only builds and displays blocks. It never runs a program by
-itself; you still press `Run`, and any risky-action confirmation dialog still
-appears exactly as it does for a manually built or template-loaded program.
+![Voice Command panel showing the wake word requirement and voice-to-plan flow](../../../../docs/assets/programs/voicecommand.png)
 
 ### Voice Command Requirements
 
@@ -1487,9 +1383,9 @@ quick temporary backup while editing.
 
 ### Backend Saved Programs
 
-The `Backend Programs` panel is in the right sidebar on the Blocks page.
-
-![Backend Programs panel showing program name, saved program list, Save, Load, and Delete buttons](../../../../docs/assets/backendprogram.png)
+The `Backend Programs` panel is in the right sidebar on the Blocks page
+(visible below Run History in the full-page screenshot near the top of this
+guide).
 
 | Control        | Meaning                                                       |
 | -------------- | ------------------------------------------------------------- |
@@ -1531,9 +1427,9 @@ UI launch first if you want backend Save/Load/Delete to work in development.
 
 ### Browser Save, Load, Import, Export, And Reset
 
-The top-right `Save` and `Load` buttons use browser local storage:
-
-![Save, Load, Import, Export, and Reset toolbar buttons](../../../../docs/assets/saveloadimport.png)
+The top-right `Save` and `Load` buttons use browser local storage (visible
+in the toolbar above the workspace in the full-page screenshot near the top
+of this guide):
 
 ```text
 openamr_blockly_workspace
@@ -1619,10 +1515,10 @@ cd ~/openamrobot-ui/web
 npm run build
 ```
 
-### ROSBridge Says Disconnected
+### Status Shows Robot Offline
 
-The browser can render the page, but it cannot command the robot until ROSBridge
-is connected.
+The browser can render the page, but it cannot command the robot until the
+robot connection is established.
 
 Check:
 
@@ -1638,12 +1534,12 @@ program.
 
 Check:
 
-- ROSBridge status says `connected`.
+- The connection status shows `Robot connected`.
 - The Generated Plan has at least one step.
 - A program is not already running.
 - Blocks are connected below `start robot program`.
 
-If ROSBridge is disconnected, start or restart the UI launch and confirm
+If the status shows `Robot offline`, start or restart the UI launch and confirm
 `rosbridge_websocket` is running. If the Generated Plan has `0 steps`, check the
 next troubleshooting section.
 
@@ -1706,7 +1602,7 @@ Always test direct velocity commands in an open area.
 
 If the program runs but the robot does not move, check:
 
-- ROSBridge is connected.
+- The connection status shows `Robot connected`.
 - The robot or simulation stack is running.
 - `/cmd_vel` reaches the robot controller.
 - Motors or simulation control are enabled.
@@ -1756,25 +1652,27 @@ bash scripts/run_ui_backend.sh
 
 ### Category Images Do Not Appear In The README
 
-The category screenshots are stored in:
+The screenshots used in this guide are stored in:
 
 ```text
-docs/assets/completeuiimage.png
-docs/assets/saveloadimport.png
-docs/assets/program.png
-docs/assets/navigation.png
-docs/assets/motion.png
-docs/assets/docking.png
-docs/assets/robotstate.png
-docs/assets/programtemplate.png
-docs/assets/backendprogram.png
-docs/assets/namedlocations.png
-docs/assets/planchecksandgeneratedplan.png
+docs/assets/programs/blockly.png
+docs/assets/programs/program-templates.png
+docs/assets/programs/runhistory.png
+docs/assets/programs/named-location.png
+docs/assets/programs/planchecks.png
+docs/assets/programs/generatedplan.png
+docs/assets/programs/voicecommand.png
 ```
 
-If they do not render in a Markdown viewer, confirm those files exist and that
-you are viewing the README from the repository root or a viewer that supports
-relative image paths.
+There isn't a dedicated screenshot for each individual toolbox category
+(Program/Navigation/Motion/Docking/Robot State), the toolbar's Save/Load/
+Import/Export/Reset row, or the Backend Programs panel specifically — those
+are all visible within `blockly.png`, the full-page screenshot near the top
+of this guide, just not cropped out separately.
+
+If an image does not render in a Markdown viewer, confirm the file exists at
+that path and that you are viewing the README from the repository root or a
+viewer that supports relative image paths with spaces in filenames.
 
 ## Safety Notes
 

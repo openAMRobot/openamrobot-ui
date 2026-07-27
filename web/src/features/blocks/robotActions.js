@@ -51,13 +51,13 @@ export const createRobotActionClient = (ros) => {
 
   const dockTopic = new window.ROSLIB.Topic({
     ros,
-    name: "/dock_trigger",
+    name: AppConfig.DOCK_TRIGGER_TOPIC,
     messageType: "std_msgs/Bool",
   });
 
   const undockTopic = new window.ROSLIB.Topic({
     ros,
-    name: "/undock_robot",
+    name: AppConfig.UNDOCK_TRIGGER_TOPIC,
     messageType: "std_msgs/Bool",
   });
 
@@ -87,7 +87,7 @@ export const createRobotActionClient = (ros) => {
 
   const cancelClient = new window.ROSLIB.Service({
     ros,
-    name: "/navigate_to_pose/_action/cancel_goal",
+    name: AppConfig.NAV_CANCEL_GOAL_SERVICE,
     serviceType: "action_msgs/CancelGoal",
   });
 

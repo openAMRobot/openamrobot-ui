@@ -1,5 +1,5 @@
-import { useContext, useRef, useEffect, useState } from "react";
-import { RosContext } from "../app/App";
+import { useRef, useEffect, useState } from "react";
+import { useRos } from "../app/App";
 import { AppConfig } from "../shared/constants";
 
 // Position the robot moves to after undocking (map frame, metres)
@@ -51,7 +51,7 @@ const STATUSES = {
 };
 
 const DockingControl = ({ compact = false }) => {
-  const ros = useContext(RosContext);
+  const ros = useRos();
   const [status, setStatus] = useState("idle");
   const [events, setEvents] = useState([]);
   const dockTriggerRef = useRef(null);
@@ -68,13 +68,13 @@ const DockingControl = ({ compact = false }) => {
 
     dockTriggerRef.current = new window.ROSLIB.Topic({
       ros,
-      name: "/dock_trigger",
+      name: AppConfig.DOCK_TRIGGER_TOPIC,
       messageType: "std_msgs/Bool",
     });
 
     undockTriggerRef.current = new window.ROSLIB.Topic({
       ros,
-      name: "/undock_robot",
+      name: AppConfig.UNDOCK_TRIGGER_TOPIC,
       messageType: "std_msgs/Bool",
     });
 
@@ -245,9 +245,7 @@ const DockingControl = ({ compact = false }) => {
 
   return (
     <div
-      className={`rounded-xl border border-borderSubtle bg-bgCard font-[RobotoMono] ${
-        compact ? "p-3" : "p-4"
-      }`}
+      className={`dashboard-card font-[RobotoMono] ${compact ? "p-3" : "p-4"}`}
     >
       <div className="mb-2 flex items-center justify-between">
         <p className="text-xs uppercase tracking-wider text-themeTextGray">

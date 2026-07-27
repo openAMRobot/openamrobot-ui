@@ -17,6 +17,7 @@
   <depend>nav2_simple_commander</depend>
   <depend>ament_index_python</depend>
   <depend>openamr_ui_msgs</depend>
+  <depend>xacro</depend>
 
   <!-- Python build tooling for ament_python -->
   <buildtool_depend>ament_python</buildtool_depend>
