@@ -111,7 +111,7 @@ telemetry panels now live here — see the note in
 The route-authoring page: build and manage named, reusable waypoint
 sequences for a given map, as opposed to Map's one-off goals.
 
-![OpenAMR UI Routes page: route authoring header with group/map/route selectors, layer toggles, and route operations panel](<../assets/Routes/routes.png>)
+![OpenAMR UI Routes page: route authoring header with group/map/route selectors, layer toggles, and route operations panel](<../assets/routes/routes.png>)
 
 - The `GROUP` / `MAP` / `CURRENT ROUTE` header shows exactly which route
   you're editing — always check it before saving, since a route only makes
@@ -137,7 +137,7 @@ sequences for a given map, as opposed to Map's one-off goals.
 Map management: build a brand-new map from scratch, save the one currently
 loaded, and organize saved maps into groups.
 
-![OpenAMR UI Maps page: build-a-new-map and save-current-map panels, plus a saved-maps list grouped by folder](<../assets/Maps/Maps.png>)
+![OpenAMR UI Maps page: build-a-new-map and save-current-map panels, plus a saved-maps list grouped by folder](<../assets/maps/Maps.png>)
 
 - **Start mapping** launches mapping mode (SLAM) and stops
   navigation/localization — drive the robot around the space (with the
@@ -160,7 +160,7 @@ code, and the rest of this lesson series still call it "Blocks" or
 "Blockly" — same page). Build a robot program by dragging blocks instead of
 writing code, then press `Run`.
 
-![OpenAMR UI Programs page: Blockly workspace with a start-robot-program block chain, plus the ROSBridge status, Run/Stop, Voice Command, Program Templates, and Run History panels](<../assets/Programms/Blockly.png>)
+![OpenAMR UI Programs page: Blockly workspace with a start-robot-program block chain, plus the ROSBridge status, Run/Stop, Voice Command, Program Templates, and Run History panels](<../assets/programs/Blockly.png>)
 
 - The left toolbox groups blocks into `Program`, `Navigation`, `Motion`,
   `Docking`, and `Robot State`. Only blocks connected below `start robot
@@ -183,7 +183,7 @@ writing code, then press `Run`.
 
 Trigger navigation at set times of day.
 
-![OpenAMR UI Scheduler page: add-schedule form with name, time, repeat, and target, and a list of configured schedules](<../assets/Scheduler/Scheduler.png>)
+![OpenAMR UI Scheduler page: add-schedule form with name, time, repeat, and target, and a list of configured schedules](<../assets/scheduler/Scheduler.png>)
 
 - A schedule has a name, a time of day, a repeat (`Daily` or `Once`), and a
   target — go home, navigate to a saved waypoint, or run a whole
@@ -218,7 +218,7 @@ The calm diagnostics page (the sidebar calls it "Status"; the file is
 `InfoPage.jsx`) — camera, battery, charging, and system health, with no
 drive controls to accidentally bump.
 
-![OpenAMR UI Status page: camera feed, battery level with recent-trend sparkline, charging station status, velocity/position, and full system health panel](<../assets/Status/status.png>)
+![OpenAMR UI Status page: camera feed, battery level with recent-trend sparkline, charging station status, velocity/position, and full system health panel](<../assets/status/status.png>)
 
 - Battery shows a live percentage plus a small rolling **trend** sparkline
   of the last 40 readings — useful for spotting "draining faster than
@@ -238,7 +238,7 @@ drive controls to accidentally bump.
 A 3D digital twin of the robot, built directly from its real URDF/Xacro
 description — no physical robot required to look at it.
 
-![OpenAMR UI Robot page: 3D model viewer, kinematic tree, link information panel, and joint controls](<../assets/robot%20description/image.png>)
+![OpenAMR UI Robot page: 3D model viewer, kinematic tree, link information panel, and joint controls](<../assets/robot-description/image.png>)
 
 - **Description Mode** vs **Live Mode** (the switch near the top): Description
   Mode loads the model locally and needs no ROS connection at all — joint
@@ -251,28 +251,28 @@ description — no physical robot required to look at it.
   parent → child order; clicking one selects it in both the tree and the 3D
   view.
 
-  ![OpenAMR UI Robot page kinematic tree panel, expanded showing links and joints](<../assets/robot%20description/kinematictree.png>)
+  ![OpenAMR UI Robot page kinematic tree panel, expanded showing links and joints](<../assets/robot-description/kinematictree.png>)
 
 - Selecting a link or joint fills in **Link/Joint Information** — parent,
   children, geometry, mass, inertia, or (for a joint) type, axis, limits, and
   origin — read directly from the parsed URDF.
 
-  ![OpenAMR UI Robot page joint information panel showing a fixed joint's parent link, child link, and origin](<../assets/robot%20description/jointinformation.png>)
+  ![OpenAMR UI Robot page joint information panel showing a fixed joint's parent link, child link, and origin](<../assets/robot-description/jointinformation.png>)
 
 - **Joint Controls** only ever shows sliders for the robot's actual movable
   joints — on this robot, that's exactly two continuous wheel joints, since
   every other joint (casters, lidar, camera) is fixed and correctly gets no
   slider.
 
-  ![OpenAMR UI Robot page joint controls panel with left and right wheel joint sliders](<../assets/robot%20description/jointcontrols.png>)
+  ![OpenAMR UI Robot page joint controls panel with left and right wheel joint sliders](<../assets/robot-description/jointcontrols.png>)
 
 - **Display Layers** toggles what's drawn on the model: visual mesh,
   collision geometry, TF/frame axes, joint axes, link names, joint names,
   center-of-mass markers, and a computed footprint outline.
 
-  ![OpenAMR UI Robot page display layers panel with all eight layer toggles enabled](<../assets/robot%20description/displaylayers.png>)
+  ![OpenAMR UI Robot page display layers panel with all eight layer toggles enabled](<../assets/robot-description/displaylayers.png>)
 
-  ![OpenAMR UI Robot page 3D viewer with joint axes, joint names, and TF axes layers turned on](<../assets/robot%20description/description.png>)
+  ![OpenAMR UI Robot page 3D viewer with joint axes, joint names, and TF axes layers turned on](<../assets/robot-description/description.png>)
 
 ## Devices — `DevicesPage.jsx`
 

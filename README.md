@@ -10,6 +10,14 @@ connection.
 
 [▶ Watch the current feature tour with human narration](docs/assets/openamrobot_ui_feature_tour_with_audio.mp4)
 
+> [!NOTE]
+> This repository is part of the **OpenAMRobot vX.X.X** release.
+>
+> Download the complete product release (Hardware + Software + Firmware + UI +
+> Documentation) here:
+>
+> **https://github.com/openAMRobot/openamrobot-release/releases/latest**
+
 > [!CAUTION]
 > The red **E-STOP** in the dashboard is a software stop. It sends one
 > zero-velocity command and asks Nav2 to cancel the active goal. It is not
@@ -72,7 +80,7 @@ Before enabling motion:
 | Use case | Required |
 | --- | --- |
 | Docker demo/deployment | Docker Engine and Docker Compose; Linux or WSL is recommended for host networking |
-| Manual installation | Ubuntu 24.04, ROS 2 Jazzy, Python 3, `colcon`, Node.js 18+, and npm |
+| Manual installation | Ubuntu 24.04, ROS 2 Jazzy, Python 3, `colcon`, Node.js, and npm (see [Compatibility](#compatibility) for the supported Node range) |
 | Live operation | A separately running OpenAMR robot or simulation stack |
 | Remote browser | Access to TCP ports `5050`, `9090`, and optionally `8080` |
 | Voice Command | Anthropic API key supplied to the backend at runtime |
@@ -83,8 +91,8 @@ Before enabling motion:
 | --- | --- | --- |
 | Ubuntu | 24.04 LTS | Manual-install target |
 | ROS 2 | Jazzy | Required by the documented packages and commands |
-| Node.js | 18–20 | Minimum 18; documentation validation currently uses 20 |
-| `openamr-platform-sw` | Matching ROS 2 Jazzy branch/commit | Release is not yet pinned; record the exact commit for deployments |
+| Node.js | 18–20 | Enforced by `web/package.json` `engines` (`>=18 <21`); CI validates on Node 20 |
+| `openamr-platform-sw` | ROS 2 Jazzy branch, pinned to commit `<record-known-good-sha>` | Fill in the exact known-good commit SHA so setups are reproducible |
 | Robot hardware | Topic-compatible OpenAMRobot platform | Hardware revision is not yet pinned; validate drivers, limits, docking, and E-stop behavior per robot |
 
 Until platform and hardware releases are pinned, treat a known-working
@@ -128,7 +136,7 @@ The optional camera node appears only when `web_video_server` is installed.
 
 ### Manual install
 
-Install ROS 2 Jazzy, Node.js 18+, npm, and the declared ROS dependencies.
+Install ROS 2 Jazzy, Node.js, npm, and the declared ROS dependencies.
 Then:
 
 ```bash

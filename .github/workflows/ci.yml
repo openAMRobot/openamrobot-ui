@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main, theory_practical]
+  pull_request:
+
+jobs:
+  web:
+    name: Web build & tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # Keep in sync with web/package.json "engines" (>=18 <21).
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test -- --watchAll=false
+        env:
+          CI: true
+
+      - name: Build
+        run: npm run build
+        env:
+          GENERATE_SOURCEMAP: "false"
+
+  links:
+    name: Markdown link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Catches dead routes/anchors and missing local assets (e.g. renamed or
+      # deleted screenshots) in the README and the docs tree before merge.
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --include-verbatim
+            "README.md"
+            "docs/**/*.md"
+            "web/**/*.md"
+            "ros2/**/*.md"
+            "launch/**/*.md"
+            "scripts/**/*.md"
+          fail: true
