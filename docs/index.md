@@ -49,7 +49,7 @@ code that can go stale.
 
 ## Architecture at a glance
 
-![OpenAMRobot UI architecture: browser, rosbridge, UI backend nodes, and the robot/simulation stack](<assets/openamr_ui_architecture.svg>)
+![OpenAMRobot UI architecture: browser, rosbridge, UI backend nodes, and the robot/simulation stack](assets/openamr_ui_architecture.svg)
 
 For the full picture, [Lesson 03](lessons/03-how-the-browser-talks-to-ros.md)
 walks through this chain in detail, and a

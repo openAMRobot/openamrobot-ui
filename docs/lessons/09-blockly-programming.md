@@ -32,7 +32,7 @@ person could otherwise only do by publishing ROS messages by hand.
 
 ## Screenshots and page layout
 
-![OpenAMR UI Programs page: a start-robot-program block chain in the workspace, the toolbox on the left, and ROSBridge status, Voice Command, Program Templates, and Run History on the right](<../assets/programs/Blockly.png>)
+![OpenAMR UI Programs page: a start-robot-program block chain in the workspace, the toolbox on the left, and ROSBridge status, Voice Command, Program Templates, and Run History on the right](../assets/programs/blockly.png)
 
 The left toolbox groups blocks into `Program`, `Navigation`, `Motion`,
 `Docking`, and `Robot State`. The center workspace is where blocks are
@@ -50,7 +50,7 @@ workspace back to the starter program.
 
 ### Program Templates
 
-![OpenAMR UI Programs page Program Templates panel with a template selector and Load Template button](<../assets/programs/ProgramTemplates.png>)
+![OpenAMR UI Programs page Program Templates panel with a template selector and Load Template button](../assets/programs/program-templates.png)
 
 `Program Templates` provides ready-made examples such as a safe motion test or
 low-battery docking routine. Selecting a template shows a short description;
@@ -70,7 +70,7 @@ opened from another browser that reaches the same UI server.
 
 ### Run History
 
-![OpenAMR UI Programs page Run History panel listing two past runs with success/stopped badges](<../assets/programs/Runhistory.png>)
+![OpenAMR UI Programs page Run History panel listing two past runs with success/stopped badges](../assets/programs/runhistory.png)
 
 Every `Run` (however the program was built) is logged here — name, result
 badge, timestamp, step count, and duration. `Refresh` reloads the list;
@@ -79,7 +79,7 @@ long it took, without needing the Events or Metrics pages open.
 
 ### Named Locations
 
-![OpenAMR UI Programs page Named Locations panel with a saved "Charging Station" location and its x/y/yaw](<../assets/programs/named-location.png>)
+![OpenAMR UI Programs page Named Locations panel with a saved "Charging Station" location and its x/y/yaw](../assets/programs/named-location.png)
 
 `Named Locations` associates a readable name, such as `Charging Station`,
 with a map pose: `x`, `y`, and `yaw`. These entries populate the
@@ -101,9 +101,9 @@ execution; the Generated Plan panel shows the exact step list built from
 connected blocks — see
 [Plan Checks](#plan-checks-one-safety-gate-regardless-of-origin) below.
 
-![OpenAMR UI Programs page Plan Checks panel showing the configured speed limits and "Ready. No validation warnings."](<../assets/programs/Planchecks.png>)
+![OpenAMR UI Programs page Plan Checks panel showing the configured speed limits and "Ready. No validation warnings."](../assets/programs/planchecks.png)
 
-![OpenAMR UI Programs page Generated Plan panel listing three queued steps](<../assets/programs/generatedplan.png>)
+![OpenAMR UI Programs page Generated Plan panel listing three queued steps](../assets/programs/generatedplan.png)
 
 The status beside each generated step starts as `QUEUED` and changes as the
 program runs. The step count and ordered descriptions are a final preview of
@@ -183,7 +183,7 @@ The `Voice Command` panel is an alternate way to *build* a plan — it still
 goes through the exact same pipeline and safety gate above, it just adds a
 speech-to-plan step in front of it:
 
-![OpenAMR UI Programs page Voice Command panel with a "Tap to speak a command" button and transcript field](<../assets/programs/Voicecommand.png>)
+![OpenAMR UI Programs page Voice Command panel with a "Tap to speak a command" button and transcript field](../assets/programs/voicecommand.png)
 
 Tap the button, say the wake word `Monsieur`, and then speak the command. The
 panel shows the recognized transcript only after the wake word is heard. A

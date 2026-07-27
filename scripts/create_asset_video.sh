@@ -92,25 +92,25 @@ make_card \
 make_slide "map/map.png" \
   "Map and Manual Control" \
   "See the robot, send goals, drive manually, manage waypoints, and dock"
-make_slide "Routes/routes.png" \
+make_slide "routes/routes.png" \
   "Reusable Routes" \
   "Create and edit waypoint sequences for the active map"
-make_slide "Maps/Maps.png" \
+make_slide "maps/maps.png" \
   "Map Management" \
   "Build, save, switch, rename, and organize maps"
-make_slide "Programms/Blockly.png" \
+make_slide "programs/blockly.png" \
   "Visual Robot Programs" \
   "Build validated navigation and motion routines with Blockly"
-make_slide "Scheduler/Scheduler.png" \
+make_slide "scheduler/scheduler.png" \
   "Scheduling" \
   "Trigger routine browser-side robot actions at selected times"
 make_slide "missions/missions.png" \
   "Multi-step Missions" \
   "Combine waypoints, waits, docking, and reusable actions"
-make_slide "Status/status.png" \
+make_slide "status/status.png" \
   "Live Status" \
   "Monitor camera, battery, position, velocity, and system health"
-make_slide "robot description/image.png" \
+make_slide "robot-description/image.png" \
   "Robot Description" \
   "Explore the URDF model, kinematic tree, joints, and live overlays"
 make_slide "devices/devices.png" \
@@ -125,7 +125,7 @@ make_slide "metrics/metrics.png" \
 make_slide "recordings/recordings.png" \
   "Record and Replay" \
   "Capture rosbag sessions for debugging, demonstrations, and lessons"
-make_slide "events/evnets.png" \
+make_slide "events/events.png" \
   "Event Timeline" \
   "Review and export navigation, docking, battery, and safety events"
 make_slide "console/console.png" \

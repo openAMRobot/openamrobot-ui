@@ -80,7 +80,7 @@ place. (There used to be a separate Control page; its driving, docking, and
 telemetry panels now live here — see the note in
 [Lesson 07](07-ui-components.md#a-note-on-the-old-control-page).)
 
-![OpenAMR UI Map page: occupancy grid with robot pose, camera panel, manual drive joystick, speed presets, docking control, saved waypoints, and mode buttons](<../assets/map/map.png>)
+![OpenAMR UI Map page: occupancy grid with robot pose, camera panel, manual drive joystick, speed presets, docking control, saved waypoints, and mode buttons](../assets/map/map.png)
 
 - The map panel shows the occupancy grid, robot pose, and optional overlays
   (costmaps, laser, path, goal, waypoints, keep-out zones, trail) via the
@@ -111,7 +111,7 @@ telemetry panels now live here — see the note in
 The route-authoring page: build and manage named, reusable waypoint
 sequences for a given map, as opposed to Map's one-off goals.
 
-![OpenAMR UI Routes page: route authoring header with group/map/route selectors, layer toggles, and route operations panel](<../assets/routes/routes.png>)
+![OpenAMR UI Routes page: route authoring header with group/map/route selectors, layer toggles, and route operations panel](../assets/routes/routes.png)
 
 - The `GROUP` / `MAP` / `CURRENT ROUTE` header shows exactly which route
   you're editing — always check it before saving, since a route only makes
@@ -137,7 +137,7 @@ sequences for a given map, as opposed to Map's one-off goals.
 Map management: build a brand-new map from scratch, save the one currently
 loaded, and organize saved maps into groups.
 
-![OpenAMR UI Maps page: build-a-new-map and save-current-map panels, plus a saved-maps list grouped by folder](<../assets/maps/Maps.png>)
+![OpenAMR UI Maps page: build-a-new-map and save-current-map panels, plus a saved-maps list grouped by folder](../assets/maps/maps.png)
 
 - **Start mapping** launches mapping mode (SLAM) and stops
   navigation/localization — drive the robot around the space (with the
@@ -160,7 +160,7 @@ code, and the rest of this lesson series still call it "Blocks" or
 "Blockly" — same page). Build a robot program by dragging blocks instead of
 writing code, then press `Run`.
 
-![OpenAMR UI Programs page: Blockly workspace with a start-robot-program block chain, plus the ROSBridge status, Run/Stop, Voice Command, Program Templates, and Run History panels](<../assets/programs/Blockly.png>)
+![OpenAMR UI Programs page: Blockly workspace with a start-robot-program block chain, plus the ROSBridge status, Run/Stop, Voice Command, Program Templates, and Run History panels](../assets/programs/blockly.png)
 
 - The left toolbox groups blocks into `Program`, `Navigation`, `Motion`,
   `Docking`, and `Robot State`. Only blocks connected below `start robot
@@ -183,7 +183,7 @@ writing code, then press `Run`.
 
 Trigger navigation at set times of day.
 
-![OpenAMR UI Scheduler page: add-schedule form with name, time, repeat, and target, and a list of configured schedules](<../assets/scheduler/Scheduler.png>)
+![OpenAMR UI Scheduler page: add-schedule form with name, time, repeat, and target, and a list of configured schedules](../assets/scheduler/scheduler.png)
 
 - A schedule has a name, a time of day, a repeat (`Daily` or `Once`), and a
   target — go home, navigate to a saved waypoint, or run a whole
@@ -200,7 +200,7 @@ Trigger navigation at set times of day.
 Chain several actions into one ordered sequence — go here, wait, dock — and
 run the whole thing as a "mission."
 
-![OpenAMR UI Missions page: mission list with step count and run/stop controls, and a new-mission form](<../assets/missions/missions.png>)
+![OpenAMR UI Missions page: mission list with step count and run/stop controls, and a new-mission form](../assets/missions/missions.png)
 
 - A mission is an ordered list of steps: go to a saved waypoint, go home,
   wait N seconds, dock, or undock. Reorder steps with the up/down arrows,
@@ -218,7 +218,7 @@ The calm diagnostics page (the sidebar calls it "Status"; the file is
 `InfoPage.jsx`) — camera, battery, charging, and system health, with no
 drive controls to accidentally bump.
 
-![OpenAMR UI Status page: camera feed, battery level with recent-trend sparkline, charging station status, velocity/position, and full system health panel](<../assets/status/status.png>)
+![OpenAMR UI Status page: camera feed, battery level with recent-trend sparkline, charging station status, velocity/position, and full system health panel](../assets/status/status.png)
 
 - Battery shows a live percentage plus a small rolling **trend** sparkline
   of the last 40 readings — useful for spotting "draining faster than
@@ -238,7 +238,7 @@ drive controls to accidentally bump.
 A 3D digital twin of the robot, built directly from its real URDF/Xacro
 description — no physical robot required to look at it.
 
-![OpenAMR UI Robot page: 3D model viewer, kinematic tree, link information panel, and joint controls](<../assets/robot-description/image.png>)
+![OpenAMR UI Robot page: 3D model viewer, kinematic tree, link information panel, and joint controls](../assets/robot-description/image.png)
 
 - **Description Mode** vs **Live Mode** (the switch near the top): Description
   Mode loads the model locally and needs no ROS connection at all — joint
@@ -251,28 +251,28 @@ description — no physical robot required to look at it.
   parent → child order; clicking one selects it in both the tree and the 3D
   view.
 
-  ![OpenAMR UI Robot page kinematic tree panel, expanded showing links and joints](<../assets/robot-description/kinematictree.png>)
+  ![OpenAMR UI Robot page kinematic tree panel, expanded showing links and joints](../assets/robot-description/kinematictree.png)
 
 - Selecting a link or joint fills in **Link/Joint Information** — parent,
   children, geometry, mass, inertia, or (for a joint) type, axis, limits, and
   origin — read directly from the parsed URDF.
 
-  ![OpenAMR UI Robot page joint information panel showing a fixed joint's parent link, child link, and origin](<../assets/robot-description/jointinformation.png>)
+  ![OpenAMR UI Robot page joint information panel showing a fixed joint's parent link, child link, and origin](../assets/robot-description/jointinformation.png)
 
 - **Joint Controls** only ever shows sliders for the robot's actual movable
   joints — on this robot, that's exactly two continuous wheel joints, since
   every other joint (casters, lidar, camera) is fixed and correctly gets no
   slider.
 
-  ![OpenAMR UI Robot page joint controls panel with left and right wheel joint sliders](<../assets/robot-description/jointcontrols.png>)
+  ![OpenAMR UI Robot page joint controls panel with left and right wheel joint sliders](../assets/robot-description/jointcontrols.png)
 
 - **Display Layers** toggles what's drawn on the model: visual mesh,
   collision geometry, TF/frame axes, joint axes, link names, joint names,
   center-of-mass markers, and a computed footprint outline.
 
-  ![OpenAMR UI Robot page display layers panel with all eight layer toggles enabled](<../assets/robot-description/displaylayers.png>)
+  ![OpenAMR UI Robot page display layers panel with all eight layer toggles enabled](../assets/robot-description/displaylayers.png)
 
-  ![OpenAMR UI Robot page 3D viewer with joint axes, joint names, and TF axes layers turned on](<../assets/robot-description/description.png>)
+  ![OpenAMR UI Robot page 3D viewer with joint axes, joint names, and TF axes layers turned on](../assets/robot-description/description.png)
 
 ## Devices — `DevicesPage.jsx`
 
@@ -280,7 +280,7 @@ A manual registry for external hardware — USB, CAN, network, or
 Raspberry-Pi-attached devices — with a live status badge wherever a ROS
 topic is available.
 
-![OpenAMR UI Devices page: detected serial ports, a register-a-device form, and the registered devices list](<../assets/devices/devices.png>)
+![OpenAMR UI Devices page: detected serial ports, a register-a-device form, and the registered devices list](../assets/devices/devices.png)
 
 - **Detected serial ports** lists real USB-serial devices currently plugged
   into the machine running the Flask backend — click one to prefill the
@@ -299,7 +299,7 @@ topic is available.
 "Health Centre" — one place to answer "is the whole robot actually ready?",
 aggregating signals that are otherwise scattered across several pages.
 
-![OpenAMR UI Health Centre: overall status banner, system health, lifecycle, devices, battery, robot description, diagnostics, and recent faults](<../assets/health/health.png>)
+![OpenAMR UI Health Centre: overall status banner, system health, lifecycle, devices, battery, robot description, diagnostics, and recent faults](../assets/health/health.png)
 
 - The banner at the top rolls everything up into one label — Ready, Ready
   with warnings, Needs attention, or Not ready — with a short reason
@@ -314,7 +314,7 @@ aggregating signals that are otherwise scattered across several pages.
   topic that's gone silent — color-coded by severity, so you can tell "this
   happened once and recovered" from "this is still broken" at a glance.
 
-  ![OpenAMR UI Health Centre Recent Faults panel showing one warning and five errors, each timestamped](<../assets/health/recentfaults.png>)
+  ![OpenAMR UI Health Centre Recent Faults panel showing one warning and five errors, each timestamped](../assets/health/recentfaults.png)
 
 - **Export support package** bundles all of the above — connection info,
   health rollup, recent events, a metrics snapshot, runtime config, and a
@@ -327,7 +327,7 @@ The robot's track record: distance, uptime, and how often goals and docking
 actually succeed — all derived client-side from telemetry the stack already
 publishes, no extra instrumentation needed.
 
-![OpenAMR UI Metrics page: distance travelled, current speed, session uptime, and goals-run cards, plus navigation goals and docking success/fail breakdowns](<../assets/metrics/metrics.png>)
+![OpenAMR UI Metrics page: distance travelled, current speed, session uptime, and goals-run cards, plus navigation goals and docking success/fail breakdowns](../assets/metrics/metrics.png)
 
 - Counters (distance, goal/dock outcomes, peak speed) accumulate across
   page reloads — they're kept in the browser, not reset just because you
@@ -342,7 +342,7 @@ publishes, no extra instrumentation needed.
 Record real `ros2 bag` sessions and replay them later — useful for
 debugging, demos, and dataset collection.
 
-![OpenAMR UI Recordings page: start-a-recording form with topic selection, and the saved recordings list](<../assets/recordings/recordings.png>)
+![OpenAMR UI Recordings page: start-a-recording form with topic selection, and the saved recordings list](../assets/recordings/recordings.png)
 
 - Record **all topics** or hand-pick from a checklist (scan, odometry, map,
   AMCL pose, nav status, battery, joint states, TF). Give it a name and an
@@ -360,7 +360,7 @@ debugging, demos, and dataset collection.
 A reviewable, persisted timeline of what happened — navigation outcomes,
 docking, low battery, emergency stops — for looking back after the fact.
 
-![OpenAMR UI Events page: type and severity filter pills, and a timestamped list of recorded events](<../assets/events/evnets.png>)
+![OpenAMR UI Events page: type and severity filter pills, and a timestamped list of recorded events](../assets/events/events.png)
 
 - Recorded automatically by
   [`EventRecorder`](../../web/src/components/EventRecorder.jsx) (mounted in
@@ -376,7 +376,7 @@ A live `/rosout` log console plus an "echo any topic" panel — debug the
 running stack from the browser instead of needing a sourced terminal
 alongside it.
 
-![OpenAMR UI Console page: live rosout log on the left, topic echo on the right showing raw /scan messages](<../assets/console/console.png>)
+![OpenAMR UI Console page: live rosout log on the left, topic echo on the right showing raw /scan messages](../assets/console/console.png)
 
 - `ROSOUT` streams ROS log messages with a level filter, node filter, and
   text search, and a `FOLLOW`/`Pause` toggle for when you want to freeze the
@@ -390,7 +390,7 @@ alongside it.
 
 Live Nav2 parameter tuning without a terminal.
 
-![OpenAMR UI Parameters page: a table of node/parameter/type/value rows with Read and Set buttons](<../assets/parameters/parameters.png>)
+![OpenAMR UI Parameters page: a table of node/parameter/type/value rows with Read and Set buttons](../assets/parameters/parameters.png)
 
 - Each row is one parameter on one node — add a row, type the node name
   (e.g. `/controller_server`) and parameter name (e.g.
@@ -407,7 +407,7 @@ Live Nav2 parameter tuning without a terminal.
 Manage more than one robot from this UI, and switch which one it's actually
 talking to.
 
-![OpenAMR UI Fleet page: active robot health rollup, and a roster of robots with reachability dots](<../assets/fleet/fleet.png>)
+![OpenAMR UI Fleet page: active robot health rollup, and a roster of robots with reachability dots](../assets/fleet/fleet.png)
 
 - This app holds exactly one live rosbridge connection at a time — the
   robot marked **active**. The roster's other entries only get a
@@ -426,14 +426,14 @@ talking to.
 Connection and safety defaults for this browser — saved locally, never
 shared with other operators or persisted on the robot itself.
 
-![OpenAMR UI Config page: Demo mode toggle](<../assets/configuration/demomode.png>)
+![OpenAMR UI Config page: Demo mode toggle](../assets/configuration/demomode.png)
 
 - **Demo mode** — explore the whole interface with simulated telemetry, no
   robot or robot connection required. Every page shows a permanent badge
   while it's on, and nothing simulated is ever presented as live. (Every
   screenshot in this lesson was taken with Demo Mode on.)
 
-  ![OpenAMR UI Config page: connection host/port fields resolving to a ws:// address](<../assets/configuration/connection.png>)
+  ![OpenAMR UI Config page: connection host/port fields resolving to a ws:// address](../assets/configuration/connection.png)
 
 - **Connection** — the "Robot address override"/"Robot connection port"
   fields (backed by rosbridge host/port under the hood) and the camera
@@ -444,32 +444,32 @@ shared with other operators or persisted on the robot itself.
   fix it — including its "Ready with warnings" state, not just the nominal
   one.
 
-  ![OpenAMR UI Config page: Connection diagnostics card showing a "Ready with warnings" state with a stale costmap topic flagged](<../assets/configuration/connection%20diagnostics.png>)
+  ![OpenAMR UI Config page: Connection diagnostics card showing a "Ready with warnings" state with a stale costmap topic flagged](../assets/configuration/connection-diagnostics.png)
 
 - **Saved robots** — name the current connection and save it as a profile,
   then switch with one click (the same profiles the Fleet page's roster
   builds on).
 
-  ![OpenAMR UI Config page: saved robots profile list, empty](<../assets/configuration/savedrobot.png>)
+  ![OpenAMR UI Config page: saved robots profile list, empty](../assets/configuration/savedrobot.png)
 
 - **Manual-drive safety limits** — ceiling values for the joystick and the
   Map page's max-speed slider; lowering either takes effect immediately for
   new drive commands.
 
-  ![OpenAMR UI Config page: manual-drive safety limits showing max linear speed 0.2 m/s and max angular speed 2 rad/s](<../assets/configuration/manualrivesafetylimit.png>)
+  ![OpenAMR UI Config page: manual-drive safety limits showing max linear speed 0.2 m/s and max angular speed 2 rad/s](../assets/configuration/manualrivesafetylimit.png)
 
 - **Notifications** — browser notifications for nav completion, docking, and
   low battery (needs the browser's notification permission granted, shown
   here already granted), plus the percentage threshold that counts as "low."
 
-  ![OpenAMR UI Config page: notifications panel, disabled, with permission granted and a 20% low-battery threshold](<../assets/configuration/notifications.png>)
+  ![OpenAMR UI Config page: notifications panel, disabled, with permission granted and a 20% low-battery threshold](../assets/configuration/notifications.png)
 
 - **Keep-out zones** — rectangular no-go areas drawn in map coordinates;
   visible on the Map page's `Zones` layer, but this is a visual aid only —
   real enforcement needs a Nav2 `keepout_filter` configured on the robot
   side.
 
-  ![OpenAMR UI Config page: keep-out zones editor with name/position/size fields](<../assets/configuration/keepoutzones.png>)
+  ![OpenAMR UI Config page: keep-out zones editor with name/position/size fields](../assets/configuration/keepoutzones.png)
 
 ## Notes — example plugin
 
@@ -482,7 +482,7 @@ scratchpad, deliberately simple, whose only job is to prove the plugin
 registry works end to end without touching `Header.jsx` or
 `pages/index.jsx` directly.
 
-![OpenAMR UI Notes page: a note list on the left and an empty note editor on the right](<../assets/notes/notes.png>)
+![OpenAMR UI Notes page: a note list on the left and an empty note editor on the right](../assets/notes/notes.png)
 
 If you're building your own page as a plugin instead of editing the core
 registry, this folder is the template to copy — see

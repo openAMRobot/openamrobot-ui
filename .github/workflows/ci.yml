@@ -64,6 +64,5 @@ jobs:
             "docs/**/*.md"
             "web/**/*.md"
             "ros2/**/*.md"
-            "launch/**/*.md"
             "scripts/**/*.md"
           fail: true
