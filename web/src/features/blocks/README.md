@@ -18,7 +18,7 @@ start robot program
 The UI converts those blocks into a robot plan, then sends ROS commands through
 rosbridge when you press `Run`.
 
-![Complete Blockly page with workspace, program templates, run history, backend programs, named locations, plan checks, and generated plan](<../../../../docs/assets/Programms/Blockly.png>)
+![Complete Blockly page with workspace, program templates, run history, backend programs, named locations, plan checks, and generated plan](<../../../../docs/assets/programs/Blockly.png>)
 
 ## Blockly Page Areas
 
@@ -870,9 +870,9 @@ If the plan contains direct motion, docking, undocking, emergency stop, or
 validation warnings, the page asks for confirmation before running. Confirm only
 after checking that the robot area is clear.
 
-![Plan Checks panel showing configured speed limits and a "Ready. No validation warnings." result](<../../../../docs/assets/Programms/Planchecks.png>)
+![Plan Checks panel showing configured speed limits and a "Ready. No validation warnings." result](<../../../../docs/assets/programs/Planchecks.png>)
 
-![Generated Plan panel listing queued steps built from the connected blocks](<../../../../docs/assets/Programms/generatedplan.png>)
+![Generated Plan panel listing queued steps built from the connected blocks](<../../../../docs/assets/programs/generatedplan.png>)
 
 The `Stop` button calls the same emergency stop behavior used by the
 `emergency stop` block: it publishes zero velocity and cancels navigation.
@@ -936,7 +936,7 @@ locations as a fallback.
 
 The `Named Locations` panel in the right sidebar lets you manage locations:
 
-![Named Locations panel showing location name, saved locations, x, y, yaw, save, and delete controls](<../../../../docs/assets/Programms/Named%20location.png>)
+![Named Locations panel showing location name, saved locations, x, y, yaw, save, and delete controls](<../../../../docs/assets/programs/named-location.png>)
 
 | Control       | Meaning                                               |
 | ------------- | ----------------------------------------------------- |
@@ -1155,7 +1155,7 @@ The `Program Templates` panel in the right sidebar loads ready-made Blockly
 programs into the workspace. Templates are useful for first-time users, demos,
 and quick robot checks.
 
-![Program Templates panel showing template selection and Load Template button](<../../../../docs/assets/Programms/ProgramTemplates.png>)
+![Program Templates panel showing template selection and Load Template button](<../../../../docs/assets/programs/ProgramTemplates.png>)
 
 Loading a template clears the current workspace and replaces it with the
 selected example. Save your current program first if you want to keep it.
@@ -1200,7 +1200,7 @@ can't run anything or invent an action type outside the normal blocks, see
 You must say the wake word "Monsieur" before your command (see
 [Wake Word](#wake-word)); speech before it is ignored.
 
-![Voice Command panel showing the wake word requirement and voice-to-plan flow](<../../../../docs/assets/Programms/Voicecommand.png>)
+![Voice Command panel showing the wake word requirement and voice-to-plan flow](<../../../../docs/assets/programs/Voicecommand.png>)
 
 ### Voice Command Requirements
 
@@ -1655,13 +1655,13 @@ bash scripts/run_ui_backend.sh
 The screenshots used in this guide are stored in:
 
 ```text
-docs/assets/Programms/Blockly.png
-docs/assets/Programms/ProgramTemplates.png
-docs/assets/Programms/Runhistory.png
-docs/assets/Programms/Named location.png
-docs/assets/Programms/Planchecks.png
-docs/assets/Programms/generatedplan.png
-docs/assets/Programms/Voicecommand.png
+docs/assets/programs/Blockly.png
+docs/assets/programs/ProgramTemplates.png
+docs/assets/programs/Runhistory.png
+docs/assets/programs/named-location.png
+docs/assets/programs/Planchecks.png
+docs/assets/programs/generatedplan.png
+docs/assets/programs/Voicecommand.png
 ```
 
 There isn't a dedicated screenshot for each individual toolbox category
