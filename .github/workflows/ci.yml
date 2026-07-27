@@ -55,7 +55,7 @@ jobs:
           args: >-
             --no-progress
             --exclude-loopback
-            --exclude-mail
+            --include-mail=false
             --accept 200,206,429
             --exclude '^ws://'
             --exclude 'api\.anthropic\.com'
