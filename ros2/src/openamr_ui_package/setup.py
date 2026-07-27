@@ -41,6 +41,13 @@ setup(
             os.path.join(package_name, "static", "app"),
             os.path.join("share", package_name),
         ),
+
+        # Vendored URDF/Xacro + meshes for the Robot Description page →
+        # share/openamr_ui_package/robot_description/**
+        *data_files_from_dir(
+            os.path.join(package_name, "robot_description"),
+            os.path.join("share", package_name),
+        ),
     ],
     install_requires=["setuptools"],
     tests_require=["pytest"],

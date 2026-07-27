@@ -14,41 +14,53 @@ const RouteModal = ({ routesList, headerText, modalHandler }) => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 top-0 z-[100] flex items-start justify-center bg-black bg-opacity-80">
-      <section className="relative top-[5vh] flex max-h-[90vh] w-1/2 min-w-[400px] flex-col items-center justify-center gap-3 rounded-[30px] bg-white p-8 font-[RobotoMono] xl:w-1/3">
-        <h2 className="w-full rounded-lg bg-themeMediumBlue p-7 text-center text-3xl text-white">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="route-dialog-title"
+        className="modal-surface flex max-h-[90vh] w-full max-w-lg flex-col gap-4 p-5 font-[RobotoMono] sm:p-6"
+      >
+        <h2
+          id="route-dialog-title"
+          className="text-xl font-bold text-textWhiteHover"
+        >
           {headerText}
         </h2>
 
-        <div className="h-full w-full overflow-x-auto rounded-lg bg-themeLightGray px-8 py-3">
+        <div className="max-h-[50vh] w-full overflow-y-auto rounded-xl border border-borderSubtle bg-bgSurface p-3">
           {routesList.length === 0 && (
-            <h2 className="text-center">List is empty</h2>
+            <p className="py-8 text-center text-sm text-themeTextGray">
+              No routes available
+            </p>
           )}
           <div>
-            <ul className="mx-16 mt-2 flex flex-col gap-2.5">
+            <ul className="flex flex-col gap-2">
               {routesList.map((route, index) => (
-                <li
-                  key={index}
-                  className={`cursor-pointer hover:text-themeMediumBlue ${
-                    selectedRoute === route
-                      ? "text-themeDarkBlue"
-                      : "text-black"
-                  }`}
-                  onClick={() => setSelectedRoute(route)}
-                >
-                  {route}
+                <li key={index}>
+                  <button
+                    type="button"
+                    className={`min-h-[44px] w-full rounded-lg border px-3 py-2 text-left text-sm ${
+                      selectedRoute === route
+                        ? "border-themeBlue/40 bg-themeBlue/10 text-themeBlue"
+                        : "border-transparent text-textWhiteHover hover:border-borderSubtle hover:bg-bgCard"
+                    }`}
+                    onClick={() => setSelectedRoute(route)}
+                  >
+                    {route}
+                  </button>
                 </li>
               ))}
             </ul>
           </div>
         </div>
-        <div className="flex w-full justify-center gap-8">
-          <div className="w-1/4">
+        <div className="grid w-full grid-cols-2 gap-3">
+          <div>
             <Button type={"gray"} onBtnClick={handleCancelClick}>
               Cancel
             </Button>
           </div>
-          <div className="w-1/4">
+          <div>
             <Button type={"orange"} onBtnClick={handleSubmitClick}>
               Ok
             </Button>

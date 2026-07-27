@@ -19,20 +19,29 @@ window.NAV2D.robotMarker = null;
 window.NAV2D.scanShape = null;
 window.NAV2D.robotTrailShape = null;
 window.NAV2D.robotTrail = [];
-window.NAV2D.costmapItem = null;
-window.NAV2D.costmapTopic = null;
+// Costmaps are keyed by layer name so global and local can be toggled
+// independently. "costmap" is the global costmap (kept under that name for
+// back-compat with existing saved layer state); "costmapLocal" is the local.
+window.NAV2D.costmapItems = {};
+window.NAV2D.costmapTopics = {};
+window.NAV2D.keepoutItems = [];
 window.NAV2D.queuedWaypointItems = [];
+window.NAV2D.savedWaypointItems = [];
+window.NAV2D._savedWaypointClickCallback = null;
 window.NAV2D.layerState = {
   map: true,
   costmap: false,
+  costmapLocal: false,
   scan: false,
   path: true,
   goal: true,
   waypoints: true,
+  zones: true,
   robotTrail: false,
 };
 window.NAV2D.layerOpacity = {
   costmap: 0.35,
+  costmapLocal: 0.35,
   scan: 0.32,
   path: 0.95,
   robotTrail: 0.65,
@@ -44,9 +53,15 @@ window.NAV2D.mapClient = null;
 window.NAV2D.mapClientScene = null;
 window.NAV2D.mapClientChangeBound = false;
 
+const COSTMAP_LAYERS = {
+  costmap: "/global_costmap/costmap",
+  costmapLocal: "/local_costmap/costmap",
+};
+
 const TOPICS = {
   map: "/ui/map",
   globalCostmap: "/global_costmap/costmap",
+  localCostmap: "/local_costmap/costmap",
   waypoints: "/WayPoints_topic",
   uiMessage: "/ui_message",
   uiOperation: "/ui_operation",
@@ -320,10 +335,14 @@ const applyLayerState = () => {
   if (window.NAV2D.mapClient?.currentGrid) {
     window.NAV2D.mapClient.currentGrid.visible = state.map !== false;
   }
-  if (window.NAV2D.costmapItem) {
-    window.NAV2D.costmapItem.visible = state.costmap !== false;
-    window.NAV2D.costmapItem.alpha = opacity.costmap ?? 0.35;
-  }
+  Object.entries(window.NAV2D.costmapItems || {}).forEach(([key, item]) => {
+    if (!item) return;
+    item.visible = state[key] !== false;
+    item.alpha = opacity[key] ?? opacity.costmap ?? 0.35;
+  });
+  (window.NAV2D.keepoutItems || []).forEach((shape) => {
+    shape.visible = state.zones !== false;
+  });
   if (window.NAV2D.scanShape) {
     window.NAV2D.scanShape.visible = state.scan !== false;
   }
@@ -344,68 +363,77 @@ const applyLayerState = () => {
   (window.NAV2D.queuedWaypointItems || []).forEach((marker) => {
     marker.visible = state.waypoints !== false;
   });
+  (window.NAV2D.savedWaypointItems || []).forEach(({ marker }) => {
+    marker.visible = state.waypoints !== false;
+  });
 };
 
 // Costmap grids are large and expensive through rosbridge, so only subscribe
 // while the layer is actually toggled on; tear down when it's hidden again.
-const ensureCostmapSubscription = () => {
-  if (window.NAV2D.costmapTopic) return;
+// Keyed by layer ("costmap" = global, "costmapLocal" = local) so each can be
+// shown independently.
+const ensureCostmapSubscription = (key) => {
+  if (window.NAV2D.costmapTopics[key]) return;
   const ros = window.NAV2D.ros;
   if (!ros) return;
+  const topicName = COSTMAP_LAYERS[key];
+  if (!topicName) return;
 
-  window.NAV2D.costmapTopic = createSubscribeTopic(
+  window.NAV2D.costmapTopics[key] = createSubscribeTopic(
     ros,
-    TOPICS.globalCostmap,
+    topicName,
     "nav_msgs/OccupancyGrid",
     (message) => {
       const scene = getScene();
       if (!scene) return;
 
       const mapGrid = window.NAV2D.mapClient?.currentGrid;
-      const insertIndex = window.NAV2D.costmapItem
-        ? scene.getChildIndex(window.NAV2D.costmapItem)
+      const prev = window.NAV2D.costmapItems[key];
+      const insertIndex = prev
+        ? scene.getChildIndex(prev)
         : mapGrid
           ? scene.getChildIndex(mapGrid) + 1
           : 0;
 
-      if (window.NAV2D.costmapItem) {
+      if (prev) {
         try {
-          scene.removeChild(window.NAV2D.costmapItem);
+          scene.removeChild(prev);
         } catch (e) {
           // ignore
         }
       }
 
       const grid = new window.ROS2D.OccupancyGrid({ message });
-      grid.alpha = window.NAV2D.layerOpacity?.costmap ?? 0.35;
-      grid.visible = window.NAV2D.layerState?.costmap !== false;
+      grid.alpha =
+        window.NAV2D.layerOpacity?.[key] ?? window.NAV2D.layerOpacity?.costmap ?? 0.35;
+      grid.visible = window.NAV2D.layerState?.[key] !== false;
       scene.addChildAt(grid, Math.max(insertIndex, 0));
 
-      window.NAV2D.costmapItem = grid;
+      window.NAV2D.costmapItems[key] = grid;
       bringNavigationOverlaysToFront(scene);
     },
   );
 };
 
-const teardownCostmapSubscription = () => {
-  if (window.NAV2D.costmapTopic) {
+const teardownCostmapSubscription = (key) => {
+  if (window.NAV2D.costmapTopics[key]) {
     try {
-      window.NAV2D.costmapTopic.unsubscribe();
+      window.NAV2D.costmapTopics[key].unsubscribe();
     } catch (e) {
       // ignore
     }
-    window.NAV2D.costmapTopic = null;
+    window.NAV2D.costmapTopics[key] = null;
   }
 
   const scene = getScene();
-  if (scene && window.NAV2D.costmapItem) {
+  if (scene && window.NAV2D.costmapItems[key]) {
     try {
-      scene.removeChild(window.NAV2D.costmapItem);
+      scene.removeChild(window.NAV2D.costmapItems[key]);
     } catch (e) {
       // ignore
     }
   }
-  window.NAV2D.costmapItem = null;
+  window.NAV2D.costmapItems[key] = null;
 };
 
 window.NAV2D.setLayerVisible = (layer, visible) => {
@@ -414,12 +442,48 @@ window.NAV2D.setLayerVisible = (layer, visible) => {
     [layer]: visible,
   };
 
-  if (layer === "costmap") {
-    if (visible) ensureCostmapSubscription();
-    else teardownCostmapSubscription();
+  if (COSTMAP_LAYERS[layer]) {
+    if (visible) ensureCostmapSubscription(layer);
+    else teardownCostmapSubscription(layer);
   }
 
   applyLayerState();
+};
+
+// Translucent red keep-out rectangles, defined in ROS coordinates and stored
+// in the browser (see useKeepoutZones). This is a *visual* overlay for
+// operators — actually enforcing keep-out requires a Nav2 costmap filter
+// (keepout_filter) configured on the robot; drawing them here does not stop
+// the planner from crossing them.
+window.NAV2D.setKeepoutZones = (zones) => {
+  const scene = getScene();
+  if (!scene) return;
+
+  (window.NAV2D.keepoutItems || []).forEach((shape) => {
+    try {
+      scene.removeChild(shape);
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  window.NAV2D.keepoutItems = (zones || []).map((z) => {
+    const shape = new window.createjs.Shape();
+    const w = Math.abs(z.w);
+    const h = Math.abs(z.h);
+    // Canvas y is the ROS y flipped (see marker placement elsewhere in this
+    // file), so the top-left corner in canvas space is (cx - w/2, -(cy + h/2)).
+    shape.graphics
+      .beginFill("rgba(239,68,68,0.22)")
+      .beginStroke("rgba(239,68,68,0.9)")
+      .setStrokeStyle(0.04)
+      .drawRect(z.cx - w / 2, -(z.cy + h / 2), w, h);
+    shape.visible = window.NAV2D.layerState?.zones !== false;
+    scene.addChild(shape);
+    return shape;
+  });
+
+  bringNavigationOverlaysToFront(scene);
 };
 
 // Renders the client-side (not-yet-executed) waypoint queue as persistent
@@ -453,6 +517,57 @@ window.NAV2D.setQueuedWaypoints = (poses) => {
 
 window.NAV2D.clearQueuedWaypoints = () => {
   window.NAV2D.setQueuedWaypoints([]);
+};
+
+// Renders named, localStorage-persisted "saved waypoints" (see
+// useSavedWaypoints.js / WaypointLibrary.jsx) as clickable pins, distinct
+// from the ephemeral client-side queue above and the backend's own
+// /WayPoints_topic markers. Clicking a pin fires
+// window.NAV2D._savedWaypointClickCallback(id) — set by whichever page owns
+// the saved-waypoints list — mirroring the existing _poseCallback pattern
+// used for map clicks.
+window.NAV2D.setSavedWaypoints = (waypoints) => {
+  const scene = getScene();
+  if (!scene) return;
+
+  (window.NAV2D.savedWaypointItems || []).forEach(({ marker }) => {
+    try {
+      scene.removeChild(marker);
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  window.NAV2D.savedWaypointItems = (waypoints || []).map((wp) => {
+    // Violet accent — a saved/interactive place, not a status or the
+    // in-flight goal (amber) or queued-run waypoint (teal) markers.
+    const marker = createCanvasPoint(18, { r: 139, g: 92, b: 246, a: 1 });
+    marker.x = wp.x;
+    marker.y = -wp.y;
+    marker.rotation = scene.rosQuaternionToGlobalTheta({
+      x: 0,
+      y: 0,
+      z: wp.z,
+      w: wp.w,
+    });
+    scaleMarkerToScene(marker, scene);
+    marker.visible = window.NAV2D.layerState?.waypoints !== false;
+    marker.cursor = "pointer";
+    marker.addEventListener("click", (evt) => {
+      // EaselJS's click event doesn't filter by mouse button, so a
+      // right-click on a pin would otherwise fire both this (send the
+      // robot there) and the context menu at once — ignore anything that
+      // isn't a plain left-click.
+      if (evt?.nativeEvent && evt.nativeEvent.button !== 0) return;
+      window.NAV2D._savedWaypointClickCallback?.(wp.id);
+    });
+    scene.addChild(marker);
+    return { id: wp.id, marker };
+  });
+};
+
+window.NAV2D.clearSavedWaypoints = () => {
+  window.NAV2D.setSavedWaypoints([]);
 };
 
 window.NAV2D.setLayerOpacity = (layer, opacity) => {

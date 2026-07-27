@@ -5,11 +5,11 @@ import "react-toastify/dist/ReactToastify.css";
 import Button from "../../shared/ui/Button";
 
 const TimeModal = ({ modalHandler }) => {
-  const [hoursValue, setHoursValue] = useState("");
-  const [minutesValue, setMinutesValue] = useState("");
+  const [hoursValue, setHoursValue] = useState(0);
+  const [minutesValue, setMinutesValue] = useState(0);
 
   const handleSubmitClick = () => {
-    if (!hoursValue && !minutesValue) {
+    if (hoursValue === "" && minutesValue === "") {
       toast.warn("Enter hours and minutes");
       return;
     }
@@ -37,40 +37,53 @@ const TimeModal = ({ modalHandler }) => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 top-0 z-[100] flex items-start justify-center bg-black bg-opacity-80">
-      <ToastContainer />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+      <ToastContainer theme="dark" />
 
-      <section className="relative top-[5vh] flex max-h-[90vh] w-1/2 min-w-[400px] flex-col items-center justify-center gap-3 rounded-[30px] bg-white p-8 font-[RobotoMono] xl:w-1/3">
-        <h2 className="w-full rounded-lg bg-themeMediumBlue p-7 text-center text-3xl">
-          Enter the time
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="time-dialog-title"
+        className="modal-surface flex max-h-[90vh] w-full max-w-lg flex-col gap-4 p-5 font-[RobotoMono] sm:p-6"
+      >
+        <h2
+          id="time-dialog-title"
+          className="text-xl font-bold text-textWhiteHover"
+        >
+          Waypoint wait time
         </h2>
 
-        <div className="flex gap-4">
+        <p className="text-sm leading-6 text-themeTextGray">
+          How long should the robot pause here before continuing? Leave both
+          at 0 for no pause.
+        </p>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <input
             type="number"
             value={hoursValue}
-            className="w-full rounded-lg px-8 py-3 text-xl text-black placeholder:text-themeTextGray"
-            style={{ border: "1px solid #696969" }}
+            aria-label="Hours"
+            className="min-h-[46px] w-full rounded-xl border border-borderSubtle bg-bgSurface px-4 py-3 text-base text-textWhiteHover placeholder:text-themeTextGray focus:border-themeBlue"
             placeholder="hours..."
             onChange={(e) => setHoursValue(e.target.value)}
           />
           <input
             type="number"
             value={minutesValue}
-            className="w-full rounded-lg px-8 py-3 text-xl text-black placeholder:text-themeTextGray"
-            style={{ border: "1px solid #696969" }}
+            aria-label="Minutes"
+            className="min-h-[46px] w-full rounded-xl border border-borderSubtle bg-bgSurface px-4 py-3 text-base text-textWhiteHover placeholder:text-themeTextGray focus:border-themeBlue"
             placeholder="minutes..."
             onChange={(e) => setMinutesValue(e.target.value)}
           />
         </div>
 
-        <div className="flex w-full justify-center gap-8">
-          <div className="w-1/4">
+        <div className="grid w-full grid-cols-2 gap-3">
+          <div>
             <Button type={"gray"} onBtnClick={handleCancelClick}>
               Cancel
             </Button>
           </div>
-          <div className="w-1/4">
+          <div>
             <Button type={"orange"} onBtnClick={handleSubmitClick}>
               Ok
             </Button>

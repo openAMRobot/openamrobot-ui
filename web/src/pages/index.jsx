@@ -2,21 +2,19 @@ import React from "react";
 import { Routes, Route } from "react-router";
 
 import AppLayout from "../layouts/appLayout";
-import MapPage from "./MapPage";
-import RoutePage from "./RoutePage";
-import ControlPage from "./ControlPage";
-import InfoPage from "./InfoPage";
-import BlocksPage from "./BlocksPage";
 import NotFoundPage from "./NotFoundPage";
+import { PAGE_REGISTRY } from "./registry";
 
 const Routing = () => (
   <Routes>
     <Route path="/" element={<AppLayout />}>
-      <Route index element={<MapPage />} />
-      <Route path="route" element={<RoutePage />} />
-      <Route path="control" element={<ControlPage />} />
-      <Route path="blocks" element={<BlocksPage />} />
-      <Route path="info" element={<InfoPage />} />
+      {PAGE_REGISTRY.map(({ path, component: Component }) =>
+        path === "/" ? (
+          <Route key={path} index element={<Component />} />
+        ) : (
+          <Route key={path} path={path.slice(1)} element={<Component />} />
+        ),
+      )}
       <Route path="*" element={<NotFoundPage />} />
     </Route>
   </Routes>

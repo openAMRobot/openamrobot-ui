@@ -27,7 +27,11 @@ const MapButton = ({ direction, type, onBtnClick }) => {
 
   return (
     <button
-      className="flex h-[44px] w-[44px] items-center justify-center rounded-lg border border-borderSubtle bg-bgCard text-themeBlue shadow-sm shadow-slate-200 dark:shadow-slate-950/30 transition-colors hover:border-themeBlue hover:bg-themeBlue hover:text-white active:bg-themeDarkBlue xl:h-[48px] xl:w-[48px]"
+      type="button"
+      aria-label={
+        type === "zoom" ? `Zoom ${direction}` : `Pan map ${direction}`
+      }
+      className="flex h-[44px] w-[44px] items-center justify-center rounded-lg border border-borderSubtle bg-bgCard text-themeBlue shadow-[var(--shadow-card)] transition-colors hover:border-themeBlue hover:bg-themeBlue hover:text-white active:bg-themeDarkBlue"
       onClick={onBtnClick}
     >
       <span className={`${typeClass} ${rotateClass}`} />

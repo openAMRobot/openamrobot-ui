@@ -68,7 +68,7 @@ const CircularProgressBar = ({
               transition: "stroke-dashoffset 0.5s ease 0s",
             },
             text: {
-              fill: "#22b7fc",
+              fill: "#f5f5f7",
               fontSize: "16px",
               display: "flex",
               flexDirection: "column",
