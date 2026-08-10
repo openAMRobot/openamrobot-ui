@@ -40,21 +40,24 @@ const MapComponent = ({
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h4
+        <button
+          type="button"
+          disabled={mode !== "selectMap"}
           onClick={handleMapClick}
-          className={`${
+          className={`min-h-[40px] rounded-lg px-2 text-left text-sm font-semibold ${
             mode === "selectMap"
               ? "cursor-pointer hover:text-themeMediumBlue"
               : ""
           } ${
             selectedMap === mapKey && mode === "selectMap"
-              ? "text-themeDarkBlue"
-              : "text-black"
+              ? "bg-themeBlue/10 text-themeBlue"
+              : "text-textWhiteHover"
           }`}
         >
           {mapKey} ({routes.length})
-        </h4>
+        </button>
         <button
+          type="button"
           onClick={() => setShowRoutes(!showRoutes)}
           className={`rounded bg-themeMediumBlue px-2 py-1 text-sm text-white  ${
             routes.length > 0 ? "hover:bg-themeDarkBlue" : "opacity-40"
@@ -65,20 +68,21 @@ const MapComponent = ({
         </button>
       </div>
       {showRoutes && (
-        <ul className="mx-16 mt-2 flex flex-col gap-2.5">
+        <ul className="ml-4 mt-2 flex flex-col gap-1">
           {routes.map((route, index) => (
-            <li
-              key={index}
-              className={`${
-                mode === "selectRoute"
-                  ? "cursor-pointer hover:text-themeMediumBlue"
-                  : ""
-              } ${
-                selectedRoute === route ? "text-themeDarkBlue" : "text-black"
-              }`}
-              onClick={() => handleRouteClick(route)}
-            >
-              {route}
+            <li key={index}>
+              <button
+                type="button"
+                disabled={mode !== "selectRoute"}
+                className={`min-h-[40px] w-full rounded-lg px-2 text-left text-sm ${
+                  selectedRoute === route
+                    ? "bg-themeBlue/10 text-themeBlue"
+                    : "text-themeTextGray hover:bg-bgCard hover:text-textWhiteHover"
+                }`}
+                onClick={() => handleRouteClick(route)}
+              >
+                {route}
+              </button>
             </li>
           ))}
         </ul>
@@ -161,10 +165,18 @@ const FilesModal = ({
 
   return (
     <>
-      <ToastContainer />
-      <div className="fixed bottom-0 left-0 right-0 top-0 z-[100] flex items-start justify-center bg-black bg-opacity-80">
-        <section className="relative top-[5vh] flex max-h-[90vh] w-1/2 min-w-[400px] flex-col items-center justify-center gap-3 rounded-[30px] bg-white p-8 font-[RobotoMono] xl:w-1/3">
-          <h2 className="w-full rounded-lg bg-themeMediumBlue p-7 text-center text-3xl text-white">
+      <ToastContainer theme="dark" />
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="files-dialog-title"
+          className="modal-surface flex max-h-[90vh] w-full max-w-xl flex-col gap-4 p-5 font-[RobotoMono] sm:p-6"
+        >
+          <h2
+            id="files-dialog-title"
+            className="text-xl font-bold text-textWhiteHover"
+          >
             {headerText}
           </h2>
 
@@ -172,15 +184,16 @@ const FilesModal = ({
             <input
               type="text"
               value={inputValue}
-              className="w-full rounded-lg px-8 py-3 text-xl text-black placeholder:text-themeTextGray"
-              style={{ border: "1px solid #696969" }}
+              className="min-h-[46px] w-full rounded-xl border border-borderSubtle bg-bgSurface px-4 py-3 text-base text-textWhiteHover placeholder:text-themeTextGray focus:border-themeBlue"
               placeholder={inputPlaceholder}
               onChange={(e) => setInputValue(e.target.value)}
             />
           )}
-          <div className="h-full w-full overflow-x-auto rounded-lg bg-themeLightGray px-8 py-3">
+          <div className="w-full overflow-y-auto rounded-xl border border-borderSubtle bg-bgSurface p-3">
             {filesList.length === 0 && (
-              <h2 className="text-center">List is empty</h2>
+              <p className="py-8 text-center text-sm text-themeTextGray">
+                No files available
+              </p>
             )}
             <div>
               {filesList.map((floor) => {
@@ -190,15 +203,17 @@ const FilesModal = ({
                     className="mt-2.5 flex flex-col gap-2.5"
                     key={floorKey}
                   >
-                    <h3
-                      className={`text-center text-2xl ${
+                    <button
+                      type="button"
+                      disabled={mode !== "selectGroup"}
+                      className={`min-h-[42px] w-full rounded-lg px-3 text-left text-base font-semibold ${
                         mode === "selectGroup"
                           ? "cursor-pointer hover:text-themeMediumBlue"
                           : ""
                       } ${
                         selectedGroup === floorKey && mode === "selectGroup"
-                          ? "text-themeDarkBlue"
-                          : "text-black"
+                          ? "bg-themeBlue/10 text-themeBlue"
+                          : "text-textWhiteHover"
                       }`}
                       onClick={() => {
                         if (mode === "selectGroup") {
@@ -207,7 +222,7 @@ const FilesModal = ({
                       }}
                     >
                       {floorKey}
-                    </h3>
+                    </button>
                     {floor[floorKey].map((roomObj) => {
                       const mapKey = Object.keys(roomObj)[0];
                       return (
@@ -230,13 +245,13 @@ const FilesModal = ({
               })}
             </div>
           </div>
-          <div className="flex w-full justify-center gap-8">
-            <div className="w-1/4">
+          <div className="grid w-full grid-cols-2 gap-3">
+            <div>
               <Button type={"gray"} onBtnClick={handleCancelClick}>
                 Cancel
               </Button>
             </div>
-            <div className="w-1/4">
+            <div>
               <Button type={"orange"} onBtnClick={handleSubmitClick}>
                 Ok
               </Button>

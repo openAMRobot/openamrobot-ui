@@ -17,9 +17,12 @@ export const AppConfig = {
   AMCL_POSE_TOPIC: "/ui/amcl_pose",
   NAV_STATUS_TOPIC: "/ui/navigate_to_pose/status",
   NAV_FEEDBACK_TOPIC: "/navigate_to_pose/_action/feedback",
+  NAV_CANCEL_GOAL_SERVICE: "/navigate_to_pose/_action/cancel_goal",
   DOCK_STATUS_TOPIC: "/ui/dock_robot/status",
   DOCK_TRIGGER_STATUS_TOPIC: "/dock_trigger_status",
+  DOCK_TRIGGER_TOPIC: "/dock_trigger",
   UNDOCK_STATUS_TOPIC: "/ui/undock_robot/status",
+  UNDOCK_TRIGGER_TOPIC: "/undock_robot",
   GOAL_POSE_TOPIC: "/goal_pose",
   INITIAL_POSE_TOPIC: "/initialpose",
   UI_OPERATION_TOPIC: "/ui_operation",
@@ -31,6 +34,42 @@ export const AppConfig = {
   BATTERY_TOPIC: "/battery_status",
   CHARGE_STATION_CONNECTED: "/charge_station_connected",
 
+  // Robot Description page — Live Mode joint telemetry (sensor_msgs/JointState)
+  JOINT_STATES_TOPIC: "/joint_states",
+
+  // Route editor: file/waypoint exchange with openamr_ui_package's folders_handler node
+  NAV_DATA_REQ_TOPIC: "/nav_data_req",
+  NAV_DATA_RESP_TOPIC: "/nav_data_resp",
+  NEW_WAYPOINT_TOPIC: "/new_way_point",
+  // compute_path_to_pose is a ROS2 action, not a service — there is no
+  // "/compute_path_to_pose" service on the graph to call directly. Every
+  // ROS2 action implicitly exposes a goal-submission and a result-retrieval
+  // service (the same pattern NAV_FEEDBACK_TOPIC/NAV_CANCEL_GOAL_SERVICE
+  // above already rely on for navigate_to_pose), so planning goes through
+  // these two instead.
+  COMPUTE_PATH_SEND_GOAL_SERVICE: "/compute_path_to_pose/_action/send_goal",
+  COMPUTE_PATH_GET_RESULT_SERVICE: "/compute_path_to_pose/_action/get_result",
+
   MAX_LINEAR_SPEED: 0.2,
   MAX_ANGULAR_SPEED: 2,
 };
+
+// Camera image topics selectable on the Camera panel; value must match a
+// topic actually published by the robot/simulation stack or web_video_server
+// will just show nothing for that selection.
+export const CAMERA_TOPIC_OPTIONS = [
+  { value: "/camera/color/image_raw", label: "Color" },
+  { value: "/rgb_image", label: "RGB Sim" },
+  { value: "/camera/image_raw", label: "Raw" },
+];
+export const DEFAULT_CAMERA_TOPIC = "/rgb_image";
+
+// Nav2 lifecycle-managed nodes polled/controlled from the Health page.
+// `base` is the ROS node namespace exposing get_state/change_state services.
+export const LIFECYCLE_NODES = [
+  { name: "map_server", base: "/map_server" },
+  { name: "amcl", base: "/amcl" },
+  { name: "controller", base: "/controller_server" },
+  { name: "planner", base: "/planner_server" },
+  { name: "bt_navigator", base: "/bt_navigator" },
+];

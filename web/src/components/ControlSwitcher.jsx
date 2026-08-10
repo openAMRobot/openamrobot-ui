@@ -1,11 +1,11 @@
-import React, { useState, useContext, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
-import { RosContext } from "../app/App";
+import { useRos } from "../app/App";
 
 import Switcher from "../shared/ui/Switcher";
 
 const ControlSwitcher = ({ text, activeValue, disabledValue, topicName }) => {
-  const ros = useContext(RosContext);
+  const ros = useRos();
 
   const [switcherValue, setSwitcherValue] = useState(false);
   const peripheryOperation = useRef(null);

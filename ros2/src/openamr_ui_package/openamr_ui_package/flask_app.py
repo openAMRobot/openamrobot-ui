@@ -1,20 +1,95 @@
 import os
 import json
 import re
+import signal
+import subprocess
+import time
+import ipaddress
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 import rclpy
 from rclpy.node import Node
-from flask import Flask, abort, jsonify, request, send_from_directory
+from flask import Flask, abort, jsonify, request, send_file, send_from_directory
 from ament_index_python.packages import get_package_share_directory
 from werkzeug.exceptions import HTTPException
+
+import xacro
+
+# ─────────────────────────────────────────────────────────────────────────
+# AUTH_MODE — open-source access model
+#
+# This UI must stay fully usable with zero authentication out of the box
+# (open-source, self-hosted, offline-first — see project design notes).
+# AUTH_MODE is an opt-in deployment switch for maintainers who need to lock
+# down a shared/classroom/lab robot, not a feature this app forces on
+# anyone:
+#   open     - default. No login. (only implemented mode right now)
+#   local    - backend-validated credentials/sessions for shared installs.
+#              NOT IMPLEMENTED YET: there is no user store, session/cookie
+#              handling, or password hashing in this codebase. Requesting
+#              it does not silently no-op into "unprotected" — it falls
+#              back to open and says so loudly (see AUTH_MODE_WARNING),
+#              because a maintainer believing they enabled auth when they
+#              didn't is worse than the current, honest "wide open" state.
+#   external - future OIDC/OAuth or authenticated-reverse-proxy support.
+#              NOT IMPLEMENTED YET, same reasoning as local.
+# Whichever mode is eventually real, it must be enforced here in the
+# backend — hiding frontend routes/buttons is never authorization.
+# ─────────────────────────────────────────────────────────────────────────
+VALID_AUTH_MODES = {"open", "local", "external"}
+IMPLEMENTED_AUTH_MODES = {"open"}
+
+REQUESTED_AUTH_MODE = os.environ.get("AUTH_MODE", "open").strip().lower()
+if REQUESTED_AUTH_MODE not in VALID_AUTH_MODES:
+    print(
+        f"[openamr_ui] WARNING: unknown AUTH_MODE={REQUESTED_AUTH_MODE!r}; "
+        "falling back to 'open'. Valid values: open, local, external.",
+        flush=True,
+    )
+    REQUESTED_AUTH_MODE = "open"
+
+if REQUESTED_AUTH_MODE in IMPLEMENTED_AUTH_MODES:
+    AUTH_MODE = REQUESTED_AUTH_MODE
+    AUTH_MODE_WARNING = None
+else:
+    AUTH_MODE = "open"
+    AUTH_MODE_WARNING = (
+        f"AUTH_MODE={REQUESTED_AUTH_MODE!r} was requested but is not implemented "
+        "in this version yet — running with AUTH_MODE=open (no authentication)."
+    )
+    print(f"[openamr_ui] WARNING: {AUTH_MODE_WARNING}", flush=True)
+
+
+def is_local_address(addr):
+    """True if addr is a loopback/private/link-local IP (i.e. "this network"),
+    used only to warn operators in AUTH_MODE=open — not an access control."""
+    if not addr:
+        return False
+    try:
+        ip = ipaddress.ip_address(addr)
+    except ValueError:
+        return False
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
+    return bool(ip.is_private or ip.is_loopback or ip.is_link_local)
 
 # React build is installed to share/openamr_ui_package/static/app/ by setup.py
 SHARE_DIR = get_package_share_directory("openamr_ui_package")
 REACT_BUILD_DIR = os.path.join(SHARE_DIR, "app")
 REACT_STATIC_DIR = os.path.join(REACT_BUILD_DIR, "static")
 REACT_ROS_DIR = os.path.join(REACT_BUILD_DIR, "ros")
+
+# Vendored URDF/Xacro + meshes for the Robot Description page, installed to
+# share/openamr_ui_package/robot_description/openamrobot/ by setup.py.
+# Source of truth: openAMRobot/openamr-platform-sw's openamrobot_description
+# ROS package. Kept as a data subfolder here (not a second ROS package of the
+# same name) so this UI workspace never collides with the real robot-software
+# workspace if the two are ever colcon-built together.
+ROBOT_DESC_NAME = "openamrobot"
+ROBOT_DESC_DIR = os.path.join(SHARE_DIR, "robot_description", ROBOT_DESC_NAME)
+ROBOT_DESC_XACRO = os.path.join(ROBOT_DESC_DIR, "urdf", "robo_urdf.urdf.xacro")
+_robot_urdf_cache = {"mtime": None, "xml": None}
 
 # Make Flask serve /static/* from the CRA build folder
 app = Flask(__name__, static_folder=REACT_STATIC_DIR, static_url_path="/static")
@@ -29,6 +104,18 @@ BLOCK_LOCATIONS_FILE = os.path.join(
 BLOCK_RUN_HISTORY_FILE = os.path.join(
     os.path.expanduser("~"), ".openamr_ui", "block_run_history.json"
 )
+RECORDING_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$")
+RECORDINGS_DIR = os.path.join(os.path.expanduser("~"), ".openamr_ui", "recordings")
+RECORDINGS_INDEX_FILE = os.path.join(RECORDINGS_DIR, "index.json")
+TOPIC_NAME_RE = re.compile(r"^/[A-Za-z0-9_/]{1,255}$")
+
+# In-process only — this Flask server runs as a single Werkzeug process
+# (threaded=True, not multi-worker), so module-level state is safe here.
+# Neither survives a Flask restart: the real `ros2 bag` OS process would
+# keep running orphaned if that happened mid-recording/replay (flagged,
+# not solved — see _reconcile_recordings_on_startup below).
+_recording = {"proc": None, "id": None, "name": None, "started_at": None, "topics": None}
+_replay = {"proc": None, "id": None, "started_at": None, "paused": False, "rate": 1.0}
 DEFAULT_BLOCK_LOCATIONS = {
     "Home": {"x": 0, "y": 0, "yaw": 0},
     "Charging Station": {"x": 0.5, "y": 0, "yaw": 0},
@@ -319,6 +406,79 @@ def parse_float(value, field: str):
     return parsed
 
 
+def ensure_recordings_dir():
+    os.makedirs(RECORDINGS_DIR, exist_ok=True)
+
+
+def read_recordings_index():
+    if not os.path.exists(RECORDINGS_INDEX_FILE):
+        return []
+    try:
+        with open(RECORDINGS_INDEX_FILE, "r", encoding="utf-8") as index_file:
+            return json.load(index_file)
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def write_recordings_index(entries):
+    ensure_recordings_dir()
+    with open(RECORDINGS_INDEX_FILE, "w", encoding="utf-8") as index_file:
+        json.dump(entries, index_file, indent=2, sort_keys=True)
+
+
+def dir_size_bytes(path):
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for filename in files:
+            try:
+                total += os.path.getsize(os.path.join(root, filename))
+            except OSError:
+                pass
+    return total
+
+
+def validate_recording_name(name: str):
+    if not RECORDING_NAME_RE.match(name or ""):
+        abort(
+            400,
+            "Recording names must be 1-64 characters and may use letters, numbers, spaces, dots, underscores, or hyphens.",
+        )
+
+
+def validate_topics(topics):
+    if topics is None:
+        return None
+    if not isinstance(topics, list) or not topics:
+        abort(400, "topics must be a non-empty array of topic names, or omitted to record everything.")
+    for topic in topics:
+        if not isinstance(topic, str) or not TOPIC_NAME_RE.match(topic):
+            abort(400, f"Invalid topic name: {topic!r}")
+    return topics
+
+
+def _reconcile_recordings_on_startup():
+    """Any index entry still marked "recording" means Flask restarted
+    mid-recording — the real ros2 bag process, if it's even still alive, is
+    now orphaned and un-trackable (a fresh Python process has no handle to
+    it). Don't guess whether it's fine; mark it honestly as interrupted."""
+    entries = read_recordings_index()
+    changed = False
+    for entry in entries:
+        if entry.get("status") == "recording":
+            entry["status"] = "interrupted"
+            print(
+                f"[openamr_ui_package] WARNING: recording '{entry.get('name')}' was still "
+                "marked active at startup — Flask must have restarted mid-recording. "
+                "Marked interrupted; check whether a leftover ros2 bag process is still running."
+            )
+            changed = True
+    if changed:
+        write_recordings_index(entries)
+
+
+_reconcile_recordings_on_startup()
+
+
 def read_program_file(path: str):
     with open(path, "r", encoding="utf-8") as program_file:
         return json.load(program_file)
@@ -405,6 +565,21 @@ def handle_http_error(error):
             error.code,
         )
     return error
+
+
+@app.route("/api/auth/status", methods=["GET"])
+def auth_status():
+    remote_addr = request.remote_addr
+    return jsonify(
+        {
+            "mode": AUTH_MODE,
+            "requestedMode": REQUESTED_AUTH_MODE,
+            "implemented": REQUESTED_AUTH_MODE in IMPLEMENTED_AUTH_MODES,
+            "warning": AUTH_MODE_WARNING,
+            "remoteAddr": remote_addr,
+            "isLocalNetwork": is_local_address(remote_addr),
+        }
+    )
 
 
 @app.route("/api/block-programs", methods=["GET"])
@@ -585,6 +760,382 @@ def create_voice_plan():
     plan = sanitize_plan_actions(raw_actions)
 
     return jsonify({"plan": plan, "transcript": transcript})
+
+
+def get_robot_description_urdf_xml():
+    """Xacro-process the vendored robot description, cached by file mtime.
+
+    Re-reads gazebo_control.xacro's mtime too since it's xacro:included by
+    the main file and edits there should also invalidate the cache.
+    """
+    if not os.path.exists(ROBOT_DESC_XACRO):
+        abort(404, "Robot description xacro not found on this install.")
+
+    included = os.path.join(os.path.dirname(ROBOT_DESC_XACRO), "gazebo_control.xacro")
+    try:
+        mtime = (
+            os.path.getmtime(ROBOT_DESC_XACRO),
+            os.path.getmtime(included) if os.path.exists(included) else 0,
+        )
+    except OSError as error:
+        abort(500, f"Could not stat robot description files: {error}")
+
+    if _robot_urdf_cache["mtime"] == mtime and _robot_urdf_cache["xml"] is not None:
+        return _robot_urdf_cache["xml"]
+
+    try:
+        doc = xacro.process_file(ROBOT_DESC_XACRO)
+        xml_text = doc.toxml()
+    except Exception as error:  # xacro raises plain Exception/xml errors
+        abort(500, f"Xacro processing failed: {error}")
+
+    _robot_urdf_cache["mtime"] = mtime
+    _robot_urdf_cache["xml"] = xml_text
+    return xml_text
+
+
+@app.route("/api/robot-description/manifest", methods=["GET"])
+def robot_description_manifest():
+    xacro_exists = os.path.exists(ROBOT_DESC_XACRO)
+    return jsonify(
+        {
+            "name": "robo_urdf",
+            "displayName": "OpenAMRobot",
+            "package": "openamrobot_description",
+            "sourceRepo": "openAMRobot/openamr-platform-sw",
+            "available": xacro_exists,
+            "urdfUrl": "/api/robot-description/urdf",
+            "assetBaseUrl": "/api/robot-description/assets",
+            "packages": {"openamrobot_description": "/api/robot-description/assets"},
+        }
+    )
+
+
+@app.route("/api/robot-description/urdf", methods=["GET"])
+def robot_description_urdf():
+    xml_text = get_robot_description_urdf_xml()
+    return app.response_class(xml_text, mimetype="application/xml")
+
+
+@app.route("/api/robot-description/assets/<path:filename>", methods=["GET"])
+def robot_description_assets(filename: str):
+    # filename comes straight from the URL path — normalize and confirm the
+    # resolved path stays inside ROBOT_DESC_DIR before serving anything.
+    requested = os.path.normpath(os.path.join(ROBOT_DESC_DIR, filename))
+    if not requested.startswith(os.path.join(ROBOT_DESC_DIR, "")):
+        abort(404, "Asset not found.")
+    if not os.path.isfile(requested):
+        abort(404, "Asset not found.")
+
+    rel_dir = os.path.dirname(filename)
+    rel_name = os.path.basename(filename)
+    return send_from_directory(os.path.join(ROBOT_DESC_DIR, rel_dir), rel_name)
+
+
+@app.route("/api/devices/serial-ports", methods=["GET"])
+def list_serial_ports():
+    """Real serial ports currently present on this host (USB/Pi-attached).
+
+    This is genuine detection, not a stand-in for full USB/CAN plug-and-play
+    support: it only sees serial devices on the machine running this Flask
+    process, via pyserial's udev-backed enumeration. Every Linux box also
+    exposes /dev/ttyS0-31 legacy platform serial ports whether or not
+    anything is attached to them; pyserial reports hwid "n/a" for those, so
+    they're filtered out here to avoid a permanently-populated fake list.
+    """
+    try:
+        from serial.tools import list_ports
+    except ImportError:
+        return jsonify({"ports": [], "supported": False})
+
+    ports = [
+        {
+            "device": port.device,
+            "description": port.description if port.description != "n/a" else None,
+            "manufacturer": port.manufacturer,
+            "vid": port.vid,
+            "pid": port.pid,
+        }
+        for port in list_ports.comports()
+        if port.hwid and port.hwid != "n/a"
+    ]
+    return jsonify({"ports": ports, "supported": True})
+
+
+def _recording_alive():
+    return _recording["proc"] is not None and _recording["proc"].poll() is None
+
+
+def _replay_alive():
+    return _replay["proc"] is not None and _replay["proc"].poll() is None
+
+
+def _finalize_recording(interrupted=False):
+    """Common cleanup for a recording that has stopped, one way or another
+    — clean Stop request, the subprocess exiting on its own (duration/size
+    limit), or a leftover marked interrupted at startup."""
+    entries = read_recordings_index()
+    for entry in entries:
+        if entry.get("id") == _recording["id"]:
+            entry["status"] = "interrupted" if interrupted else "complete"
+            entry["endedAt"] = datetime.now(timezone.utc).isoformat()
+            bag_path = os.path.join(RECORDINGS_DIR, entry["id"])
+            entry["sizeBytes"] = dir_size_bytes(bag_path) if os.path.isdir(bag_path) else 0
+            break
+    write_recordings_index(entries)
+    _recording.update({"proc": None, "id": None, "name": None, "started_at": None, "topics": None})
+
+
+@app.route("/api/recordings", methods=["GET"])
+def list_recordings():
+    # Reap a recording that exited on its own (e.g. hit a size/duration
+    # limit) since the last time anyone asked.
+    if _recording["id"] and not _recording_alive():
+        _finalize_recording()
+    return jsonify({"recordings": read_recordings_index()})
+
+
+@app.route("/api/recordings/status", methods=["GET"])
+def recordings_status():
+    if _recording["id"] and not _recording_alive():
+        _finalize_recording()
+    if _replay["id"] and not _replay_alive():
+        _replay.update({"proc": None, "id": None, "started_at": None, "paused": False, "rate": 1.0})
+
+    recording = None
+    if _recording["id"]:
+        recording = {
+            "id": _recording["id"],
+            "name": _recording["name"],
+            "startedAt": _recording["started_at"],
+            "topics": _recording["topics"],
+        }
+
+    replay = None
+    if _replay["id"]:
+        replay = {
+            "id": _replay["id"],
+            "startedAt": _replay["started_at"],
+            "paused": _replay["paused"],
+            "rate": _replay["rate"],
+        }
+
+    return jsonify({"recording": recording, "replay": replay})
+
+
+@app.route("/api/recordings/start", methods=["POST", "OPTIONS"])
+def start_recording():
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    if _recording["id"] and _recording_alive():
+        abort(409, "A recording is already in progress — stop it before starting another.")
+
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get("name") or "").strip()
+    validate_recording_name(name)
+    topics = validate_topics(payload.get("topics"))
+    description = str(payload.get("description") or "").strip()[:500]
+
+    ensure_recordings_dir()
+    recording_id = f"{re.sub(r'[^A-Za-z0-9]+', '_', name).strip('_') or 'recording'}_{int(time.time())}"
+    bag_path = os.path.join(RECORDINGS_DIR, recording_id)
+
+    cmd = ["ros2", "bag", "record", "-o", bag_path, "--disable-keyboard-controls"]
+    cmd += topics if topics else ["--all-topics"]
+
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        abort(500, "ros2 command not found on this backend — is the ROS environment sourced?")
+
+    started_at = datetime.now(timezone.utc).isoformat()
+    _recording.update(
+        {"proc": proc, "id": recording_id, "name": name, "started_at": started_at, "topics": topics}
+    )
+
+    entries = read_recordings_index()
+    entries.append(
+        {
+            "id": recording_id,
+            "name": name,
+            "description": description,
+            "topics": topics,
+            "status": "recording",
+            "startedAt": started_at,
+            "endedAt": None,
+            "sizeBytes": 0,
+        }
+    )
+    write_recordings_index(entries)
+
+    return jsonify({"id": recording_id, "name": name, "startedAt": started_at}), 201
+
+
+@app.route("/api/recordings/stop", methods=["POST", "OPTIONS"])
+def stop_recording():
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    if not _recording["id"]:
+        abort(409, "No recording is in progress.")
+
+    if _recording_alive():
+        _recording["proc"].send_signal(signal.SIGINT)
+        try:
+            _recording["proc"].wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            _recording["proc"].kill()
+
+    _finalize_recording()
+    return jsonify({"stopped": True})
+
+
+@app.route("/api/recordings/<recording_id>", methods=["DELETE", "OPTIONS"])
+def delete_recording(recording_id):
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    if _recording["id"] == recording_id or _replay["id"] == recording_id:
+        abort(409, "That recording is currently active — stop it first.")
+
+    entries = read_recordings_index()
+    remaining = [entry for entry in entries if entry.get("id") != recording_id]
+    if len(remaining) == len(entries):
+        abort(404, "Recording not found.")
+
+    bag_path = os.path.join(RECORDINGS_DIR, recording_id)
+    if os.path.isdir(bag_path):
+        import shutil
+
+        shutil.rmtree(bag_path, ignore_errors=True)
+
+    write_recordings_index(remaining)
+    return jsonify({"deleted": recording_id})
+
+
+@app.route("/api/recordings/<recording_id>/download", methods=["GET"])
+def download_recording(recording_id):
+    # A rosbag is a directory (metadata.yaml + one or more .db3/.mcap files),
+    # so we can't hand back a single file directly — zip the whole bag dir to a
+    # temp archive and stream that. The recording must have finished; a bag
+    # that's still being written isn't safe to archive.
+    entries = read_recordings_index()
+    entry = next((e for e in entries if e.get("id") == recording_id), None)
+    if not entry:
+        abort(404, "Recording not found.")
+    if _recording["id"] == recording_id and _recording_alive():
+        abort(409, "That recording is still in progress — stop it before downloading.")
+
+    bag_path = os.path.join(RECORDINGS_DIR, recording_id)
+    if not os.path.isdir(bag_path):
+        abort(404, "Recording files are missing on disk.")
+
+    import shutil
+    import tempfile
+
+    tmp_base = os.path.join(tempfile.gettempdir(), f"{recording_id}")
+    archive_path = shutil.make_archive(tmp_base, "zip", root_dir=bag_path)
+
+    response = send_file(
+        archive_path,
+        as_attachment=True,
+        download_name=f"{recording_id}.zip",
+        mimetype="application/zip",
+    )
+
+    # Delete the temp archive once the response has been fully sent — we only
+    # needed it to stream; keeping it would leak disk on every download.
+    @response.call_on_close
+    def _cleanup():
+        try:
+            os.remove(archive_path)
+        except OSError:
+            pass
+
+    return response
+
+
+@app.route("/api/recordings/<recording_id>/replay/start", methods=["POST", "OPTIONS"])
+def start_replay(recording_id):
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    if _replay["id"] and _replay_alive():
+        abort(409, "A replay is already in progress — stop it before starting another.")
+
+    entries = read_recordings_index()
+    entry = next((e for e in entries if e.get("id") == recording_id), None)
+    if not entry:
+        abort(404, "Recording not found.")
+    if entry.get("status") not in ("complete", "interrupted"):
+        abort(409, "That recording hasn't finished yet.")
+
+    bag_path = os.path.join(RECORDINGS_DIR, recording_id)
+    if not os.path.isdir(bag_path):
+        abort(404, "Recording files are missing on disk.")
+
+    payload = request.get_json(silent=True) or {}
+    rate = parse_float(payload.get("rate", 1.0), "rate")
+    if rate <= 0 or rate > 10:
+        abort(400, "rate must be between 0 and 10.")
+
+    cmd = ["ros2", "bag", "play", bag_path, "--disable-keyboard-controls", "-r", str(rate)]
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        abort(500, "ros2 command not found on this backend — is the ROS environment sourced?")
+
+    started_at = datetime.now(timezone.utc).isoformat()
+    _replay.update(
+        {"proc": proc, "id": recording_id, "started_at": started_at, "paused": False, "rate": rate}
+    )
+    return jsonify({"id": recording_id, "startedAt": started_at, "rate": rate}), 201
+
+
+@app.route("/api/recordings/replay/stop", methods=["POST", "OPTIONS"])
+def stop_replay():
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    if not _replay["id"]:
+        abort(409, "No replay is in progress.")
+
+    if _replay_alive():
+        if _replay["paused"]:
+            _replay["proc"].send_signal(signal.SIGCONT)
+        _replay["proc"].send_signal(signal.SIGINT)
+        try:
+            _replay["proc"].wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            _replay["proc"].kill()
+
+    _replay.update({"proc": None, "id": None, "started_at": None, "paused": False, "rate": 1.0})
+    return jsonify({"stopped": True})
+
+
+@app.route("/api/recordings/replay/pause", methods=["POST", "OPTIONS"])
+def pause_replay():
+    if request.method == "OPTIONS":
+        return ("", 204)
+    if not _replay["id"] or not _replay_alive():
+        abort(409, "No replay is in progress.")
+    if not _replay["paused"]:
+        _replay["proc"].send_signal(signal.SIGSTOP)
+        _replay["paused"] = True
+    return jsonify({"paused": True})
+
+
+@app.route("/api/recordings/replay/resume", methods=["POST", "OPTIONS"])
+def resume_replay():
+    if request.method == "OPTIONS":
+        return ("", 204)
+    if not _replay["id"] or not _replay_alive():
+        abort(409, "No replay is in progress.")
+    if _replay["paused"]:
+        _replay["proc"].send_signal(signal.SIGCONT)
+        _replay["paused"] = False
+    return jsonify({"paused": False})
 
 
 @app.route("/ros/<path:filename>")

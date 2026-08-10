@@ -1,13 +1,13 @@
-import React, { useContext, useRef, useEffect } from "react";
+import React, { useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import moment from "moment";
 
 import { AppConfig } from "../shared/constants/index";
-import { RosContext } from "../app/App";
+import { useRos } from "../app/App";
 import { logsSelector, setLogs, addSingleLog } from "../stores";
 
 const RobotLog = () => {
-  const ros = useContext(RosContext);
+  const ros = useRos();
   const dispatch = useDispatch();
   const { logs } = useSelector(logsSelector);
 
@@ -26,7 +26,7 @@ const RobotLog = () => {
   }, [ros, dispatch]);
 
   return (
-    <article className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-borderSubtle bg-bgCard font-[RobotoMono]">
+    <article className="dashboard-card flex h-full w-full flex-col overflow-hidden font-[RobotoMono]">
       <header className="flex items-center justify-between border-b border-borderSubtle bg-bgSurface px-4 py-2">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-themeBlue">
           Messages

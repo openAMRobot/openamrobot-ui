@@ -1,0 +1,217 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1600" viewBox="0 0 2400 1600" role="img" aria-labelledby="diagram-title diagram-description">
+  <title id="diagram-title">OpenAMRobot UI architecture</title>
+  <desc id="diagram-description">The React frontend uses separate HTTP, WebSocket, and MJPEG paths. ROS bridge, UI helper nodes, and the external robot stack are peers on the ROS 2 graph. Demo Mode stays entirely in the browser.</desc>
+
+  <defs>
+    <marker id="arrow-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#172033"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0868b8"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#19783c"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6d28d9"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#152033" flood-opacity="0.10"/>
+    </filter>
+    <style>
+      .title { font: 700 52px Arial, sans-serif; fill: #111827; }
+      .subtitle { font: 400 20px Arial, sans-serif; fill: #5d6b82; }
+      .section-title { font: 700 28px Arial, sans-serif; fill: #172033; letter-spacing: 0.4px; }
+      .box-title { font: 700 23px Arial, sans-serif; fill: #172033; }
+      .box-copy { font: 400 17px Arial, sans-serif; fill: #5d6b82; }
+      .small-copy { font: 400 15px Arial, sans-serif; fill: #5d6b82; }
+      .label { font: 600 16px Arial, sans-serif; fill: #35506f; }
+      .transport-label { font: 700 18px Arial, sans-serif; fill: #0868b8; }
+      .box { fill: #ffffff; stroke-width: 2; filter: url(#shadow); }
+      .arrow { fill: none; stroke: #172033; stroke-width: 3; marker-end: url(#arrow-dark); }
+      .arrow-both { fill: none; stroke: #172033; stroke-width: 3; marker-start: url(#arrow-dark); marker-end: url(#arrow-dark); }
+      .blue-arrow { fill: none; stroke: #0868b8; stroke-width: 4; marker-end: url(#arrow-blue); }
+      .green-arrow { fill: none; stroke: #19783c; stroke-width: 4; marker-end: url(#arrow-green); }
+      .green-both { fill: none; stroke: #19783c; stroke-width: 4; marker-start: url(#arrow-green); marker-end: url(#arrow-green); }
+      .purple-both { fill: none; stroke: #6d28d9; stroke-width: 4; marker-start: url(#arrow-purple); marker-end: url(#arrow-purple); }
+      .dashed { stroke-dasharray: 10 8; }
+    </style>
+  </defs>
+
+  <rect width="2400" height="1600" fill="#ffffff"/>
+
+  <text id="diagram-title-text" x="1200" y="62" text-anchor="middle" class="title">OpenAMRobot UI Architecture</text>
+  <text x="1200" y="94" text-anchor="middle" class="subtitle">Browser application, independent network paths, UI ROS nodes, and the shared robot graph</text>
+
+  <!-- Browser frontend -->
+  <rect x="40" y="120" width="2320" height="350" rx="14" fill="#eaf4ff" stroke="#0870c9" stroke-width="3"/>
+  <text x="1200" y="158" text-anchor="middle" class="section-title">BROWSER FRONTEND (React)</text>
+
+  <rect class="box" x="75" y="190" width="285" height="108" rx="10" stroke="#0870c9"/>
+  <text x="217.5" y="228" text-anchor="middle" class="box-title">web/src/index.js</text>
+  <text x="217.5" y="260" text-anchor="middle" class="box-copy">Installs plugins and renders App</text>
+
+  <rect class="box" x="430" y="178" width="430" height="132" rx="10" stroke="#0870c9"/>
+  <text x="645" y="216" text-anchor="middle" class="box-title">web/src/app/App.jsx</text>
+  <text x="645" y="248" text-anchor="middle" class="box-copy">Runtime configuration and shared ROS context</text>
+  <text x="645" y="276" text-anchor="middle" class="box-copy">Opens one rosbridge connection in Live Mode</text>
+
+  <rect class="box" x="930" y="178" width="430" height="132" rx="10" stroke="#0870c9"/>
+  <text x="1145" y="216" text-anchor="middle" class="box-title">Routes + page registry</text>
+  <text x="1145" y="248" text-anchor="middle" class="box-copy">17 built-in pages plus registered plugins</text>
+  <text x="1145" y="276" text-anchor="middle" class="box-copy">Map, Routes, Programs, Health, and more</text>
+
+  <rect class="box" x="1430" y="178" width="500" height="132" rx="10" stroke="#0870c9"/>
+  <text x="1680" y="216" text-anchor="middle" class="box-title">Components + feature modules</text>
+  <text x="1680" y="248" text-anchor="middle" class="box-copy">Map, camera, joystick, missions, diagnostics,</text>
+  <text x="1680" y="276" text-anchor="middle" class="box-copy">recordings, robot model, console, and controls</text>
+
+  <rect class="box" x="2000" y="178" width="325" height="132" rx="10" stroke="#0870c9"/>
+  <text x="2162.5" y="216" text-anchor="middle" class="box-title">Redux provider</text>
+  <text x="2162.5" y="248" text-anchor="middle" class="box-copy">Robot log slice</text>
+  <text x="2162.5" y="276" text-anchor="middle" class="box-copy">Shared application state</text>
+
+  <path class="arrow" d="M 360 244 H 430"/>
+  <path class="arrow" d="M 860 244 H 930"/>
+  <path class="arrow" d="M 1360 244 H 1430"/>
+  <path class="arrow-both" d="M 1930 244 H 2000"/>
+
+  <rect x="430" y="350" width="430" height="82" rx="10" fill="#eaf8ef" stroke="#1b7f42" stroke-width="2"/>
+  <text x="645" y="382" text-anchor="middle" class="box-title">Demo transport</text>
+  <text x="645" y="411" text-anchor="middle" class="box-copy">Synthetic data in the browser — no network or ROS</text>
+  <path class="green-arrow dashed" d="M 645 310 V 350"/>
+  <path class="green-arrow dashed" d="M 860 391 H 900 V 330 H 1680 V 310"/>
+
+  <rect x="930" y="350" width="1400" height="82" rx="10" fill="#ffffff" stroke="#8aa2bf" stroke-width="2"/>
+  <text x="1630" y="382" text-anchor="middle" class="box-title">Live Mode uses three independent browser communication paths</text>
+  <text x="1630" y="411" text-anchor="middle" class="box-copy">Loading the page and REST calls are separate from ROS messages and camera streaming</text>
+
+  <!-- Browser transports -->
+  <rect x="40" y="495" width="2320" height="170" rx="14" fill="#f7f9fc" stroke="#7c8ba1" stroke-width="2"/>
+  <text x="1200" y="532" text-anchor="middle" class="section-title">LIVE-MODE NETWORK PATHS</text>
+
+  <rect class="box" x="85" y="560" width="650" height="75" rx="10" stroke="#0870c9"/>
+  <text x="410" y="590" text-anchor="middle" class="transport-label">HTTP(S) :5050</text>
+  <text x="410" y="617" text-anchor="middle" class="box-copy">React files, REST APIs, URDF assets, recordings</text>
+
+  <rect class="box" x="875" y="560" width="650" height="75" rx="10" stroke="#0870c9"/>
+  <text x="1200" y="590" text-anchor="middle" class="transport-label">ROSLIB.js WebSocket :9090</text>
+  <text x="1200" y="617" text-anchor="middle" class="box-copy">ROS topics, services, actions, and rosapi requests</text>
+
+  <rect class="box" x="1665" y="560" width="650" height="75" rx="10" stroke="#0870c9"/>
+  <text x="1990" y="590" text-anchor="middle" class="transport-label">MJPEG HTTP :8080</text>
+  <text x="1990" y="617" text-anchor="middle" class="box-copy">Camera image stream loaded directly by the browser</text>
+
+  <!-- Main launch -->
+  <rect x="40" y="700" width="2320" height="330" rx="14" fill="#fff4e8" stroke="#d86700" stroke-width="3"/>
+  <text x="1200" y="740" text-anchor="middle" class="section-title">MAIN UI SERVICES — new_ui_launch.py</text>
+  <text x="1200" y="768" text-anchor="middle" class="subtitle">Included by openamr_ui_bringup/ui.launch.py; Flask and relays always start, while external service packages are checked first</text>
+
+  <rect class="box" x="70" y="810" width="340" height="145" rx="10" stroke="#d86700"/>
+  <text x="240" y="849" text-anchor="middle" class="box-title">flask_app</text>
+  <text x="240" y="880" text-anchor="middle" class="box-copy">Serves the compiled React app</text>
+  <text x="240" y="908" text-anchor="middle" class="box-copy">and backend REST APIs</text>
+  <text x="240" y="936" text-anchor="middle" class="small-copy">HTTP(S) on port 5050</text>
+
+  <rect class="box" x="455" y="810" width="340" height="145" rx="10" stroke="#d86700"/>
+  <text x="625" y="849" text-anchor="middle" class="box-title">rosbridge_websocket</text>
+  <text x="625" y="880" text-anchor="middle" class="box-copy">Browser gateway to ROS 2</text>
+  <text x="625" y="908" text-anchor="middle" class="box-copy">Required for Live Mode control</text>
+  <text x="625" y="936" text-anchor="middle" class="small-copy">Port 9090 • conditional package</text>
+
+  <rect class="box" x="840" y="810" width="340" height="145" rx="10" stroke="#d86700"/>
+  <text x="1010" y="849" text-anchor="middle" class="box-title">web_video_server</text>
+  <text x="1010" y="880" text-anchor="middle" class="box-copy">Subscribes to ROS image topics</text>
+  <text x="1010" y="908" text-anchor="middle" class="box-copy">and exposes MJPEG over HTTP</text>
+  <text x="1010" y="936" text-anchor="middle" class="small-copy">Port 8080 • optional</text>
+
+  <rect class="box" x="1225" y="810" width="340" height="145" rx="10" stroke="#d86700"/>
+  <text x="1395" y="849" text-anchor="middle" class="box-title">rosapi</text>
+  <text x="1395" y="880" text-anchor="middle" class="box-copy">ROS graph helper services</text>
+  <text x="1395" y="908" text-anchor="middle" class="box-copy">used through rosbridge</text>
+  <text x="1395" y="936" text-anchor="middle" class="small-copy">Optional diagnostics enhancement</text>
+
+  <rect class="box" x="1610" y="810" width="340" height="145" rx="10" stroke="#d86700"/>
+  <text x="1780" y="849" text-anchor="middle" class="box-title">map_volatile_relay</text>
+  <text x="1780" y="880" text-anchor="middle" class="box-copy">TRANSIENT_LOCAL → VOLATILE</text>
+  <text x="1780" y="908" text-anchor="middle" class="box-copy">/map → /ui/map</text>
+  <text x="1780" y="936" text-anchor="middle" class="small-copy">Browser-friendly map QoS</text>
+
+  <rect class="box" x="1995" y="810" width="340" height="145" rx="10" stroke="#d86700"/>
+  <text x="2165" y="849" text-anchor="middle" class="box-title">nav_relays</text>
+  <text x="2165" y="880" text-anchor="middle" class="box-copy">AMCL pose and action status</text>
+  <text x="2165" y="908" text-anchor="middle" class="box-copy">republished under /ui/*</text>
+  <text x="2165" y="936" text-anchor="middle" class="small-copy">Navigation, dock, and undock</text>
+
+  <path class="blue-arrow" d="M 410 635 V 685 H 240 V 810"/>
+  <path class="blue-arrow" d="M 1200 635 V 685 H 625 V 810"/>
+  <path class="blue-arrow" d="M 1990 635 V 685 H 1010 V 810"/>
+
+  <!-- Shared graph -->
+  <rect x="40" y="1060" width="2320" height="92" rx="12" fill="#edf8f0" stroke="#19783c" stroke-width="3"/>
+  <text x="1200" y="1098" text-anchor="middle" class="section-title">SHARED ROS 2 GRAPH (DDS)</text>
+  <text x="1200" y="1128" text-anchor="middle" class="subtitle">Rosbridge, rosapi, UI nodes, helper nodes, and the robot stack are peers—not a chained proxy pipeline</text>
+
+  <path class="green-both" d="M 625 955 V 1060"/>
+  <path class="green-both" d="M 1010 955 V 1060"/>
+  <path class="green-both" d="M 1395 955 V 1060"/>
+  <path class="green-both" d="M 1780 955 V 1060"/>
+  <path class="green-both" d="M 2165 955 V 1060"/>
+  <path class="green-both dashed" d="M 240 955 V 1060"/>
+
+  <!-- Helper launch -->
+  <rect x="40" y="1185" width="900" height="370" rx="14" fill="#eaf8ef" stroke="#19783c" stroke-width="3"/>
+  <text x="490" y="1225" text-anchor="middle" class="section-title">SEPARATE HELPER LAUNCH — physnode_launch.py</text>
+  <text x="490" y="1253" text-anchor="middle" class="subtitle">Required for map/route file operations and CSV route following</text>
+
+  <rect class="box" x="80" y="1290" width="390" height="125" rx="10" stroke="#19783c"/>
+  <text x="275" y="1328" text-anchor="middle" class="box-title">folders_handler</text>
+  <text x="275" y="1359" text-anchor="middle" class="box-copy">Map, route, and waypoint file operations</text>
+  <text x="275" y="1387" text-anchor="middle" class="small-copy">Calls /map_server/load_map</text>
+
+  <rect class="box" x="510" y="1290" width="390" height="125" rx="10" stroke="#19783c"/>
+  <text x="705" y="1328" text-anchor="middle" class="box-title">waypoint_nav</text>
+  <text x="705" y="1359" text-anchor="middle" class="box-copy">Optional CSV waypoint follower</text>
+  <text x="705" y="1387" text-anchor="middle" class="small-copy">Uses Nav2 Simple Commander</text>
+
+  <rect x="80" y="1440" width="820" height="82" rx="10" fill="#ffffff" stroke="#19783c" stroke-width="2"/>
+  <text x="490" y="1472" text-anchor="middle" class="box-title">Package data</text>
+  <text x="490" y="1501" text-anchor="middle" class="box-copy">maps/ • paths/ • param/current_map_route.yaml</text>
+
+  <path class="green-both" d="M 490 1152 V 1185"/>
+
+  <!-- Interface package -->
+  <rect x="980" y="1185" width="430" height="370" rx="14" fill="#f7f9fc" stroke="#6f829c" stroke-width="3"/>
+  <text x="1195" y="1225" text-anchor="middle" class="section-title">SHARED MESSAGE PACKAGE</text>
+
+  <rect class="box" x="1020" y="1280" width="350" height="155" rx="10" stroke="#6f829c"/>
+  <text x="1195" y="1320" text-anchor="middle" class="box-title">openamr_ui_msgs</text>
+  <text x="1195" y="1353" text-anchor="middle" class="box-copy">ArrayPoseStampedWithCovariance</text>
+  <text x="1195" y="1381" text-anchor="middle" class="small-copy">Used by folders_handler and waypoint_nav</text>
+  <text x="1195" y="1409" text-anchor="middle" class="small-copy">Depends on geometry_msgs</text>
+
+  <path class="arrow dashed" d="M 940 1360 H 1020"/>
+  <text x="980" y="1342" text-anchor="middle" class="small-copy">uses</text>
+
+  <!-- External stack -->
+  <rect x="1450" y="1185" width="910" height="370" rx="14" fill="#f3eaff" stroke="#6d28d9" stroke-width="3"/>
+  <text x="1905" y="1225" text-anchor="middle" class="section-title">EXTERNAL ROBOT / SIMULATION STACK</text>
+
+  <rect class="box" x="1490" y="1280" width="400" height="140" rx="10" stroke="#6d28d9"/>
+  <text x="1690" y="1320" text-anchor="middle" class="box-title">Navigation and drivers</text>
+  <text x="1690" y="1352" text-anchor="middle" class="box-copy">Nav2, AMCL, map_server, docking,</text>
+  <text x="1690" y="1380" text-anchor="middle" class="box-copy">base controller, and robot drivers</text>
+
+  <rect class="box" x="1930" y="1280" width="390" height="140" rx="10" stroke="#6d28d9"/>
+  <text x="2125" y="1320" text-anchor="middle" class="box-title">Hardware and sensors</text>
+  <text x="2125" y="1352" text-anchor="middle" class="box-copy">LiDAR, odometry, cameras, battery,</text>
+  <text x="2125" y="1380" text-anchor="middle" class="box-copy">charger, joints, and device interfaces</text>
+
+  <rect x="1490" y="1440" width="830" height="82" rx="10" fill="#ffffff" stroke="#6d28d9" stroke-width="2"/>
+  <text x="1905" y="1472" text-anchor="middle" class="box-title">Bidirectional ROS contracts</text>
+  <text x="1905" y="1501" text-anchor="middle" class="box-copy">Telemetry flows to the UI • commands, goals, cancellations, and services flow to the robot</text>
+
+  <path class="purple-both" d="M 1905 1152 V 1185"/>
+
+  <text x="1200" y="1582" text-anchor="middle" class="small-copy">Default ports shown. Host and ports are runtime-configurable. Camera and rosapi support are optional; Live Mode control requires rosbridge.</text>
+</svg>

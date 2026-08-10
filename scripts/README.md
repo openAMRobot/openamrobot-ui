@@ -56,3 +56,60 @@ Normal users should start the container from the repository root:
 ```bash
 docker compose up --build
 ```
+
+## Feature-tour video
+
+`create_asset_video.sh` creates a captioned 1920×1080 feature tour from the
+current screenshots under `docs/assets/`. It requires FFmpeg and the DejaVu
+Sans fonts. The generated MP4 includes a silent AAC track for broad playback
+compatibility.
+
+```bash
+bash scripts/create_asset_video.sh
+```
+
+Default output:
+
+```text
+docs/assets/openamrobot_ui_feature_tour.mp4
+```
+
+Pass a different output path as the first argument when needed.
+
+### Add narration
+
+`create_narrated_video.sh` creates a synchronized English narration track and
+adds it to the feature tour. It requires FFmpeg and eSpeak NG:
+
+```bash
+sudo apt install ffmpeg espeak-ng
+bash scripts/create_asset_video.sh
+bash scripts/create_narrated_video.sh
+```
+
+Default outputs:
+
+```text
+docs/assets/openamrobot_ui_feature_tour_narration.m4a
+docs/assets/openamrobot_ui_feature_tour_with_audio.mp4
+```
+
+The original feature-tour MP4 is kept unchanged. You can optionally pass the
+source video, narrated-video output, and audio-only output as three arguments.
+The matching transcript is maintained in
+`docs/assets/openamrobot_ui_feature_tour_transcript.md`.
+
+### Add a recorded human voice-over
+
+`add_feature_tour_voiceover.sh` replaces the generated narration with the
+recorded 83.8-second English voice-over and adjusts each slide to follow its
+natural sentence pauses:
+
+```bash
+bash scripts/add_feature_tour_voiceover.sh \
+  docs/assets/openamrobot_ui_feature_tour.mp4 \
+  /path/to/voiceover.mp3
+```
+
+It updates the same narrated-video and audio-only outputs listed above while
+leaving the silent feature tour unchanged.

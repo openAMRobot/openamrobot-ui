@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    name: Web build & tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # Keep in sync with web/package.json "engines" (>=18 <21).
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        # --passWithNoTests so the job doesn't fail simply because the suite
+        # is currently empty; it still fails on any real test failure.
+        run: npm test -- --watchAll=false --passWithNoTests
+        env:
+          CI: true
+
+      - name: Build
+        run: npm run build
+        env:
+          GENERATE_SOURCEMAP: "false"
+
+  links:
+    name: Markdown link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The point of this job is catching broken *local* links and missing
+      # assets (e.g. a renamed/deleted screenshot or a dead relative route) in
+      # the README and docs tree. External flakiness must not fail the build,
+      # so we skip loopback/private hosts, non-HTTP schemes, POST-only API
+      # endpoints, and the placeholder release URL, and accept rate-limit codes.
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --exclude-loopback
+            --include-mail=false
+            --accept 200,206,429
+            --exclude '^ws://'
+            --exclude 'api\.anthropic\.com'
+            --exclude 'openamrobot-release'
+            "README.md"
+            "docs/**/*.md"
+            "web/**/*.md"
+            "ros2/**/*.md"
+            "scripts/**/*.md"
+          fail: true

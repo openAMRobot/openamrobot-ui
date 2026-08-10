@@ -3,32 +3,43 @@ import React, { useEffect, useState } from "react";
 const DEFAULT_VISIBLE = {
   map: true,
   costmap: false,
+  costmapLocal: false,
   scan: false,
   path: true,
   goal: true,
   waypoints: true,
+  zones: true,
   robotTrail: false,
 };
 
 const DEFAULT_OPACITY = {
   costmap: 0.35,
+  costmapLocal: 0.35,
   scan: 0.32,
   path: 0.95,
   robotTrail: 0.65,
 };
 
+const COSTMAP_GLOBAL_TITLE =
+  "Global costmap — obstacle map covering the whole area";
+const COSTMAP_LOCAL_TITLE =
+  "Local costmap — obstacle map covering the area right around the robot";
+
 const TOGGLES = [
   ["map", "Map"],
-  ["costmap", "Costmap"],
+  ["costmap", "Obstacles (wide)", COSTMAP_GLOBAL_TITLE],
+  ["costmapLocal", "Obstacles (near)", COSTMAP_LOCAL_TITLE],
   ["scan", "Laser"],
   ["path", "Path"],
   ["goal", "Goal"],
   ["waypoints", "Waypoints"],
+  ["zones", "Zones"],
   ["robotTrail", "Trail"],
 ];
 
 const OPACITY = [
-  ["costmap", "Costmap"],
+  ["costmap", "Obstacles (wide)", COSTMAP_GLOBAL_TITLE],
+  ["costmapLocal", "Obstacles (near)", COSTMAP_LOCAL_TITLE],
   ["scan", "Laser"],
   ["path", "Path"],
   ["robotTrail", "Trail"],
@@ -49,15 +60,16 @@ const MapLayers = () => {
   }, [visible, opacity]);
 
   return (
-    <div className="rounded-xl border border-borderSubtle bg-bgCard px-3 py-2 font-[RobotoMono]">
+    <div className="dashboard-card px-3 py-2 font-[RobotoMono]" data-tour="map-layers">
       <div className="mb-1.5 flex items-center gap-3">
         <p className="shrink-0 text-xs uppercase tracking-wider text-themeTextGray">
           Layers
         </p>
-        <div className="grid min-w-0 flex-1 grid-cols-4 gap-1.5 xl:grid-cols-7">
-          {TOGGLES.map(([key, label]) => (
+        <div className="grid min-w-0 flex-1 grid-cols-3 gap-1.5 sm:grid-cols-5 xl:grid-cols-9">
+          {TOGGLES.map(([key, label, title]) => (
             <label
               key={key}
+              title={title}
               className={`flex min-h-[24px] items-center gap-1.5 rounded-md px-2 py-0.5 text-xs ${
                 visible[key]
                   ? "bg-themeBlue/10 text-themeBlue"
@@ -88,8 +100,12 @@ const MapLayers = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 xl:grid-cols-4">
-        {OPACITY.map(([key, label]) => (
-          <label key={key} className="text-[10px] uppercase text-themeTextGray">
+        {OPACITY.map(([key, label, title]) => (
+          <label
+            key={key}
+            title={title}
+            className="text-[10px] uppercase text-themeTextGray"
+          >
             <div className="flex justify-between">
               <span>{label}</span>
               <span>{Math.round(opacity[key] * 100)}%</span>

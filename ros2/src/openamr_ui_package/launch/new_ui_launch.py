@@ -39,12 +39,13 @@ def generate_launch_description():
 
     actions = []
 
-    if not flask_env:
+    if not flask_env and not os.environ.get("ANTHROPIC_API_KEY"):
         actions.append(
             LogInfo(
-                msg="[openamr_ui_package] No .env found next to the package "
-                "(copy .env.example to .env and fill in ANTHROPIC_API_KEY) -> "
-                "/api/voice-plan will return 500 until set."
+                msg="[openamr_ui_package] ANTHROPIC_API_KEY is not configured. "
+                "Set it in the process environment or copy .env.example to "
+                ".env next to the package; /api/voice-plan will return 500 "
+                "until it is set."
             )
         )
 

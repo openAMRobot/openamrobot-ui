@@ -11,7 +11,7 @@ import "blockly/blocks";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { RosContext, RosStatusContext } from "../app/App";
+import { ThemeContext, useRos, useRosStatus } from "../app/App";
 import {
   registerOpenAmrBlocks,
   setOpenAmrLocations,
@@ -34,6 +34,11 @@ import {
 } from "../features/blocks/planValidation";
 import { openAmrToolbox } from "../features/blocks/toolbox";
 import {
+  openAmrDarkTheme,
+  BLOCKLY_GRID_COLOUR_DARK,
+  BLOCKLY_GRID_COLOUR_LIGHT,
+} from "../features/blocks/blocklyTheme";
+import {
   deleteBlockProgram,
   fetchBlockProgram,
   fetchBlockPrograms,
@@ -54,6 +59,7 @@ import {
   saveBlockRunHistory,
 } from "../features/blocks/backendRunHistory";
 import { AppConfig } from "../shared/constants";
+import { StatusBadge } from "../shared/ui/Dashboard";
 
 const STORAGE_KEY = "openamr_blockly_workspace";
 
@@ -196,8 +202,9 @@ const hasRiskyActions = (actions) =>
   flattenActions(actions).some((action) => riskyActionTypes.has(action.type));
 
 const BlocksPage = () => {
-  const ros = useContext(RosContext);
-  const rosStatus = useContext(RosStatusContext);
+  const ros = useRos();
+  const rosStatus = useRosStatus();
+  const { theme } = useContext(ThemeContext);
   const blocklyDivRef = useRef(null);
   const workspaceRef = useRef(null);
   const importInputRef = useRef(null);
@@ -311,7 +318,13 @@ const BlocksPage = () => {
 
     const workspace = Blockly.inject(blocklyDivRef.current, {
       toolbox: openAmrToolbox,
-      grid: { spacing: 24, length: 2, colour: "#d8e4ed", snap: true },
+      theme: theme === "dark" ? openAmrDarkTheme : Blockly.Themes.Classic,
+      grid: {
+        spacing: 24,
+        length: 2,
+        colour: theme === "dark" ? BLOCKLY_GRID_COLOUR_DARK : BLOCKLY_GRID_COLOUR_LIGHT,
+        snap: true,
+      },
       trashcan: true,
       move: { scrollbars: true, drag: true, wheel: true },
       zoom: {
@@ -349,12 +362,21 @@ const BlocksPage = () => {
       workspaceRef.current = null;
       activeRecognizerRef.current?.stop();
     };
+    // `theme` is read once here at inject time only (grid colour can't be
+    // changed live) — the effect below handles theme flips while mounted.
   }, [
     refreshLocations,
     refreshRunHistory,
     refreshSavedPrograms,
     updatePlanFromWorkspace,
   ]);
+
+  // Blockly's workspace theme (unlike the grid colour) can be swapped live
+  // via setTheme, so a toggle while already on this page still re-themes
+  // the canvas instead of waiting for the next mount.
+  useEffect(() => {
+    workspaceRef.current?.setTheme(theme === "dark" ? openAmrDarkTheme : Blockly.Themes.Classic);
+  }, [theme]);
 
   const saveWorkspace = () => {
     if (!workspaceRef.current) return;
@@ -727,8 +749,8 @@ const BlocksPage = () => {
   };
 
   return (
-    <section className="grid min-h-[520px] grid-cols-1 gap-3 py-3 lg:h-[calc(100vh-96px)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:overflow-hidden">
-      <div className="flex min-h-[480px] flex-col overflow-hidden rounded-lg border border-borderSubtle bg-bgCard shadow-sm shadow-slate-200/70 dark:shadow-slate-950/40 lg:min-h-0">
+    <section className="grid min-h-[520px] grid-cols-1 gap-3 py-3 lg:h-[calc(100vh-145px)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_360px] lg:overflow-hidden">
+      <div className="dashboard-card flex min-h-[480px] flex-col overflow-hidden lg:min-h-0">
         <div className="flex shrink-0 items-center justify-between border-b border-borderSubtle px-3 py-2">
           <div>
             <h1 className="font-[RobotoMono] text-lg font-bold text-themeBlue">
@@ -781,18 +803,13 @@ const BlocksPage = () => {
         <div ref={blocklyDivRef} className="min-h-[420px] flex-1 lg:min-h-0" />
       </div>
 
-      <aside className="flex min-h-0 flex-col overflow-y-auto rounded-lg border border-borderSubtle bg-bgCard p-3 shadow-sm shadow-slate-200/70 dark:shadow-slate-950/40 lg:h-full">
+      <aside className="dashboard-card flex min-h-0 flex-col overflow-y-auto p-3 lg:h-full">
         <div className="mb-3">
-          <p className="font-[RobotoMono] text-xs uppercase tracking-wider text-themeTextGray">
-            ROSBridge
-          </p>
-          <p
-            className={`font-[RobotoMono] text-sm font-semibold ${
-              rosStatus === "connected" ? "text-statusGreen" : "text-statusRed"
-            }`}
-          >
-            {rosStatus}
-          </p>
+          <StatusBadge
+            status={rosStatus === "connected" ? "connected" : "disconnected"}
+            pulse={rosStatus === "connected"}
+            label={rosStatus === "connected" ? "Robot connected" : "Robot offline"}
+          />
         </div>
 
         <div className="mb-3 grid grid-cols-2 gap-2 font-[RobotoMono] text-sm">
@@ -829,9 +846,8 @@ const BlocksPage = () => {
             <>
               <p className="mb-2 mt-2 text-xs text-themeTextGray">
                 Tap to speak, then say “Monsieur” followed by a command, e.g.
-                “Monsieur, navigate to x 1 y 1 yaw 0, then wait 3 seconds,
-                then dock”. The transcript only appears once “Monsieur” is
-                heard.
+                “Monsieur, navigate to x 1 y 1 yaw 0, then wait 3 seconds, then
+                dock”. The transcript only appears once “Monsieur” is heard.
               </p>
               <button
                 onClick={
@@ -847,8 +863,8 @@ const BlocksPage = () => {
                 {voiceBusy
                   ? "Generating plan..."
                   : voiceListening
-                    ? "Listening for “Monsieur”... (tap to stop)"
-                    : "Tap to speak a command"}
+                  ? "Listening for “Monsieur”... (tap to stop)"
+                  : "Tap to speak a command"}
               </button>
 
               <div className="min-h-[40px] rounded-lg border border-borderSubtle bg-bgCard px-3 py-2 text-xs text-textWhiteHover">
@@ -1198,7 +1214,7 @@ const BlocksPage = () => {
           </details>
         </div>
       </aside>
-      <ToastContainer position="bottom-right" theme="light" />
+      <ToastContainer position="bottom-right" theme="dark" />
     </section>
   );
 };
