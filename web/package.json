@@ -2,6 +2,7 @@
   "name": "robot_ui",
   "version": "0.0.2",
   "private": true,
+  "description": "Browser dashboard for operating and monitoring a ROS 2 autonomous mobile robot",
   "engines": {
     "node": ">=18 <21"
   },

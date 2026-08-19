@@ -33,7 +33,7 @@ Also worth knowing: Demo Mode (toggle on the Config page) renders the entire
 UI with simulated telemetry and no rosbridge connection at all — useful for
 frontend-only work when a robot or simulator isn't available.
 
-## Production Build
+## Production build
 
 From the repository root, use the canonical scripts:
 

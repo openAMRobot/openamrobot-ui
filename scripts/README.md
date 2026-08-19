@@ -23,7 +23,7 @@ bash scripts/build_frontend.sh
 bash scripts/sync_frontend_to_ros.sh
 ```
 
-## ROS 2 Workspace
+## ROS 2 workspace
 
 Build ROS2 workspace (requires ROS2 + colcon):
 
@@ -41,7 +41,7 @@ For the Blockly `Voice Command` feature to work, set an LLM API key first —
 see `ros2/src/openamr_ui_package/.env.example` and
 [../ros2/src/openamr_ui_package/launch/README.md](../ros2/src/openamr_ui_package/launch/README.md).
 
-## Docker Container
+## Docker container
 
 `container_entrypoint.sh` is used by the root `Dockerfile`. It sources ROS 2,
 optionally rebuilds the frontend and ROS workspace when

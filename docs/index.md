@@ -8,8 +8,8 @@ OpenAMRobot UI is a browser dashboard for seeing and controlling a robot
 that's already running elsewhere — maps, routes, manual driving, Blockly
 programs, missions, diagnostics, and more, all talking to ROS 2 through
 rosbridge. This site is the documentation for it. The code itself lives at
-[github.com/rajindulkar22/openamrobot-ui](https://github.com/rajindulkar22/openamrobot-ui);
-start there for the [full README](https://github.com/rajindulkar22/openamrobot-ui/blob/theory_practical/README.md).
+[github.com/openAMRobot/openamrobot-ui](https://github.com/openAMRobot/openamrobot-ui);
+start there for the [full README](https://github.com/openAMRobot/openamrobot-ui/blob/main/README.md).
 
 > **Heads up:** the lesson pages link out to source files
 > (`web/src/pages/...`) and a few repo-root docs (`README.md`,
@@ -17,7 +17,7 @@ start there for the [full README](https://github.com/rajindulkar22/openamrobot-u
 > you're reading this documentation on GitHub itself, but this published
 > site only contains the `docs/` folder — so a link like that will 404
 > here. If you hit one, you're one click away: open the same page from the
-> [repository](https://github.com/rajindulkar22/openamrobot-ui/tree/theory_practical/docs)
+> [repository](https://github.com/openAMRobot/openamrobot-ui/tree/main/docs)
 > instead.
 
 ## Get started

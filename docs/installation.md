@@ -7,6 +7,20 @@ shortest Demo Mode path, start with the [main README](../README.md).
 > The dashboard's red **E-STOP** is a non-latched software stop. It does not
 > replace a tested physical emergency stop on real hardware.
 
+## Contents
+
+- [Choose one method](#choose-one-method)
+- [Compatibility matrix](#compatibility-matrix)
+- [Docker Compose](#docker-compose)
+- [Manual installation](#manual-installation)
+- [Start the complete system](#start-the-complete-system)
+- [Launch choices](#launch-choices)
+- [Ports](#ports)
+- [Voice Command](#voice-command)
+- [Back up and restore](#back-up-and-restore)
+- [Reset and uninstall](#reset-and-uninstall)
+- [Next](#next)
+
 ## Choose one method
 
 | Method | Best for |
