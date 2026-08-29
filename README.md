@@ -1,33 +1,56 @@
+<div align="center">
+
 # OpenAMRobot UI
+
+**Browser dashboard for ROS 2 mobile robots.**
+
+Mapping, manual driving, Nav2 goals, camera views, saved routes, visual programs,
+missions, health diagnostics and recordings in one interface. No ROS tooling on the client.
 
 [![CI](https://github.com/openAMRobot/openamrobot-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/openAMRobot/openamrobot-ui/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/openAMRobot/openamrobot-ui)](LICENSE)
 [![Node](https://img.shields.io/badge/node-18--20-339933?logo=node.js&logoColor=white)](web/package.json)
 [![ROS 2](https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white)](docs/installation.md)
 
-OpenAMRobot UI is a browser-based dashboard for operating and monitoring a
-ROS 2 autonomous mobile robot. It talks to the robot over rosbridge and puts
-mapping, manual driving, navigation goals, camera views, saved routes, visual
-programs, missions, health diagnostics, and recordings in one interface —
-no ROS tooling required on the client.
+<a href="docs/assets/openamrobot_ui_feature_tour_with_audio.mp4">
+  <img src="docs/assets/hero-poster.jpg" width="820" alt="OpenAMRobot UI dashboard: map, robot pose, joystick and telemetry in the browser">
+</a>
 
-**No robot? No problem.** Demo Mode runs the entire interface on browser-side
-sample data, so you can explore every page without a robot or a ROS
-connection.
+**[▶ Watch the feature tour, with narration](docs/assets/openamrobot_ui_feature_tour_with_audio.mp4)**
 
-[▶ Watch the feature tour, with narration](docs/assets/openamrobot_ui_feature_tour_with_audio.mp4)
+[Quick start](#quick-start) · [Lessons](docs/lessons/README.md) · [Installation](docs/installation.md) · [Full platform release](https://github.com/openAMRobot/openamrobot-release/releases/latest)
 
-> [!NOTE]
-> This UI is part of the OpenAMRobot platform. Download the full product
-> release (hardware + software + firmware + UI + documentation) from
-> **[openamrobot-release/releases/latest](https://github.com/openAMRobot/openamrobot-release/releases/latest)**.
+</div>
 
-> [!CAUTION]
-> The red **E-STOP** in the dashboard is a *software* stop: it sends one
-> zero-velocity command and asks Nav2 to cancel the active goal. It is not
-> latched, not safety-rated, and not independent of the browser, network,
-> rosbridge, or robot controller. Keep a tested physical emergency stop
-> within reach whenever you operate real hardware.
+---
+
+**No robot? No problem.** Demo Mode runs the entire interface on browser-side sample
+data, so you can explore every page without a robot or a ROS connection.
+
+```bash
+git clone https://github.com/openAMRobot/openamrobot-ui.git
+cd openamrobot-ui
+docker compose up --build
+# open http://127.0.0.1:5050 and choose "Explore without a robot"
+```
+
+|  |  |
+| --- | --- |
+| 🗺️ **Map and drive** | Live map, robot pose, click-to-goal, joystick, docking, waypoints |
+| 🧭 **Routes and missions** | Reusable waypoint sequences, schedules, multi-step missions |
+| 🧩 **Visual programs** | Blockly blocks plus Voice Command backed by an Anthropic key |
+| 📷 **See everything** | Camera streams, telemetry, battery, URDF model, live joint state |
+| 🩺 **Health and history** | Topic freshness, lifecycle, diagnostics, metrics, events, rosbag replay |
+| 🔌 **Extendable** | Add a panel, a device or a Blockly block. MIT licensed |
+
+<!--
+Alternative hero, if you upload the video through the GitHub editor instead of
+linking the file in the repo. Drag the .mp4 into the README edit box on
+github.com, and GitHub returns a https://github.com/user-attachments/assets/...
+URL. Paste that URL on its own line and it renders as a real inline player:
+
+https://github.com/user-attachments/assets/PASTE-ID-HERE
+-->
 
 ## Contents
 
@@ -85,6 +108,13 @@ ros2 launch openamr_ui_bringup ui.launch.py
 ```
 
 Before enabling motion:
+
+> [!CAUTION]
+> The red **E-STOP** in the dashboard is a *software* stop: it sends one
+> zero-velocity command and asks Nav2 to cancel the active goal. It is not
+> latched, not safety-rated, and not independent of the browser, network,
+> rosbridge, or robot controller. Keep a tested physical emergency stop
+> within reach whenever you operate real hardware.
 
 1. Turn Demo Mode off.
 2. Confirm the correct robot connection profile.
