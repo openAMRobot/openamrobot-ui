@@ -13,12 +13,11 @@ missions, health diagnostics and recordings in one interface. No ROS tooling on 
 [![Node](https://img.shields.io/badge/node-18--20-339933?logo=node.js&logoColor=white)](web/package.json)
 [![ROS 2](https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white)](docs/installation.md)
 
-<a href="docs/assets/openamrobot_ui_feature_tour_with_audio.mp4">
-  
-  <img src="docs/assets/hero-poster.jpg" width="820" alt="OpenAMRobot UI dashboard: map, robot pose, joystick and telemetry in the browser">
+<a href="https://youtu.be/orwzcDPvAEs">
+  <img src="https://img.youtube.com/vi/orwzcDPvAEs/maxresdefault.jpg" width="820" alt="OpenAMRobot UI feature tour: map, robot pose, joystick and telemetry in the browser">
 </a>
 
-**[▶ Watch the feature tour, with narration](docs/assets/openamrobot_ui_feature_tour_with_audio.mp4)**
+**[▶ Watch the feature tour, with narration](https://youtu.be/orwzcDPvAEs)**
 
 [Quick start](#quick-start) · [Lessons](docs/lessons/README.md) · [Installation](docs/installation.md) · [Full platform release](https://github.com/openAMRobot/openamrobot-release/releases/latest)
 
@@ -44,15 +43,6 @@ docker compose up --build
 | 📷 **See everything** | Camera streams, telemetry, battery, URDF model, live joint state |
 | 🩺 **Health and history** | Topic freshness, lifecycle, diagnostics, metrics, events, rosbag replay |
 | 🔌 **Extendable** | Add a panel, a device or a Blockly block. MIT licensed |
-
-<!--
-Alternative hero, if you upload the video through the GitHub editor instead of
-linking the file in the repo. Drag the .mp4 into the README edit box on
-github.com, and GitHub returns a https://github.com/user-attachments/assets/...
-URL. Paste that URL on its own line and it renders as a real inline player:
-
-https://github.com/user-attachments/assets/PASTE-ID-HERE
--->
 
 ## Contents
 
