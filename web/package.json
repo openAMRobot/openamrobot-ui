@@ -1,7 +1,8 @@
 {
-  "name": "robot_ui",
+  "name": "openamrobot-ui",
   "version": "0.0.2",
   "private": true,
+  "license": "MIT",
   "description": "Browser dashboard for operating and monitoring a ROS 2 autonomous mobile robot",
   "engines": {
     "node": ">=18 <21"
@@ -37,16 +38,8 @@
     "lint": "clear && npm run lint:prettier &&  npm run lint:js --fix"
   },
   "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "production": [">0.2%", "not dead", "not op_mini all"],
+    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
