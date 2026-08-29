@@ -20,7 +20,50 @@ rosbridge when you press `Run`.
 
 ![Complete Blockly page with workspace, program templates, run history, backend programs, named locations, plan checks, and generated plan](../../../../docs/assets/programs/blockly.png)
 
-## Blockly Page Areas
+## Contents
+
+- [Blockly page areas](#blockly-page-areas)
+- [Where the Blockly code lives](#where-the-blockly-code-lives)
+- [Requirements](#requirements)
+- [Install frontend dependencies](#install-frontend-dependencies)
+- [Beginner setup from a fresh workspace](#beginner-setup-from-a-fresh-workspace)
+- [Run in development mode](#run-in-development-mode)
+- [Build for production](#build-for-production)
+- [Make Flask serve the updated blocks](#make-flask-serve-the-updated-blocks)
+- [How a block runs](#how-a-block-runs)
+- [Current block categories](#current-block-categories)
+- [Category screenshots and detailed block reference](#category-screenshots-and-detailed-block-reference)
+- [How to execute a Blockly program properly](#how-to-execute-a-blockly-program-properly)
+- [Important values](#important-values)
+- [Named locations](#named-locations)
+- [Example programs](#example-programs)
+- [Adding a new block](#adding-a-new-block)
+- [ROS topics used by Blockly](#ros-topics-used-by-blockly)
+- [Program templates](#program-templates)
+- [Voice Command](#voice-command)
+  - [Voice Command requirements](#voice-command-requirements)
+  - [How to use Voice Command](#how-to-use-voice-command)
+  - [Wake word](#wake-word)
+  - [Example Voice Commands](#example-voice-commands)
+  - [Voice Command backend endpoint](#voice-command-backend-endpoint)
+- [Run history](#run-history)
+- [Save, load, delete, and reset](#save-load-delete-and-reset)
+- [Troubleshooting](#troubleshooting)
+  - [I only see Program and Robot categories](#i-only-see-program-and-robot-categories)
+  - [npm run build says package.json is missing](#npm-run-build-says-packagejson-is-missing)
+  - [Status shows robot offline](#status-shows-robot-offline)
+  - [Run button is disabled](#run-button-is-disabled)
+  - [Generated plan shows 0 steps](#generated-plan-shows-0-steps)
+  - [Saved blocks look wrong](#saved-blocks-look-wrong)
+  - [Navigation does not continue](#navigation-does-not-continue)
+  - [Robot moves too fast](#robot-moves-too-fast)
+  - [Robot does not move](#robot-does-not-move)
+  - [Voice Command doesn't work](#voice-command-doesnt-work)
+  - [Category images do not appear in the README](#category-images-do-not-appear-in-the-readme)
+- [Safety notes](#safety-notes)
+- [Quick command cheat sheet](#quick-command-cheat-sheet)
+
+## Blockly page areas
 
 The category screenshots later in this guide show the expected updated Blockly
 toolbox. If your page looks different, compare it with the labels below.
@@ -89,9 +132,9 @@ Robot
 
 you are seeing an old frontend bundle. Rebuild, sync, reinstall, restart the UI,
 and hard refresh the browser. The exact commands are in
-[Make Flask Serve The Updated Blocks](#make-flask-serve-the-updated-blocks).
+[Make Flask serve the updated blocks](#make-flask-serve-the-updated-blocks).
 
-## Where The Blockly Code Lives
+## Where the Blockly code lives
 
 ```text
 web/src/pages/BlocksPage.jsx
@@ -147,7 +190,7 @@ colcon --help
 If one of these commands is missing, install the missing tool first using the
 main project README or your ROS 2 distribution instructions.
 
-## Install Frontend Dependencies
+## Install frontend dependencies
 
 From the repository root:
 
@@ -167,7 +210,7 @@ cd ~/openamrobot-ui/web
 npm ci
 ```
 
-## Beginner Setup From A Fresh Workspace
+## Beginner setup from a fresh workspace
 
 Use this sequence when setting up Blockly for the first time:
 
@@ -196,7 +239,7 @@ Open:
 http://127.0.0.1:5050/blocks
 ```
 
-## Run In Development Mode
+## Run in development mode
 
 Use this while editing React or Blockly code:
 
@@ -218,7 +261,7 @@ hard refresh the browser with `Ctrl+Shift+R`.
 Use development mode when you are editing code. Use Flask mode
 (`http://127.0.0.1:5050/blocks`) when you want to test the installed ROS UI.
 
-## Build For Production
+## Build for production
 
 From the frontend folder:
 
@@ -236,7 +279,7 @@ web/build/
 That build is not automatically served by the ROS Flask app. To make the ROS UI
 serve the new frontend, continue with the next section.
 
-## Make Flask Serve The Updated Blocks
+## Make Flask serve the updated blocks
 
 The Flask app on port `5050` serves the installed ROS package, not the live
 React source files. This means editing `web/src` alone is not enough for the
@@ -293,7 +336,7 @@ colcon build --packages-select openamr_ui_package
 source install/setup.bash
 ```
 
-## How A Block Runs
+## How a block runs
 
 Every block goes through the same pipeline before anything reaches the
 robot: block definition → action object in the Generated Plan → execution
@@ -301,7 +344,7 @@ logic → ROS topic/service. See
 [Lesson 09 — The pipeline](../../../../docs/lessons/09-blockly-programming.md#the-pipeline-block--action--execution--ros)
 for the full explanation of why it's split this way.
 
-## Current Block Categories
+## Current block categories
 
 ### Program
 
@@ -366,13 +409,13 @@ These blocks use robot state or publish UI mode commands.
 The battery block depends on `/battery_status` publishing a numeric percentage.
 If no battery message is received, the nested blocks are skipped.
 
-## Category Screenshots And Detailed Block Reference
+## Category screenshots and detailed block reference
 
 The next sections explain every block in each toolbox category (visible in the
 left sidebar in the screenshot above). Each example is written as a block
 chain you can build in the Blockly workspace.
 
-### Program Blocks
+### Program blocks
 
 Program blocks control the shape of your Blockly program. They do not directly
 move the robot unless robot action blocks are connected below or inside them.
@@ -454,7 +497,7 @@ What happens:
 - The program waits for navigation status.
 - The second log appears after navigation finishes.
 
-### Navigation Blocks
+### Navigation blocks
 
 Navigation blocks publish map-frame goals or wait for Nav2-style navigation
 status. They are best used when the robot is localized and the map is correct.
@@ -579,7 +622,7 @@ What happens:
 
 Use patrol only when both points are reachable on the current map.
 
-### Motion Blocks
+### Motion blocks
 
 Motion blocks publish direct velocity commands or wait for time. These do not
 plan around obstacles. Use them carefully on a real robot.
@@ -712,7 +755,7 @@ What happens:
 On a real robot, this UI command is not a replacement for a physical emergency
 stop.
 
-### Docking Blocks
+### Docking blocks
 
 Docking blocks publish trigger messages. The robot stack must provide the real
 docking and undocking behavior.
@@ -760,7 +803,7 @@ What happens:
 
 Use a small speed and short time until the undocking behavior is verified.
 
-### Robot State Blocks
+### Robot State blocks
 
 Robot State blocks use robot state or publish a selected mode command.
 
@@ -812,7 +855,7 @@ What happens:
 Use this block only if your ROS-side system listens for these mode strings on
 `/ui_operation`.
 
-## How To Execute A Blockly Program Properly
+## How to execute a Blockly program properly
 
 Use this checklist every time, especially on a real robot.
 
@@ -877,7 +920,7 @@ after checking that the robot area is clear.
 The `Stop` button calls the same emergency stop behavior used by the
 `emergency stop` block: it publishes zero velocity and cancels navigation.
 
-### Safest First Real-Robot Test
+### Safest first real-robot test
 
 Use this tiny program before trying navigation, docking, or patrol:
 
@@ -895,9 +938,9 @@ Expected result:
 If this does not work, do not test larger programs yet. Check the connection
 status, `/cmd_vel`, robot motor enable state, and the robot/simulation bringup.
 
-## Important Values
+## Important values
 
-### Navigation Coordinates
+### Navigation coordinates
 
 `x` and `y` are map coordinates in meters.
 
@@ -910,7 +953,7 @@ yaw -1.57  = turn right 90 degrees
 yaw 3.14   = face backward
 ```
 
-### Velocity Values
+### Velocity values
 
 Direct motion uses `/cmd_vel`.
 
@@ -928,7 +971,7 @@ linear 0.05
 angular 0.3
 ```
 
-## Named Locations
+## Named locations
 
 Named locations are loaded from the Flask backend when the Blocks page opens.
 The `navigate to location` dropdown uses the backend list, with built-in default
@@ -983,9 +1026,9 @@ stored on the backend. Edit `DEFAULT_OPEN_AMR_LOCATIONS` only if you want to
 change the built-in fallback values; after editing source code, rebuild and
 restart the UI using the production update flow above.
 
-## Example Programs
+## Example programs
 
-### 1. Safest First Movement Test
+### 1. Safest first movement test
 
 Use this when testing on a real robot for the first time:
 
@@ -1001,7 +1044,7 @@ What it does:
 - Publishes zero velocity.
 - Does not send a navigation goal.
 
-### 2. Turn In Place
+### 2. Turn in place
 
 ```text
 start robot program
@@ -1011,7 +1054,7 @@ start robot program
 
 Use `-0.5` to rotate the other direction.
 
-### 3. Navigate And Wait
+### 3. Navigate and wait
 
 ```text
 start robot program
@@ -1025,7 +1068,7 @@ start robot program
 remove it and `navigate` still waits (with the default 60s timeout) before the
 `wait 2 seconds` block runs.
 
-### 4. Navigate To Charging Station And Dock
+### 4. Navigate to charging station and dock
 
 ```text
 start robot program
@@ -1037,7 +1080,7 @@ start robot program
 Before using this on a real robot, confirm the charging station coordinates are
 correct in the backend `Named Locations` panel.
 
-### 5. Undock And Move Away
+### 5. Undock and move away
 
 ```text
 start robot program
@@ -1049,7 +1092,7 @@ start robot program
 
 This starts undocking, waits briefly, then moves away from the dock.
 
-### 6. Repeat A Small Pattern
+### 6. Repeat a small pattern
 
 ```text
 start robot program
@@ -1060,7 +1103,7 @@ start robot program
 
 This drives and turns three times.
 
-### 7. Patrol Between Two Points
+### 7. Patrol between two points
 
 ```text
 start robot program
@@ -1074,7 +1117,7 @@ Internally, the patrol block sends A, waits for navigation to complete, waits
 the selected pause time, sends B, waits for navigation to complete, and pauses
 again.
 
-### 8. Battery-Based Docking
+### 8. Battery-based docking
 
 ```text
 start robot program
@@ -1087,7 +1130,7 @@ start robot program
 This only runs the nested actions if the battery topic reports below 20 percent.
 If the UI does not receive a battery value, it skips the nested actions.
 
-### 9. Debug A Program With Logs
+### 9. Debug a program with logs
 
 ```text
 start robot program
@@ -1099,7 +1142,7 @@ start robot program
 
 Logs help you understand which part of a program is running.
 
-### 10. Mode Then Navigation
+### 10. Mode then Navigation
 
 ```text
 start robot program
@@ -1110,7 +1153,7 @@ start robot program
 
 Use this only if the ROS side listens to the UI operation topic.
 
-## Adding A New Block
+## Adding a new block
 
 See
 [`docs/extending/add-a-blockly-block.md`](../../../../docs/extending/add-a-blockly-block.md)
@@ -1118,7 +1161,7 @@ for the full step-by-step guide: defining the block, registering it in the
 toolbox, wiring its execution, and the rebuild/reinstall flow needed before
 Flask serves it.
 
-## ROS Topics Used By Blockly
+## ROS topics used by Blockly
 
 See [Lesson 10 — Topics as the Contract](../../../../docs/lessons/10-topics-as-the-contract.md)
 for why centralizing these names matters. The block executor uses topics and
@@ -1149,7 +1192,7 @@ Note: `/dock_trigger`, `/undock_robot`, and
 `/navigate_to_pose/_action/cancel_goal` are currently hardcoded in
 `robotActions.js`.
 
-## Program Templates
+## Program templates
 
 The `Program Templates` panel in the right sidebar loads ready-made Blockly
 programs into the workspace. Templates are useful for first-time users, demos,
@@ -1198,11 +1241,11 @@ can't run anything or invent an action type outside the normal blocks, see
 [Voice Command in Lesson 09](../../../../docs/lessons/09-blockly-programming.md#voice-command).
 
 You must say the wake word "Monsieur" before your command (see
-[Wake Word](#wake-word)); speech before it is ignored.
+[Wake word](#wake-word)); speech before it is ignored.
 
 ![Voice Command panel showing the wake word requirement and voice-to-plan flow](../../../../docs/assets/programs/voicecommand.png)
 
-### Voice Command Requirements
+### Voice Command requirements
 
 - Chrome or Edge. The Web Speech API used for microphone capture is not
   supported in Firefox.
@@ -1239,7 +1282,7 @@ If the key is missing, the panel shows a toast: `ANTHROPIC_API_KEY is not set
 on the server.` If the browser cannot use speech recognition at all, the
 panel shows: `Voice input isn't supported in this browser.`
 
-### How To Use Voice Command
+### How to use Voice Command
 
 1. Open the Blocks page from a supported browser/origin (see requirements
    above).
@@ -1260,7 +1303,7 @@ Generating a new voice plan replaces the current workspace. Save your current
 program first (`Backend Programs` or the toolbar `Save`/`Export`) if you want
 to keep it.
 
-### Wake Word
+### Wake word
 
 You must say the wake word "Monsieur" before your command, e.g.:
 
@@ -1311,7 +1354,7 @@ question with no buildable action typically comes back as an empty or
 near-empty plan.
 
 Claude only uses the action types already defined for the Blockly blocks (see
-[Current Block Categories](#current-block-categories)); it cannot invent a new
+[Current block categories](#current-block-categories)); it cannot invent a new
 kind of action. Named-location commands only resolve correctly when that name
 already exists in the `Named Locations` panel — otherwise Plan Checks reports
 a missing-location error and disables `Run`, the same as it would for a
@@ -1322,7 +1365,7 @@ multi-clause sentences are more likely to be misinterpreted; if the generated
 blocks look wrong, try a simpler phrasing, or edit the generated blocks by
 hand afterward.
 
-### Voice Command Backend Endpoint
+### Voice Command backend endpoint
 
 | Endpoint          | Method | Use                                                                    |
 | ------------------ | ------ | ----------------------------------------------------------------------- |
@@ -1337,7 +1380,7 @@ including inside `repeat`/`battery_below`), and returns the plan. No new
 Python dependency was added; the call uses the standard library
 `urllib.request`.
 
-## Run History
+## Run history
 
 The `Run History` panel records the result of each block program run. It helps
 you debug what happened after pressing `Run`.
@@ -1371,7 +1414,7 @@ Backend API endpoints:
 Run History is not a replacement for ROS logs. Use it as a quick UI-level
 summary, then check ROS logs for deeper robot-side failures.
 
-## Save, Load, Delete, And Reset
+## Save, load, delete, and reset
 
 The Blockly page supports two kinds of storage:
 
@@ -1381,7 +1424,7 @@ The Blockly page supports two kinds of storage:
 Use backend saved programs for normal work. Use browser local storage as a
 quick temporary backup while editing.
 
-### Backend Saved Programs
+### Backend saved programs
 
 The `Backend Programs` panel is in the right sidebar on the Blocks page
 (visible below Run History in the full-page screenshot near the top of this
@@ -1425,7 +1468,7 @@ When running the React development server at `http://localhost:3000/blocks`,
 the frontend calls the Flask backend at `http://127.0.0.1:5050`. Start the ROS
 UI launch first if you want backend Save/Load/Delete to work in development.
 
-### Browser Save, Load, Import, Export, And Reset
+### Browser save, load, import, export, and reset
 
 The top-right `Save` and `Load` buttons use browser local storage (visible
 in the toolbar above the workspace in the full-page screenshot near the top
@@ -1456,7 +1499,7 @@ site data for `127.0.0.1:5050`.
 
 ## Troubleshooting
 
-### I Only See Program And Robot Categories
+### I only see Program and Robot categories
 
 You are seeing the old bundle. The new toolbox should show:
 
@@ -1497,7 +1540,7 @@ colcon build --packages-select openamr_ui_package
 source install/setup.bash
 ```
 
-### npm run build Says package.json Is Missing
+### npm run build says package.json is missing
 
 You are probably in the wrong folder.
 
@@ -1515,7 +1558,7 @@ cd ~/openamrobot-ui/web
 npm run build
 ```
 
-### Status Shows Robot Offline
+### Status shows robot offline
 
 The browser can render the page, but it cannot command the robot until the
 robot connection is established.
@@ -1527,7 +1570,7 @@ Check:
 - The robot or simulation workspace is running.
 - The browser is opened from the correct host.
 
-### Run Button Is Disabled
+### Run button is disabled
 
 The `Run` button is disabled on purpose when the UI cannot safely execute a
 program.
@@ -1543,7 +1586,7 @@ If the status shows `Robot offline`, start or restart the UI launch and confirm
 `rosbridge_websocket` is running. If the Generated Plan has `0 steps`, check the
 next troubleshooting section.
 
-### Generated Plan Shows 0 Steps
+### Generated plan shows 0 steps
 
 The UI only runs actions connected below the start block that the planner reads.
 
@@ -1562,7 +1605,7 @@ start robot program
 
 If that creates one Generated Plan step, the planner is working.
 
-### Saved Blocks Look Wrong
+### Saved blocks look wrong
 
 The top toolbar `Save` button stores one workspace in browser local storage. If
 old blocks keep returning, the browser may be loading that saved workspace.
@@ -1578,7 +1621,7 @@ Fix:
 Resetting the workspace does not change the source code. It only changes the
 blocks saved in that browser.
 
-### Navigation Does Not Continue
+### Navigation does not continue
 
 If a program waits forever or times out after navigation, check:
 
@@ -1587,7 +1630,7 @@ If a program waits forever or times out after navigation, check:
 - `/ui/navigate_to_pose/status` is being published.
 - The timeout value is large enough.
 
-### Robot Moves Too Fast
+### Robot moves too fast
 
 Use smaller values:
 
@@ -1598,7 +1641,7 @@ rotate angular speed 0.3 for 1 seconds
 
 Always test direct velocity commands in an open area.
 
-### Robot Does Not Move
+### Robot does not move
 
 If the program runs but the robot does not move, check:
 
@@ -1618,7 +1661,7 @@ start robot program
 
 Do not test larger motion or patrol programs until this basic command works.
 
-### Voice Command Doesn't Work
+### Voice Command doesn't work
 
 Check these in order:
 
@@ -1650,7 +1693,7 @@ bash scripts/run_ui_backend.sh
    "monsewer"). Speak it more clearly and pause briefly after it, then try
    again.
 
-### Category Images Do Not Appear In The README
+### Category images do not appear in the README
 
 The screenshots used in this guide are stored in:
 
@@ -1674,7 +1717,7 @@ If an image does not render in a Markdown viewer, confirm the file exists at
 that path and that you are viewing the README from the repository root or a
 viewer that supports relative image paths with spaces in filenames.
 
-## Safety Notes
+## Safety notes
 
 - Test first in simulation when possible.
 - Start with very small linear and angular speeds.
@@ -1687,7 +1730,7 @@ viewer that supports relative image paths with spaces in filenames.
   before pressing Run, whether the blocks came from dragging, a template, or
   voice.
 
-## Quick Command Cheat Sheet
+## Quick command cheat sheet
 
 Frontend development:
 

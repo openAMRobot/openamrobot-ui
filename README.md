@@ -1,33 +1,51 @@
 # OpenAMRobot UI
 
-OpenAMRobot UI is a browser dashboard for operating and monitoring an
-autonomous mobile robot. It provides maps, manual driving, navigation goals,
-camera views, routes, visual programs, missions, health diagnostics,
-recordings, and developer tools in one interface.
+[![CI](https://github.com/openAMRobot/openamrobot-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/openAMRobot/openamrobot-ui/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/openAMRobot/openamrobot-ui)](LICENSE)
+[![Node](https://img.shields.io/badge/node-18--20-339933?logo=node.js&logoColor=white)](web/package.json)
+[![ROS 2](https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white)](docs/installation.md)
 
-Demo Mode lets you explore the complete interface without a robot or ROS
+OpenAMRobot UI is a browser-based dashboard for operating and monitoring a
+ROS 2 autonomous mobile robot. It talks to the robot over rosbridge and puts
+mapping, manual driving, navigation goals, camera views, saved routes, visual
+programs, missions, health diagnostics, and recordings in one interface —
+no ROS tooling required on the client.
+
+**No robot? No problem.** Demo Mode runs the entire interface on browser-side
+sample data, so you can explore every page without a robot or a ROS
 connection.
 
-[▶ Watch the current feature tour with human narration](docs/assets/openamrobot_ui_feature_tour_with_audio.mp4)
+[▶ Watch the feature tour, with narration](docs/assets/openamrobot_ui_feature_tour_with_audio.mp4)
 
 > [!NOTE]
-> This repository is part of the **OpenAMRobot vX.X.X** release.
->
-> Download the complete product release (Hardware + Software + Firmware + UI +
-> Documentation) here:
->
-> **https://github.com/openAMRobot/openamrobot-release/releases/latest**
+> This UI is part of the OpenAMRobot platform. Download the full product
+> release (hardware + software + firmware + UI + documentation) from
+> **[openamrobot-release/releases/latest](https://github.com/openAMRobot/openamrobot-release/releases/latest)**.
 
 > [!CAUTION]
-> The red **E-STOP** in the dashboard is a software stop. It sends one
+> The red **E-STOP** in the dashboard is a *software* stop: it sends one
 > zero-velocity command and asks Nav2 to cancel the active goal. It is not
-> latched, safety-rated, or independent of the browser, network, rosbridge,
-> and robot controller. Keep a tested physical emergency stop within reach
-> whenever operating real hardware.
+> latched, not safety-rated, and not independent of the browser, network,
+> rosbridge, or robot controller. Keep a tested physical emergency stop
+> within reach whenever you operate real hardware.
 
-## Quick Start
+## Contents
 
-### Try the UI in five minutes
+- [Quick start](#quick-start)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Main pages](#main-pages)
+- [Architecture](#architecture)
+- [Security and access](#security-and-access)
+- [Data and backups](#data-and-backups)
+- [Documentation](#documentation)
+- [Development](#development)
+- [Troubleshooting](#troubleshooting)
+- [Project](#project)
+  - [Support the project](#support-the-project)
+  - [Third-party notices](#third-party-notices)
+
+## Quick start
 
 Requirements: Docker Engine and the Docker Compose plugin.
 
@@ -40,23 +58,24 @@ docker compose up --build
 Then:
 
 1. Open `http://127.0.0.1:5050/`.
-2. Choose **Explore without a robot** in the first-run guide.
-3. If the guide does not appear, open `/config` and enable **Demo Mode**.
-4. Confirm the purple Demo Mode banner and green connection indicator.
-5. Follow [Lesson 00 — Your First 10 Minutes](docs/lessons/00-your-first-10-minutes.md).
+2. Choose **Explore without a robot** in the first-run guide (or open
+   `/config` and enable **Demo Mode** if the guide doesn't appear).
+3. Confirm the purple Demo Mode banner and the green connection indicator.
+4. Follow [Lesson 00 — Your First 10 Minutes](docs/lessons/00-your-first-10-minutes.md).
 
-Demo Mode uses browser-side sample data and does not command a real robot.
+That's the fastest path to a running UI. For every Docker flag, the manual
+(non-Docker) install, and what a healthy startup looks like, see
+[Installation](#installation) below.
 
-### Connect to a real robot or simulation
+### Connecting to a real robot or simulation
 
-The robot stack and UI are separate workspaces:
+The robot stack and the UI are separate workspaces — start the robot or
+simulation first, then launch the UI against it:
 
 ```text
 Robot/simulation workspace → Nav2, localization, sensors, drivers, simulator
 UI workspace               → dashboard, rosbridge, camera server, relays
 ```
-
-Start the robot or simulation first. Then launch the UI:
 
 ```bash
 cd ~/openamrobot-ui/ros2
@@ -82,8 +101,8 @@ Before enabling motion:
 | Docker demo/deployment | Docker Engine and Docker Compose; Linux or WSL is recommended for host networking |
 | Manual installation | Ubuntu 24.04, ROS 2 Jazzy, Python 3, `colcon`, Node.js, and npm (see [Compatibility](#compatibility) for the supported Node range) |
 | Live operation | A separately running OpenAMR robot or simulation stack |
-| Remote browser | Access to TCP ports `5050`, `9090`, and optionally `8080` |
-| Voice Command | Anthropic API key supplied to the backend at runtime |
+| Remote browser access | TCP ports `5050`, `9090`, and optionally `8080` reachable |
+| Voice Command | An Anthropic API key supplied to the backend at runtime |
 
 ### Compatibility
 
@@ -92,11 +111,8 @@ Before enabling motion:
 | Ubuntu | 24.04 LTS | Manual-install target |
 | ROS 2 | Jazzy | Required by the documented packages and commands |
 | Node.js | 18–20 | Enforced by `web/package.json` `engines` (`>=18 <21`); CI validates on Node 20 |
-| `openamr-platform-sw` | ROS 2 Jazzy branch, pinned to commit `<record-known-good-sha>` | Fill in the exact known-good commit SHA so setups are reproducible |
+| `openamr-platform-sw` | `main` branch | Pin it to a commit you've validated against this UI version — treat that pin as part of your deployment configuration, not a fixed release |
 | Robot hardware | Topic-compatible OpenAMRobot platform | Hardware revision is not yet pinned; validate drivers, limits, docking, and E-stop behavior per robot |
-
-Until platform and hardware releases are pinned, treat a known-working
-platform commit and robot revision as part of each deployment's configuration.
 
 For complete installation details, Docker Desktop networking, simulation
 commands, and dependency explanations, see the
@@ -104,31 +120,25 @@ commands, and dependency explanations, see the
 
 ## Installation
 
-Choose Docker or manual installation. Do not run both UI instances on the
-same ports.
+Choose Docker or manual installation — don't run both on the same ports.
 
 ### Docker Compose
 
 ```bash
-docker compose up --build
+docker compose up --build   # build and run in the foreground
+docker compose up -d        # ...or run in the background
+docker compose logs -f      # follow logs
+docker compose down         # stop (saved backend data is kept)
 ```
 
-Useful commands:
-
-```bash
-docker compose up -d       # Run in the background
-docker compose logs -f     # Follow logs
-docker compose down        # Stop and keep saved backend data
-```
-
-Optional Voice Command key:
+To enable Voice Command, pass the key at runtime rather than baking it into
+the image:
 
 ```bash
 ANTHROPIC_API_KEY="your-key" docker compose up
 ```
 
-Real `.env` files are excluded from Docker images. Pass secrets at runtime;
-never bake them into an image.
+Real `.env` files are excluded from Docker images.
 
 **Success check:** the dashboard opens on port `5050`, and the logs show
 `flask_app`, `rosbridge_websocket`, `map_volatile_relay`, and `nav_relays`.
@@ -136,8 +146,8 @@ The optional camera node appears only when `web_video_server` is installed.
 
 ### Manual install
 
-Install ROS 2 Jazzy, Node.js, npm, and the declared ROS dependencies.
-Then:
+Install ROS 2 Jazzy, Node.js, npm, and the declared ROS dependencies
+(including Xacro, needed for the Robot Description page). Then:
 
 ```bash
 cd ~/openamrobot-ui
@@ -151,8 +161,7 @@ source install/setup.bash
 ros2 launch openamr_ui_bringup ui.launch.py
 ```
 
-The backend requires Xacro for the Robot Description page. A complete manual
-dependency command and `rosdep` workflow are in the
+The full dependency command and `rosdep` workflow are in the
 [manual installation guide](docs/installation.md#manual-installation).
 
 **Success check:**
@@ -164,7 +173,7 @@ ros2 pkg list | grep openamr_ui
 This should list `openamr_ui_bringup`, `openamr_ui_msgs`, and
 `openamr_ui_package`.
 
-## Main Pages
+## Main pages
 
 | Page | URL | Use it for |
 | --- | --- | --- |
@@ -187,8 +196,9 @@ This should list `openamr_ui_bringup`, `openamr_ui_msgs`, and
 | Config | `/config` | Connections, Demo Mode, limits, and preferences |
 | Notes | `/notes` | Example plugin page |
 
-Scheduler and Missions run in the browser tab. Keep the tab open for scheduled
-actions, and do not assume an interrupted browser session resumes safely.
+Scheduler and Missions run in the browser tab — keep the tab open for
+scheduled actions, and don't assume an interrupted browser session resumes
+safely.
 
 See [Lesson 06](docs/lessons/06-the-pages.md) for screenshots, dependencies,
 and task-based page guidance.
@@ -197,15 +207,13 @@ and task-based page guidance.
 
 ![OpenAMRobot UI architecture diagram](docs/assets/openamr_ui_architecture.svg)
 
-Default services:
-
 | Service | Default | Purpose |
 | --- | --- | --- |
 | Flask UI | `http://127.0.0.1:5050` | Serves the React dashboard and REST API |
 | Rosbridge | `ws://127.0.0.1:9090` | Browser-to-ROS communication |
 | Web video | `http://127.0.0.1:8080` | Optional camera streams |
 
-Map/route file operations and route-following helpers require:
+Map/route file operations and route-following helpers also require:
 
 ```bash
 ros2 launch openamr_ui_package physnode_launch.py
@@ -216,24 +224,24 @@ For the communication and topic model, read
 [Lesson 04](docs/lessons/04-data-flow-and-relays.md), and
 [Lesson 10](docs/lessons/10-topics-as-the-contract.md).
 
-## Security and Access
+## Security and access
 
-Only unauthenticated `AUTH_MODE=open` is implemented. Anyone who can reach the
-configured UI and rosbridge ports can potentially view data and command the
-robot.
+Only unauthenticated `AUTH_MODE=open` is implemented today. Anyone who can
+reach the configured UI and rosbridge ports can potentially view data and
+command the robot.
 
 - Keep the dashboard on a trusted local network.
-- Do not expose ports `5050`, `9090`, or `8080` directly to the internet.
-- Use firewall rules or an authenticated reverse proxy when isolation is not
-  sufficient.
-- Do not commit `.env` files or API keys.
+- Don't expose ports `5050`, `9090`, or `8080` directly to the internet.
+- Use firewall rules or an authenticated reverse proxy when network isolation
+  isn't enough on its own.
+- Don't commit `.env` files or API keys.
 - Read [SECURITY.md](SECURITY.md) before deploying outside a private lab
-  network or reporting a vulnerability.
+  network, or to report a vulnerability.
 
-`local` and `external` are reserved future authentication modes. Requesting
-either currently falls back to `open` and shows a warning.
+`local` and `external` are reserved for future authentication modes.
+Requesting either currently falls back to `open` and shows a warning.
 
-## Data and Backups
+## Data and backups
 
 | Data | Location |
 | --- | --- |
@@ -242,9 +250,9 @@ either currently falls back to `open` and shows a warning.
 | Schedules, missions, devices, profiles, metrics, and preferences | Current browser profile's `localStorage` |
 | Maps and routes | `ros2/src/openamr_ui_package/maps/` and `paths/` |
 
-Browser-local data does not automatically move to another browser or computer.
-Back up important data before reinstalling, clearing browser storage, or
-removing Docker volumes.
+Browser-local data doesn't automatically move to another browser or computer.
+Back it up before reinstalling, clearing browser storage, or removing Docker
+volumes.
 
 ## Documentation
 
@@ -314,5 +322,180 @@ Continue with [Lesson 12](docs/lessons/12-debugging-with-ros-cli.md) or the
 
 ## Project
 
-- Support the project through [FUNDING.md](FUNDING.md).
-- OpenAMRobot UI is available under the [MIT License](LICENSE).
+OpenAMRobot UI is available under the [MIT License](LICENSE).
+
+### Support the project
+
+Support open-source robotics, ROS 2 development, AI robotics education, and
+dual-arm mobile robot research.
+
+**⚡ Back the build — one-time, no strings**
+
+| Tier | What it says about you | Link |
+| --- | --- | --- |
+| ⚡ First Mover — €5 | You got here first, and you didn't overthink it. Your name goes on the backers wall as one of the people who moved before it was obvious. | [Back it →](https://buy.stripe.com/eVqcN5b99eeAaSd7WPgUM06) |
+| 🎯 Sharpshooter — €25 | You spotted it early and called it. Name on the wall, plus a shareable "OpenAMRobot Backer" badge. | [Back it →](https://buy.stripe.com/4gMdR9ell1rO2lH90TgUM07) |
+| 🕶️ Insider — €50 | You want in behind the curtain. Everything above, plus the backer-only build log and early files. | [Back it →](https://buy.stripe.com/eVq14nfpp4E0gcx2CvgUM08) |
+| 🔩 Immortal — €100 | Your name goes on the actual robot — physically, and for as long as the machine keeps rolling around. | [Back it →](https://buy.stripe.com/00w00jdhhb2o4tPfphgUM09) |
+| 🏆 Founding Backer — €250 | Not a supporter — a co-author. Everything above, plus a personal thank-you in a build video. | [Back it →](https://buy.stripe.com/28EeVdcdddawaSdeldgUM0a) |
+
+**🔁 Monthly subscriptions — build it with us, every month**
+
+| Tier | What you get | Link |
+| --- | --- | --- |
+| 😇 Benefactor — €5/mo | A small, recurring push toward an open robot for everyone. Your name goes on the wall. | [Subscribe →](https://buy.stripe.com/9B6cN5dhh9Yk7G1cd5gUM05) |
+| ❤️ Community — €19/mo | Community access, project and roadmap updates, basic documentation, and community Q&A. | [Subscribe →](https://buy.stripe.com/6oUcN55OPc6s3pL4KDgUM00) |
+| 🔧 Builder — €79/mo | For the ones who actually build: everything in Community, plus builder docs, monthly group Q&A, selected tutorials, early design updates, and discounts on digital packs. | [Subscribe →](https://buy.stripe.com/14A28r0uvdaw9O9eldgUM01) |
+| 🚀 Pro Support — €299/mo | Expert support for advanced builders, early founders, and small labs — one private consulting call and up to 3 hours/month of technical guidance. | [Subscribe →](https://buy.stripe.com/dRm4gz4KLdaw6BX4KDgUM02) |
+| 🏢 Startup Support — €750/mo | For robotics startups and teams heading toward a prototype — two private consulting calls/month, roadmap support, GitHub/documentation review, supplier review, and up to 6 hours/month. | [Subscribe →](https://buy.stripe.com/7sY8wPfpp8Ugf8t90TgUM03) |
+| 🔬 Lab Support — €1,500/mo | For universities, corporate labs, and training centers — four private sessions/month, lab implementation support, architecture reviews, training-roadmap support, and up to 10 hours/month. | [Subscribe →](https://buy.stripe.com/eVq14ndhh2vSaSda4XgUM04) |
+
+❤️ You can also support the project through
+[GitHub Sponsors](https://github.com/sponsors/openAMRobot).
+
+Every contribution — €5 or €1,500 — goes directly toward building this
+robot. You're not donating; you're building it. 🤖
+
+### Third-party notices
+
+OpenAMRobot UI serves a small number of third-party JavaScript libraries as
+static files under `web/public/ros/` (copied into the production build, not
+installed through npm — see [web/README.md](web/README.md)) so the browser
+can load them without a bundler. Their original copyright and license
+notices are reproduced below.
+
+**roslibjs** — `web/public/ros/roslib.js` —
+[RobotWebTools/roslibjs](https://github.com/RobotWebTools/roslibjs) — BSD
+License:
+
+```
+Software License Agreement (BSD License)
+
+Copyright (c) 2014, Worcester Polytechnic Institute, Robert Bosch
+LLC, Yujin Robot. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+ * Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above
+   copyright notice, this list of conditions and the following
+   disclaimer in the documentation and/or other materials provided
+   with the distribution.
+ * Neither the name of Worcester Polytechnic Institute, Robert
+   Bosch LLC, Yujin Robot nor the names of its contributors may be
+   used to endorse or promote products derived from this software
+   without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+```
+
+roslib.js also bundles a small CBOR encode/decode library:
+[paroga/cbor-js](https://github.com/paroga/cbor-js), copyright (c) 2014
+Patrick Gansterer \<paroga@paroga.com\>, MIT License, reproduced in full at
+the top of that bundled module inside `roslib.js`.
+
+**ros2djs** — `web/public/ros/ros2d.js` —
+[RobotWebTools/ros2djs](https://github.com/RobotWebTools/ros2djs) — BSD
+License:
+
+```
+Software License Agreement (BSD License)
+
+Copyright (c) 2013, Robert Bosch LLC, Willow Garage Inc., Worcester
+Polytechnic Institute, Yujin Robot. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+ * Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above
+   copyright notice, this list of conditions and the following
+   disclaimer in the documentation and/or other materials provided
+   with the distribution.
+ * Neither the name of Robert Bosch LLC, Willow Garage Inc.,
+   Worcester Polytechnic Institute, Yujin Robot nor the names of its
+   contributors may be used to endorse or promote products derived
+   from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+```
+
+**nav2djs** — `web/public/ros/nav2d.js`, `web/public/ros/nav2d-old.js` —
+[GT-RAIL/nav2djs](https://github.com/GT-RAIL/nav2djs) — BSD License:
+
+```
+Software License Agreement (BSD License)
+
+Copyright (c) 2013, Worcester Polytechnic Institute.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+ * Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above
+   copyright notice, this list of conditions and the following
+   disclaimer in the documentation and/or other materials provided
+   with the distribution.
+ * Neither the name of Worcester Polytechnic Institute nor the
+   names of its contributors may be used to endorse or promote
+   products derived from this software without specific prior
+   written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+```
+
+**EaselJS** — `web/public/ros/easeljs.js` —
+[CreateJS/EaselJS](http://createjs.com/) — copyright (c) 2011–2013
+gskinner.com, inc. — MIT License, per the notice embedded at the top of the
+file: "Distributed under the terms of the MIT license.
+http://www.opensource.org/licenses/mit-license.html"
+
+**EventEmitter2** — `web/public/ros/eventemitter2.min.js`, and bundled again
+inside `web/public/ros/roslib.js` —
+[hij1nx/EventEmitter2](https://github.com/hij1nx/EventEmitter2) — copyright
+(c) 2013 hij1nx — MIT License, per the notice embedded at the top of the
+file.
+
+Dependencies installed through `web/package.json` carry their own licenses,
+tracked by npm and not reproduced here.

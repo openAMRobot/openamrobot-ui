@@ -7,7 +7,7 @@ map/route helper nodes used by the OpenAMR browser UI.
 The top-level `../../../README.md` is the source of truth for workspace setup,
 build commands, run commands, ports, topics, and troubleshooting.
 
-## Launch Files
+## Launch files
 
 - `launch/new_ui_launch.py`: starts the web UI services and browser-friendly
   relays.
@@ -22,7 +22,7 @@ build commands, run commands, ports, topics, and troubleshooting.
   **Save current map** buttons (SLAM while mapping, then back to
   localization/navigation once saved).
 
-## Runtime Pieces
+## Runtime pieces
 
 - `flask_app.py`: serves the compiled React app.
 - `map_relay.py`: republishes `/map` to `/ui/map` with browser-friendly QoS.
@@ -35,7 +35,7 @@ build commands, run commands, ports, topics, and troubleshooting.
   falls back to a simulated drain if none is present). Not started by
   `new_ui_launch.py` or `physnode_launch.py` by default.
 
-## Voice Command API Key
+## Voice Command API key
 
 `flask_app.py` reads `ANTHROPIC_API_KEY` from the environment for the
 `/api/voice-plan` endpoint (Blockly's Voice Command feature). Copy
@@ -44,7 +44,7 @@ gitignored, and `launch/new_ui_launch.py` loads it and injects it only into
 the `flask_app` node's process, so no shell `export` is needed. See
 [launch/README.md](launch/README.md) for details.
 
-## Static App
+## Static app
 
 The React source lives in the repository-level `web/` directory. Production
 assets are built and copied into:

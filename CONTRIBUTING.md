@@ -4,6 +4,15 @@ Thank you for improving OpenAMRobot UI. Changes can affect real robot motion,
 so keep patches focused, test them in Demo Mode or simulation first, and
 describe any safety impact clearly.
 
+## Safety notice
+
+This repository can affect real-robot behavior. Contributors and users are
+responsible for validating robot safety (E-stop, watchdog, fault handling),
+navigation, docking, motor control, sensor integration, deployment
+suitability, and regulatory compliance for their own setup.
+
+This software is provided for research, education, and development.
+
 ## Before you start
 
 1. Read the [README](README.md) and the
@@ -13,6 +22,13 @@ describe any safety impact clearly.
 3. Search existing issues and pull requests before starting duplicate work.
 4. Never commit API keys, `.env` files, robot credentials, recordings with
    sensitive data, or private network details.
+5. Keep a pull request scoped to the package or feature directory the task
+   is about — for example, a Blockly change should normally stay within
+   `web/src/features/blocks/`, and a devices change within
+   `web/src/features/devices/` and the device-facing code in
+   `ros2/src/openamr_ui_package/`. If a change genuinely needs to touch a
+   sibling area too (a shared constant, a relay another feature depends on),
+   explain why in the PR.
 
 ## Development setup
 
@@ -45,8 +61,12 @@ CI=true npm test -- --watchAll=false
 npm run build
 ```
 
-`npm run lint` currently applies formatting and ESLint fixes. Run it only
-when you are ready to inspect and keep those edits.
+`npm run lint` runs Prettier (`web/prettier.config.js`) followed by ESLint.
+The Prettier step works and rewrites files in place — run it only when you're
+ready to inspect and keep those edits. The ESLint step does not: this repo
+has no ESLint config file, so `lint:js` has no rules to check against.
+`npm run build` is the real correctness gate — `react-scripts build` runs
+Create React App's own bundled lint rules regardless of a project config.
 
 For ROS packages:
 
@@ -87,3 +107,5 @@ and include an observable success condition.
 ## License
 
 Contributions are accepted under the repository's [MIT License](LICENSE).
+Third-party assets bundled as static files are attributed in the README's
+[Third-party notices](README.md#third-party-notices) section.

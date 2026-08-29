@@ -48,7 +48,7 @@ local program controls. `Save` and `Load` use browser storage, `Import` and
 `Export` move Blockly programs as JSON files, and `Reset` clears the
 workspace back to the starter program.
 
-### Program Templates
+### Program templates
 
 ![OpenAMR UI Programs page Program Templates panel with a template selector and Load Template button](../assets/programs/program-templates.png)
 
@@ -58,7 +58,7 @@ low-battery docking routine. Selecting a template shows a short description;
 Blockly blocks. Loading does not execute the program. Review the resulting
 blocks, Plan Checks, and Generated Plan before pressing `Run`.
 
-### Backend Programs
+### Backend programs
 
 `Backend Programs` stores Blockly workspaces through the Flask backend
 (further down the right panel, past Run History). Enter a program name and
@@ -68,7 +68,7 @@ This is separate from the toolbar's browser-local `Save` and `Load`: backend
 programs remain available even if browser storage is cleared and can be
 opened from another browser that reaches the same UI server.
 
-### Run History
+### Run history
 
 ![OpenAMR UI Programs page Run History panel listing two past runs with success/stopped badges](../assets/programs/runhistory.png)
 
@@ -77,7 +77,7 @@ badge, timestamp, step count, and duration. `Refresh` reloads the list;
 `Clear` empties it. Useful for confirming a program actually ran, and how
 long it took, without needing the Events or Metrics pages open.
 
-### Named Locations
+### Named locations
 
 ![OpenAMR UI Programs page Named Locations panel with a saved "Charging Station" location and its x/y/yaw](../assets/programs/named-location.png)
 
