@@ -1,4 +1,5 @@
-<div align="center">
+
+<div align="left">
 
 # OpenAMRobot UI
 
@@ -13,6 +14,7 @@ missions, health diagnostics and recordings in one interface. No ROS tooling on 
 [![ROS 2](https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white)](docs/installation.md)
 
 <a href="docs/assets/openamrobot_ui_feature_tour_with_audio.mp4">
+  
   <img src="docs/assets/hero-poster.jpg" width="820" alt="OpenAMRobot UI dashboard: map, robot pose, joystick and telemetry in the browser">
 </a>
 
