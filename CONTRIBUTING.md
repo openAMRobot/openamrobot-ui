@@ -109,3 +109,14 @@ and include an observable success condition.
 Contributions are accepted under the repository's [MIT License](LICENSE).
 Third-party assets bundled as static files are attributed in the README's
 [Third-party notices](README.md#third-party-notices) section.
+
+## Legal requirements
+
+OpenAMRobot is operated by **Botshare LTD**. Before a contribution can be accepted:
+
+1. every commit must be signed off under the [DCO](https://github.com/openAMRobot/.github/blob/main/DCO.md);
+2. the contributor must be covered by the applicable [Individual or Corporate Contributor Agreement](https://github.com/openAMRobot/.github/blob/main/CLA.md);
+3. any necessary employer, university, client, sponsor, co-author, or institutional authorization must be obtained; and
+4. third-party and material AI-assisted content must be disclosed with its source, licence, and required notices.
+
+The Contributor Agreement governs assignment of transferable economic rights in accepted contributions to Botshare LTD. DCO confirms provenance and authority but does not replace that agreement. Do not submit unauthorized confidential information, personal data, credentials, export-controlled material, or third-party material with unclear rights.
