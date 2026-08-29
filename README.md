@@ -1,5 +1,4 @@
-
-<div align="left">
+<div align="center">
 
 # OpenAMRobot UI
 
@@ -13,11 +12,11 @@ missions, health diagnostics and recordings in one interface. No ROS tooling on 
 [![Node](https://img.shields.io/badge/node-18--20-339933?logo=node.js&logoColor=white)](web/package.json)
 [![ROS 2](https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white)](docs/installation.md)
 
-<a href="https://youtu.be/orwzcDPvAEs">
+<a href="https://youtu.be/orwzcDPvAEs" target="_blank" rel="noopener noreferrer">
   <img src="https://img.youtube.com/vi/orwzcDPvAEs/maxresdefault.jpg" width="820" alt="OpenAMRobot UI feature tour: map, robot pose, joystick and telemetry in the browser">
 </a>
 
-**[▶ Watch the feature tour, with narration](https://youtu.be/orwzcDPvAEs)**
+**<a href="https://youtu.be/orwzcDPvAEs" target="_blank" rel="noopener noreferrer">▶ Watch the feature tour, with narration</a>**
 
 [Quick start](#quick-start) · [Lessons](docs/lessons/README.md) · [Installation](docs/installation.md) · [Full platform release](https://github.com/openAMRobot/openamrobot-release/releases/latest)
 
