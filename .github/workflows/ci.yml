@@ -33,10 +33,37 @@ jobs:
         env:
           CI: true
 
+      - name: Run-state fixture tests (must be non-empty)
+        # No --passWithNoTests here: this step fails if the run-state
+        # adapter/view suites are missing or match zero tests.
+        run: npx react-scripts test --watchAll=false --testPathPattern='(runState|CurrentRunFixture)'
+        env:
+          CI: true
+
       - name: Build
         run: npm run build
         env:
           GENERATE_SOURCEMAP: "false"
+
+  run-state-fixture-backend:
+    name: Run-state fixture backend (pure, no ROS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ros2/src/openamr_ui_package
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python3 -m pip install -r test/requirements-run-state-fixture.txt
+
+      - name: Test
+        run: python3 -m pytest test/test_run_state_fixture.py -v
 
   links:
     name: Markdown link check
