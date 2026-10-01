@@ -1,4 +1,4 @@
-# OpenAMR Blockly Guide
+# OpenAMRobot Blockly Guide
 
 This guide is the practical reference for the Blockly robot programming page:
 setup, the full block-by-block reference, example programs, and
@@ -153,7 +153,7 @@ web/src/features/blocks/voicePlan.js
 | File                   | Purpose                                                                                 |
 | ---------------------- | --------------------------------------------------------------------------------------- |
 | `BlocksPage.jsx`       | Shows the Blockly workspace, toolbar, sidebar panels, Run/Stop buttons, and plan status |
-| `blockDefinitions.js`  | Defines custom OpenAMR blocks, converts blocks into plan actions, and converts a plan back into Blockly JSON via `planToWorkspace()` |
+| `blockDefinitions.js`  | Defines custom OpenAMRobot blocks, converts blocks into plan actions, and converts a plan back into Blockly JSON via `planToWorkspace()` |
 | `toolbox.js`           | Controls which block categories and blocks appear in the left sidebar                   |
 | `robotActions.js`      | Executes each generated action by publishing ROS messages or waiting for ROS status     |
 | `backendPrograms.js`   | Calls the backend saved-program API                                                     |
@@ -860,7 +860,7 @@ Use this block only if your ROS-side system listens for these mode strings on
 Use this checklist every time, especially on a real robot.
 
 1. Start the robot or simulation stack first.
-2. Start the OpenAMR UI launch in a separate terminal:
+2. Start the OpenAMRobot UI launch in a separate terminal:
 
 ```bash
 cd ~/openamrobot-ui/ros2

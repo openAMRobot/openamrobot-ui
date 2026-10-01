@@ -16,6 +16,6 @@ setup(
     zip_safe=True,
     maintainer="Raj",
     maintainer_email="raj@example.com",
-    description="Standalone OpenAMR UI bringup launch wrapper",
+    description="Standalone OpenAMRobot UI bringup launch wrapper",
     license="MIT",
 )

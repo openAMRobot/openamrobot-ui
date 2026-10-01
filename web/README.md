@@ -1,6 +1,6 @@
 # Web Frontend
 
-This folder contains the React browser dashboard for OpenAMR robot control,
+This folder contains the React browser dashboard for OpenAMRobot robot control,
 status, maps, routes, docking, and camera views.
 
 The top-level `../README.md` is the source of truth for full workspace setup,

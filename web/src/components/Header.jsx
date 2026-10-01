@@ -211,7 +211,7 @@ const Logo = ({ onClick }) => (
     to="/"
     onClick={onClick}
     className="group flex min-w-0 items-center gap-2.5 rounded-xl focus-visible:outline-none"
-    aria-label="OpenAMR map dashboard"
+    aria-label="OpenAMRobot map dashboard"
   >
     <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-bgSurface text-white ring-1 ring-white/10">
       <span className="absolute inset-0 bg-gradient-to-br from-violet-500 via-purple-500 to-pink-400 opacity-90 transition-opacity group-hover:opacity-100" />
@@ -229,7 +229,7 @@ const Logo = ({ onClick }) => (
     </span>
     <span className="min-w-0">
       <span className="block truncate text-[15px] font-bold tracking-[-0.03em] text-textWhiteHover">
-        OpenAMR
+        OpenAMRobot
       </span>
       <span className="hidden font-[RobotoMono] text-[9px] uppercase tracking-[0.16em] text-themeTextGray sm:block">
         Robot workspace

@@ -121,7 +121,7 @@ Before enabling motion:
 | --- | --- |
 | Docker demo/deployment | Docker Engine and Docker Compose; Linux or WSL is recommended for host networking |
 | Manual installation | Ubuntu 24.04, ROS 2 Jazzy, Python 3, `colcon`, Node.js, and npm (see [Compatibility](#compatibility) for the supported Node range) |
-| Live operation | A separately running OpenAMR robot or simulation stack |
+| Live operation | A separately running OpenAMRobot robot or simulation stack |
 | Remote browser access | TCP ports `5050`, `9090`, and optionally `8080` reachable |
 | Voice Command | An Anthropic API key supplied to the backend at runtime |
 
