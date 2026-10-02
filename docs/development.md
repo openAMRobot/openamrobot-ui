@@ -92,6 +92,41 @@ colcon build --symlink-install \
 source install/setup.bash
 ```
 
+## Run-state fixture (development/test only)
+
+A deterministic run-state fixture feeds the read-only current-run view at
+`/dev/current-run`. The envelope is **Proposed, fixture-only, pending owner
+review**. See [the proposal](proposals/i5-run-state-fixture.md). The
+fixture is not an executor, and its data is development test data.
+
+- It is off by default. With the flag unset, `/api/dev/run-state-fixture/*`
+  returns 404 and the view shows "Fixture backend disabled". There is no
+  Config toggle, and Demo Mode is unchanged.
+- To enable it with Compose (this is the only opt-in):
+
+  ```bash
+  OPENAMR_RUN_STATE_FIXTURE_SCENARIO=failed \
+    docker compose -f docker-compose.yml -f docker-compose.run-state-fixture.yml up
+  ```
+
+  Outside Compose, start the backend with `OPENAMR_RUN_STATE_FIXTURES=1`.
+  The available scenarios are `success` (the default), `failed`,
+  `producer_restart`, `new_run` and `stale`.
+  `OPENAMR_RUN_STATE_FIXTURE_STEP_SECONDS` sets the step interval
+  (default 3).
+- Pure backend tests, run without ROS from `ros2/src/openamr_ui_package`:
+
+  ```bash
+  python3 -m pip install -r test/requirements-run-state-fixture.txt
+  python3 -m pytest test/test_run_state_fixture.py
+  ```
+
+- Frontend tests, run from `web/`:
+
+  ```bash
+  CI=true npx react-scripts test --watchAll=false --testPathPattern='(runState|CurrentRunFixture)'
+  ```
+
 ## Where to make changes
 
 | Change | Start here |

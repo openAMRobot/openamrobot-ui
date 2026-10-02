@@ -81,6 +81,14 @@ class FlaskApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["history"], [])
 
+    def test_run_state_fixture_routes_404_by_default(self):
+        # The development run-state fixture is off unless the backend runs
+        # with OPENAMR_RUN_STATE_FIXTURES=1; without the guard these paths
+        # would fall through to the SPA catch-all and return 200.
+        for path in ("/snapshot", "/events?epoch=x&after_seq=0"):
+            response = self.client.get("/api/dev/run-state-fixture" + path)
+            self.assertEqual(response.status_code, 404)
+
 
 if __name__ == "__main__":
     unittest.main()

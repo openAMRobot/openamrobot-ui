@@ -16,6 +16,8 @@ from werkzeug.exceptions import HTTPException
 
 import xacro
 
+from openamr_ui_package.run_state_fixture import register_run_state_fixture
+
 # ─────────────────────────────────────────────────────────────────────────
 # AUTH_MODE — open-source access model
 #
@@ -1136,6 +1138,11 @@ def resume_replay():
         _replay["proc"].send_signal(signal.SIGCONT)
         _replay["paused"] = False
     return jsonify({"paused": False})
+
+
+# Development/test-only run-state fixture: read-only routes when
+# OPENAMR_RUN_STATE_FIXTURES=1, otherwise a 404 guard (see run_state_fixture.py).
+register_run_state_fixture(app)
 
 
 @app.route("/ros/<path:filename>")
