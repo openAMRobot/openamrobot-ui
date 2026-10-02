@@ -49,7 +49,7 @@ const NotificationsWatcher = () => {
       const key = latest.goal_info?.goal_id?.uuid?.join?.("-") || latest.status;
       if (lastNavTerminalRef.current === key) return;
       lastNavTerminalRef.current = key;
-      notify("OpenAMR", NAV_TERMINAL_LABELS[latest.status]);
+      notify("OpenAMRobot", NAV_TERMINAL_LABELS[latest.status]);
     });
 
     const dockStatusTopic = new window.ROSLIB.Topic({
@@ -58,8 +58,8 @@ const NotificationsWatcher = () => {
       messageType: "std_msgs/String",
     });
     dockStatusTopic.subscribe((msg) => {
-      if (msg.data === "docked") notify("OpenAMR", "Docking complete");
-      else if (msg.data === "failed") notify("OpenAMR", "Docking failed — check the dock tag and logs");
+      if (msg.data === "docked") notify("OpenAMRobot", "Docking complete");
+      else if (msg.data === "failed") notify("OpenAMRobot", "Docking failed — check the dock tag and logs");
     });
 
     const batteryTopic = new window.ROSLIB.Topic({
@@ -72,7 +72,7 @@ const NotificationsWatcher = () => {
       if (data <= threshold) {
         if (!lowBatteryNotifiedRef.current) {
           lowBatteryNotifiedRef.current = true;
-          notify("OpenAMR", `Battery at ${Math.round(data)}% — below ${threshold}%`);
+          notify("OpenAMRobot", `Battery at ${Math.round(data)}% — below ${threshold}%`);
         }
       } else if (data > threshold + 5) {
         // Hysteresis: only re-arm once it's recovered a few points past the

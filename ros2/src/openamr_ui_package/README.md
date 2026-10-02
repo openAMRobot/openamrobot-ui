@@ -1,8 +1,8 @@
-# OpenAMR UI Package
+# OpenAMRobot UI Package
 
 This ROS 2 package contains the Flask server, rosbridge launch integration,
 camera web streaming launch integration, map/navigation relays, and optional
-map/route helper nodes used by the OpenAMR browser UI.
+map/route helper nodes used by the OpenAMRobot browser UI.
 
 The top-level `../../../README.md` is the source of truth for workspace setup,
 build commands, run commands, ports, topics, and troubleshooting.
