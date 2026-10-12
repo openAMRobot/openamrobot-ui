@@ -161,6 +161,11 @@ ANTHROPIC_API_KEY="your-key" docker compose up
 
 Real `.env` files are excluded from Docker images.
 
+The image also builds `openamrobot_description` from openamr-platform-sw at
+the commit pinned in the Dockerfile (`OPENAMR_PLATFORM_SW_COMMIT`, the same
+commit as in [installation](docs/installation.md)), so the Robot page has its
+model. Building the image needs network access to GitHub.
+
 **Success check:** the dashboard opens on port `5050`, and the logs show
 `flask_app`, `rosbridge_websocket`, `map_volatile_relay`, and `nav_relays`.
 The optional camera node appears only when `web_video_server` is installed.

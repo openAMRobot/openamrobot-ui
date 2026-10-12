@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
     curl \
+    git \
     nodejs \
     npm \
     python3-colcon-common-extensions \
@@ -25,6 +26,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-web-video-server \
     ros-${ROS_DISTRO}-xacro \
   && rm -rf /var/lib/apt/lists/*
+
+# Robot Description page: openamrobot_description from openamr-platform-sw,
+# pinned to the validated commit recorded in docs/installation.md. Only that
+# package is fetched and built, into its own workspace, which the entrypoint
+# sources before the UI workspace.
+ARG OPENAMR_PLATFORM_SW_REPO=https://github.com/openAMRobot/openamr-platform-sw.git
+ARG OPENAMR_PLATFORM_SW_COMMIT=174731c6a593870276fa47d8f92db2ef79eda79a
+RUN git init -q /tmp/openamr-platform-sw \
+  && cd /tmp/openamr-platform-sw \
+  && git fetch -q --depth 1 "${OPENAMR_PLATFORM_SW_REPO}" "${OPENAMR_PLATFORM_SW_COMMIT}" \
+  && git checkout -q FETCH_HEAD \
+  && test "$(git rev-parse HEAD)" = "${OPENAMR_PLATFORM_SW_COMMIT}" \
+  && mkdir -p /opt/openamr_platform_sw/src \
+  && cp -r ros2/src/openamrobot_description /opt/openamr_platform_sw/src/ \
+  && echo "${OPENAMR_PLATFORM_SW_COMMIT}" > /opt/openamr_platform_sw/PLATFORM_SW_COMMIT \
+  && rm -rf /tmp/openamr-platform-sw \
+  && cd /opt/openamr_platform_sw \
+  && source /opt/ros/${ROS_DISTRO}/setup.bash \
+  && colcon build --packages-select openamrobot_description \
+  && rm -rf build log
 
 WORKDIR /workspace
 COPY . /workspace
