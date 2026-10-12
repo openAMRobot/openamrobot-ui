@@ -11,7 +11,10 @@ from datetime import datetime, timezone
 import rclpy
 from rclpy.node import Node
 from flask import Flask, abort, jsonify, request, send_file, send_from_directory
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import (
+    get_package_share_directory,
+    PackageNotFoundError,
+)
 from werkzeug.exceptions import HTTPException
 
 import xacro
@@ -80,15 +83,14 @@ REACT_BUILD_DIR = os.path.join(SHARE_DIR, "app")
 REACT_STATIC_DIR = os.path.join(REACT_BUILD_DIR, "static")
 REACT_ROS_DIR = os.path.join(REACT_BUILD_DIR, "ros")
 
-# Vendored URDF/Xacro + meshes for the Robot Description page, installed to
-# share/openamr_ui_package/robot_description/openamrobot/ by setup.py.
-# Source of truth: openAMRobot/openamr-platform-sw's openamrobot_description
-# ROS package. Kept as a data subfolder here (not a second ROS package of the
-# same name) so this UI workspace never collides with the real robot-software
-# workspace if the two are ever colcon-built together.
-ROBOT_DESC_NAME = "openamrobot"
-ROBOT_DESC_DIR = os.path.join(SHARE_DIR, "robot_description", ROBOT_DESC_NAME)
-ROBOT_DESC_XACRO = os.path.join(ROBOT_DESC_DIR, "urdf", "robo_urdf.urdf.xacro")
+# Robot Description page: URDF/Xacro and meshes come from the installed
+# openamrobot_description package of openAMRobot/openamr-platform-sw (REP 105
+# base frames and 2.0 sensor frames, platform-sw PR #55). Nothing is copied
+# into this package. Resolved per request, not at import, so the UI still
+# starts when that package is not in the sourced workspace; the page then
+# reports the description as unavailable.
+ROBOT_DESC_PACKAGE = "openamrobot_description"
+ROBOT_DESC_XACRO_REL = os.path.join("urdf", "robo_urdf.urdf.xacro")
 _robot_urdf_cache = {"mtime": None, "xml": None}
 
 # Make Flask serve /static/* from the CRA build folder
@@ -762,19 +764,38 @@ def create_voice_plan():
     return jsonify({"plan": plan, "transcript": transcript})
 
 
+def robot_description_dir():
+    """Return the openamrobot_description share directory, or None if absent."""
+    try:
+        return get_package_share_directory(ROBOT_DESC_PACKAGE)
+    except PackageNotFoundError:
+        return None
+
+
+def robot_description_xacro():
+    """Return the platform-sw xacro path, or None if it is not installed."""
+    desc_dir = robot_description_dir()
+    if desc_dir is None:
+        return None
+    path = os.path.join(desc_dir, ROBOT_DESC_XACRO_REL)
+    return path if os.path.exists(path) else None
+
+
 def get_robot_description_urdf_xml():
-    """Xacro-process the vendored robot description, cached by file mtime.
+    """Xacro-process the platform-sw robot description, cached by file mtime.
 
     Re-reads gazebo_control.xacro's mtime too since it's xacro:included by
     the main file and edits there should also invalidate the cache.
     """
-    if not os.path.exists(ROBOT_DESC_XACRO):
-        abort(404, "Robot description xacro not found on this install.")
+    xacro_path = robot_description_xacro()
+    if xacro_path is None:
+        abort(404, "Robot description (openamrobot_description) not found on this install.")
 
-    included = os.path.join(os.path.dirname(ROBOT_DESC_XACRO), "gazebo_control.xacro")
+    included = os.path.join(os.path.dirname(xacro_path), "gazebo_control.xacro")
     try:
         mtime = (
-            os.path.getmtime(ROBOT_DESC_XACRO),
+            xacro_path,
+            os.path.getmtime(xacro_path),
             os.path.getmtime(included) if os.path.exists(included) else 0,
         )
     except OSError as error:
@@ -784,7 +805,7 @@ def get_robot_description_urdf_xml():
         return _robot_urdf_cache["xml"]
 
     try:
-        doc = xacro.process_file(ROBOT_DESC_XACRO)
+        doc = xacro.process_file(xacro_path)
         xml_text = doc.toxml()
     except Exception as error:  # xacro raises plain Exception/xml errors
         abort(500, f"Xacro processing failed: {error}")
@@ -796,7 +817,7 @@ def get_robot_description_urdf_xml():
 
 @app.route("/api/robot-description/manifest", methods=["GET"])
 def robot_description_manifest():
-    xacro_exists = os.path.exists(ROBOT_DESC_XACRO)
+    xacro_exists = robot_description_xacro() is not None
     return jsonify(
         {
             "name": "robo_urdf",
@@ -819,17 +840,21 @@ def robot_description_urdf():
 
 @app.route("/api/robot-description/assets/<path:filename>", methods=["GET"])
 def robot_description_assets(filename: str):
-    # filename comes straight from the URL path — normalize and confirm the
-    # resolved path stays inside ROBOT_DESC_DIR before serving anything.
-    requested = os.path.normpath(os.path.join(ROBOT_DESC_DIR, filename))
-    if not requested.startswith(os.path.join(ROBOT_DESC_DIR, "")):
+    # filename comes straight from the URL path: normalize and confirm the
+    # resolved path stays inside the description share directory before
+    # serving anything.
+    desc_dir = robot_description_dir()
+    if desc_dir is None:
+        abort(404, "Asset not found.")
+    requested = os.path.normpath(os.path.join(desc_dir, filename))
+    if not requested.startswith(os.path.join(desc_dir, "")):
         abort(404, "Asset not found.")
     if not os.path.isfile(requested):
         abort(404, "Asset not found.")
 
     rel_dir = os.path.dirname(filename)
     rel_name = os.path.basename(filename)
-    return send_from_directory(os.path.join(ROBOT_DESC_DIR, rel_dir), rel_name)
+    return send_from_directory(os.path.join(desc_dir, rel_dir), rel_name)
 
 
 @app.route("/api/devices/serial-ports", methods=["GET"])

@@ -1,8 +1,9 @@
 import os
 
 from launch import LaunchDescription
-from launch.actions import LogInfo
-from launch.substitutions import PathJoinSubstitution
+from launch.actions import DeclareLaunchArgument, LogInfo
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
@@ -68,6 +69,40 @@ def generate_launch_description():
             name="nav_relays",
             namespace="ui",
             output="screen",
+        )
+    )
+
+    # Battery node (battery.py): opt-in. Publishes Float32 on /battery_status,
+    # the topic the web app reads. With battery_port empty it publishes a
+    # SIMULATED value for development and never opens a serial device. On 2.0
+    # the battery state comes from the base controller; the serial path is
+    # Gate A legacy. Example:
+    #   ros2 launch openamr_ui_bringup ui.launch.py start_battery_monitor:=true
+    actions.append(
+        DeclareLaunchArgument(
+            "start_battery_monitor",
+            default_value="false",
+            description="Start battery.py (simulated value unless battery_port is set).",
+        )
+    )
+    actions.append(
+        DeclareLaunchArgument(
+            "battery_port",
+            default_value="",
+            description=(
+                "Gate A legacy battery serial device. "
+                "Empty: simulated value, no device opened."
+            ),
+        )
+    )
+    actions.append(
+        Node(
+            package="openamr_ui_package",
+            executable="battery",
+            name="battery_monitor",
+            output="screen",
+            parameters=[{"port": LaunchConfiguration("battery_port")}],
+            condition=IfCondition(LaunchConfiguration("start_battery_monitor")),
         )
     )
 

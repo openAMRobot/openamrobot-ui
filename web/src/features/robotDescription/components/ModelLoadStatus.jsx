@@ -34,9 +34,9 @@ const ModelLoadStatus = ({ manifest, status }) => {
           integrator or IT support.
         </p>
         <p className="mt-1 text-[11px] text-themeTextGray/60">
-          No <code>robot_description/openamrobot</code> share directory
-          found. Rebuild <code>openamr_ui_package</code> with the vendored
-          URDF in place.
+          The <code>openamrobot_description</code> package (from
+          openamr-platform-sw) was not found. Source the platform-sw workspace
+          before starting the UI.
         </p>
       </DashboardCard>
     );

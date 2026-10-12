@@ -31,9 +31,12 @@ build commands, run commands, ports, topics, and troubleshooting.
 - `folders_handler.py`: handles map, group, route, and waypoint file commands.
 - `waypoint_nav.py`: optional route-following helper using Nav2 Simple
   Commander.
-- `battery.py`: optional battery-percentage publisher (reads a serial port;
-  falls back to a simulated drain if none is present). Not started by
-  `new_ui_launch.py` or `physnode_launch.py` by default.
+- `battery.py` (executable `battery`): optional battery-percentage
+  publisher. Starts from `new_ui_launch.py` only with
+  `start_battery_monitor:=true`. It reads a serial port only when
+  `battery_port` names one (Gate A legacy); otherwise it publishes a simulated
+  drain for development. On 2.0 the battery state comes from the base
+  controller.
 
 ## Voice Command API key
 

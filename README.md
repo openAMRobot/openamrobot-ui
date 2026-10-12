@@ -161,6 +161,11 @@ ANTHROPIC_API_KEY="your-key" docker compose up
 
 Real `.env` files are excluded from Docker images.
 
+The image also builds `openamrobot_description` from openamr-platform-sw at
+the commit pinned in the Dockerfile (`OPENAMR_PLATFORM_SW_COMMIT`, the same
+commit as in [installation](docs/installation.md)), so the Robot page has its
+model. Building the image needs network access to GitHub.
+
 **Success check:** the dashboard opens on port `5050`, and the logs show
 `flask_app`, `rosbridge_websocket`, `map_volatile_relay`, and `nav_relays`.
 The optional camera node appears only when `web_video_server` is installed.
@@ -168,7 +173,11 @@ The optional camera node appears only when `web_video_server` is installed.
 ### Manual install
 
 Install ROS 2 Jazzy, Node.js, npm, and the declared ROS dependencies
-(including Xacro, needed for the Robot Description page). Then:
+(including Xacro, needed for the Robot Description page). The robot model
+comes from the `openamrobot_description` package of
+[openamr-platform-sw](https://github.com/openAMRobot/openamr-platform-sw);
+source that workspace before the UI one (see
+[installation](docs/installation.md)). Then:
 
 ```bash
 cd ~/openamrobot-ui
@@ -178,6 +187,7 @@ bash scripts/sync_frontend_to_ros.sh
 cd ros2
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
+source ~/openamr-platform-sw/install/setup.bash
 source install/setup.bash
 ros2 launch openamr_ui_bringup ui.launch.py
 ```
