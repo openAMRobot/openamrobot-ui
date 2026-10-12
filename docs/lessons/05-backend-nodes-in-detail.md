@@ -134,24 +134,33 @@ safely because their command vocabularies never collide — if you're adding a
 new `ui_operation` command (for either node), check both files, not just the
 one you're editing.
 
-## battery.py — no launch path exists yet
+## battery.py: launch path exists, opt-in
 
-This one is more than "off by default": there is currently no way to start
-it at all short of writing your own launch entry or `rclpy` script.
-`setup.py`'s `console_scripts` registers `flask`, `handler`, `nav`,
-`map_relay`, and `nav_relay` — `battery.py`'s `main()` isn't one of them, so
-`ros2 run openamr_ui_package battery` doesn't exist. It also has no
-`if __name__ == "__main__":` guard at the bottom of the file, so running
-`python3 battery.py` directly does nothing either — `main()` is defined but
-never called. If it were wired up, it would read a serial port
-(`/dev/ttyUSB0`) for battery data and publish `Float32` on `battery_status`;
-absent the serial device (the common case off a real battery-equipped
-robot), it falls back to a simulated battery that slowly drains from 100,
-purely so the Status page's battery panel
-([Lesson 06](06-the-pages.md#status--infopagejsx)) has *something* to show
-during development. This is the concrete mechanism behind that page's "no
-battery data just means no node is publishing it" behavior — currently,
-that's every deployment, since nothing starts this node yet.
+`battery.py` is registered as the `battery` console script, and the UI
+launch file (`new_ui_launch.py`, included by `openamr_ui_bringup`'s
+`ui.launch.py`) can start it. It is off by default:
+
+```bash
+ros2 launch openamr_ui_bringup ui.launch.py start_battery_monitor:=true
+```
+
+It publishes `Float32` on `/battery_status`, the topic the Status page's
+battery panel ([Lesson 06](06-the-pages.md#status--infopagejsx)) and the
+status bar read.
+
+- With `battery_port` empty (the default) it never opens a serial device and
+  publishes a simulated value that slowly drains from 100, so the battery
+  panel has something to show during development. That value is not a real
+  battery reading.
+- With `battery_port:=/dev/...` it reads that serial port (Gate A legacy) and
+  falls back to the simulated value if the port cannot be opened. There is
+  no default port on purpose: `/dev/ttyUSB0` is commonly the RPLIDAR, and
+  opening it here would reconfigure and read the lidar's line.
+- On 2.0 the battery state comes from the base controller (Daly BMS on CAN2
+  via the STM32), not from this node.
+
+When the node is not started, no battery data just means nothing is
+publishing `/battery_status`, and the page shows "No battery telemetry."
 
 ## Try it
 

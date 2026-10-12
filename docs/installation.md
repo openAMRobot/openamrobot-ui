@@ -39,7 +39,7 @@ sensors, docking, and simulator must run separately.
 | ROS 2 | Jazzy | Package names and launch commands target Jazzy |
 | Node.js | 18–20 | Version 18 is the minimum; version 20 is used for current documentation validation |
 | npm | Version bundled with a supported Node.js release | Use `npm ci` with the committed lockfile |
-| `openamr-platform-sw` | A matching ROS 2 Jazzy branch or commit | No release is pinned yet |
+| `openamr-platform-sw` | `main` at `174731c6a593870276fa47d8f92db2ef79eda79a` (includes PR #55) | Validated commit for `openamrobot_description`, which the Robot Description page loads. No release is pinned yet |
 | Robot hardware | An OpenAMRobot platform implementing the documented topic/service contract | No hardware revision is pinned yet |
 
 For repeatable deployments, record:
@@ -200,8 +200,14 @@ Install dependencies declared by the ROS packages:
 cd ~/openamrobot-ui/ros2
 source /opt/ros/jazzy/setup.bash
 rosdep update
-rosdep install --from-paths src --ignore-src -r -y
+rosdep install --from-paths src --ignore-src -r -y --skip-keys openamrobot_description
 ```
+
+`openamrobot_description` is not in rosdistro. It comes from
+[openamr-platform-sw](https://github.com/openAMRobot/openamr-platform-sw)
+(`ros2/src/openamrobot_description`), built at the commit in the table above.
+Source that workspace before starting the UI so the Robot Description page
+can find the URDF/Xacro and meshes.
 
 Build the frontend, synchronize it into the ROS package, and build ROS:
 
@@ -243,6 +249,7 @@ In another terminal, start the UI:
 ```bash
 cd ~/openamrobot-ui/ros2
 source /opt/ros/jazzy/setup.bash
+source ~/openamr-platform-sw/install/setup.bash
 source install/setup.bash
 ros2 launch openamr_ui_bringup ui.launch.py
 ```

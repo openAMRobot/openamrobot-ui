@@ -1,3 +1,14 @@
+# Battery percentage publisher for the UI (Float32 on battery_status).
+#
+# On OpenAMRobot 2.0 the battery state comes from the base controller (Daly
+# BMS on CAN2 via the STM32); the serial path in this node is Gate A legacy.
+#
+# The serial port is a parameter with no default: the node never opens a
+# device unless one is named. /dev/ttyUSB0 is commonly the RPLIDAR on the
+# robot, and opening it here would reconfigure and read the lidar's line.
+# Without a port, or if the named port cannot be opened, the node publishes
+# a simulated, slowly draining value for development only. The UI launch
+# file starts this node only when start_battery_monitor:=true.
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32
@@ -6,12 +17,21 @@ import serial
 class BatteryMonitor(Node):
     def __init__(self):
         super().__init__('battery_monitor')
+        port = self.declare_parameter('port', '').get_parameter_value().string_value
+        baud = self.declare_parameter('baud', 9600).get_parameter_value().integer_value
         self.serial_port = None
-        try:
-            self.serial_port = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
-            self.get_logger().info("Successfully connected to battery monitor on /dev/ttyUSB0")
-        except Exception as e:
-            self.get_logger().warn(f"Could not open serial port /dev/ttyUSB0 ({e}). Falling back to dummy battery monitor.")
+        if not port:
+            self.get_logger().warn(
+                "No battery serial port set (parameter 'port'). Publishing a "
+                "SIMULATED battery value on battery_status for development only.")
+        else:
+            try:
+                self.serial_port = serial.Serial(port, baud, timeout=1)
+                self.get_logger().info(f"Connected to battery monitor on {port}")
+            except Exception as e:
+                self.get_logger().warn(
+                    f"Could not open serial port {port} ({e}). Publishing a "
+                    "SIMULATED battery value on battery_status for development only.")
 
         self.timer = self.create_timer(1.0, self.read_battery_status)
         self.batterypub = self.create_publisher(Float32, 'battery_status', 10)

@@ -238,6 +238,26 @@ drive controls to accidentally bump.
 A 3D digital twin of the robot, built directly from its real URDF/Xacro
 description — no physical robot required to look at it.
 
+The model is the `openamrobot_description` package of
+[openamr-platform-sw](https://github.com/openAMRobot/openamr-platform-sw),
+not a copy in this repository: Flask runs Xacro on its
+`urdf/robo_urdf.urdf.xacro` and serves its meshes. It follows REP 105 and
+the 2.0 sensor frames (platform-sw PR #55):
+
+- `base_footprint` is the root; `base_link` sits at the drive axle, 0.098 m
+  above it.
+- `lidar_link` is at (0.330, 0, 0.124) from `base_link`, rotated 180 degrees
+  about z.
+- `base_camera_link` is the base camera, an Orbbec Gemini 336L, with colour
+  and depth optical frames. The legacy `camera_link` (IMX708, Gate A) is
+  still published.
+- `imu_link`, four ultrasonic frames (`us_front_left`, `us_front_right`,
+  `us_rear_left`, `us_rear_right`) and two ToF frames (`tof_front`,
+  `tof_rear`).
+
+If that package is not in the sourced workspace, the page says the model is
+unavailable.
+
 ![OpenAMRobot UI Robot page: 3D model viewer, kinematic tree, link information panel, and joint controls](../assets/robot-description/image.png)
 
 - **Description Mode** vs **Live Mode** (the switch near the top): Description

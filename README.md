@@ -168,7 +168,11 @@ The optional camera node appears only when `web_video_server` is installed.
 ### Manual install
 
 Install ROS 2 Jazzy, Node.js, npm, and the declared ROS dependencies
-(including Xacro, needed for the Robot Description page). Then:
+(including Xacro, needed for the Robot Description page). The robot model
+comes from the `openamrobot_description` package of
+[openamr-platform-sw](https://github.com/openAMRobot/openamr-platform-sw);
+source that workspace before the UI one (see
+[installation](docs/installation.md)). Then:
 
 ```bash
 cd ~/openamrobot-ui
@@ -178,6 +182,7 @@ bash scripts/sync_frontend_to_ros.sh
 cd ros2
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
+source ~/openamr-platform-sw/install/setup.bash
 source install/setup.bash
 ros2 launch openamr_ui_bringup ui.launch.py
 ```

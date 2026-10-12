@@ -25,6 +25,9 @@
 
   <!-- Runtime Python deps -->
   <exec_depend>python3-flask</exec_depend>
+  <!-- Robot Description page: URDF/Xacro and meshes from openAMRobot/openamr-platform-sw.
+       Not in rosdistro; build it from the platform-sw commit recorded in docs/installation.md. -->
+  <exec_depend>openamrobot_description</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>python3-serial</exec_depend>
   <exec_depend>ros2launch</exec_depend>
