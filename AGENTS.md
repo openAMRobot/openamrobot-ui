@@ -46,7 +46,7 @@ This block is copied verbatim; GitHub does not propagate it between repositories
 # Repository-specific rules: openamrobot-ui
 ## Layout and ownership
 - Existing React frontend: web/. Flask/ROS packages: ros2/.
-- Moazzam owns operator UI/backend integration; Parth owns Reporting Mode presentation.
+- Mohamed owns operator UI/backend integration (interim); Parth owns Reporting Mode presentation.
 - Reporting Mode is a full-screen route in this app, sharing backend state and adapters.
 - Execution belongs to the robot-side executor; a browser view never establishes success.
 - Operational state and terminal outcome are separate. Preserve UNKNOWN/stale semantics.
