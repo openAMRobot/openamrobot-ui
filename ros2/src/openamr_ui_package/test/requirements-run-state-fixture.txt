@@ -1,0 +1,7 @@
+# Pure (no-ROS) dependencies for test/test_run_state_fixture.py.
+# Run from ros2/src/openamr_ui_package:
+#   python3 -m pip install -r test/requirements-run-state-fixture.txt
+#   python3 -m pytest test/test_run_state_fixture.py
+flask>=3.0,<4
+pytest>=7.4,<9
+pyyaml>=6,<7
