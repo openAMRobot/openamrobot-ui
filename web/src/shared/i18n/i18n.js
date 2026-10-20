@@ -31,7 +31,7 @@ const DE = {
   Offline: "Offline",
   Error: "Fehler",
   Batt: "Akku",
-  "E-STOP": "NOT-AUS",
+  "Stop (software)": "Stopp (Software)",
   Language: "Sprache",
 };
 

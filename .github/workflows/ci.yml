@@ -27,9 +27,9 @@ jobs:
         run: npm ci
 
       - name: Test
-        # --passWithNoTests so the job doesn't fail simply because the suite
-        # is currently empty; it still fails on any real test failure.
-        run: npm test -- --watchAll=false --passWithNoTests
+        # No --passWithNoTests: an empty or missing suite must fail CI,
+        # so a green run always means tests actually ran.
+        run: npm test -- --watchAll=false
         env:
           CI: true
 

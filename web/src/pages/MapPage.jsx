@@ -340,8 +340,8 @@ const MapPage = () => {
       }),
     );
     cancelGoal();
-    addEvent({ type: "safety", severity: "error", message: "Emergency stop — robot halted" });
-    toast.warn("Emergency stop — robot halted");
+    addEvent({ type: "safety", severity: "error", message: "Software stop (map page)" });
+    toast.warn("Software stop sent");
   }, [cancelGoal]);
 
   const sendHome = useCallback(() => {
@@ -448,10 +448,10 @@ const MapPage = () => {
               <Joystick maxSpeed={maxSpeed} compact />
               <button
                 onClick={emergencyStop}
-                title="Emergency stop"
-                className="mt-1 h-9 w-9 shrink-0 rounded-full border-2 border-statusRed bg-statusRed/10 font-[RobotoMono] text-[9px] font-bold leading-none text-statusRed transition-colors hover:bg-statusRed hover:text-white"
+                title="Stop (software): halts motion from this UI. This is not the hardwired E-stop."
+                className="mt-1 shrink-0 rounded-lg border-2 border-statusRed bg-statusRed/10 px-2 py-1 font-[RobotoMono] text-[10px] font-bold leading-none text-statusRed transition-colors hover:bg-statusRed hover:text-white"
               >
-                STOP
+                Stop (software)
               </button>
             </div>
 
