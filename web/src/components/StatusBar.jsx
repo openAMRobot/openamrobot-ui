@@ -23,9 +23,12 @@ const batteryColor = (pct) =>
 /**
  * Always-visible bar (mounted in AppLayout, above the routed page) surfacing
  * the three things an operator needs at a glance from anywhere: rosbridge
- * connection, battery level, and a one-tap software E-stop. The E-stop
- * publishes a zero Twist and cancels the active Nav2 goal — the same halt the
- * Map page's stop button does — so it works no matter which page is open.
+ * connection, battery level, and a one-tap "Stop (software)" button.
+ *
+ * Stop (software) publishes a zero Twist and cancels the active Nav2 goal,
+ * the same halt the Map page's stop button does, so it works no matter which
+ * page is open. It is a software stop only. It is NOT the hardwired E-stop and
+ * must never be labelled as one: the hardwired E-stop stays the safety function.
  */
 const StatusBar = () => {
   const ros = useRos();
@@ -60,7 +63,7 @@ const StatusBar = () => {
     return () => batteryTopic.unsubscribe();
   }, [ros]);
 
-  const emergencyStop = useCallback(() => {
+  const softwareStop = useCallback(() => {
     cmdVelRef.current?.publish(
       new window.ROSLIB.Message({
         linear: { x: 0, y: 0, z: 0 },
@@ -74,7 +77,7 @@ const StatusBar = () => {
       () => {},
       () => {},
     );
-    addEvent({ type: "safety", severity: "error", message: "Emergency stop (status bar)" });
+    addEvent({ type: "safety", severity: "error", message: "Software stop (status bar)" });
   }, []);
 
   const conn = CONN[rosStatus] || CONN.disconnected;
@@ -109,11 +112,11 @@ const StatusBar = () => {
       </div>
 
       <button
-        onClick={emergencyStop}
-        title="Emergency stop — halt the robot"
+        onClick={softwareStop}
+        title="Software stop: halts motion commands from this UI. This is not the hardwired E-stop."
         className="ml-auto rounded-lg border-2 border-statusRed bg-statusRed/10 px-3 py-1 text-xs font-bold text-statusRed transition-colors hover:bg-statusRed hover:text-white"
       >
-        {t("E-STOP")}
+        {t("Stop (software)")}
       </button>
     </div>
   );
