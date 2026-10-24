@@ -1,0 +1,16 @@
+# Development-only override: enables the run-state fixture routes
+# (docs/proposals/i5-run-state-fixture.md). This is the ONLY supported way
+# to turn the fixture on in Compose; the default docker-compose.yml leaves
+# OPENAMR_RUN_STATE_FIXTURES unset, so the routes return 404.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.run-state-fixture.yml up
+#
+# Fixture data is deterministic development test data. It never reaches
+# ROS publishers, mission start handlers or hardware — and enabling it does
+# not make the rest of the app hardware-isolated.
+services:
+  openamr-ui:
+    environment:
+      OPENAMR_RUN_STATE_FIXTURES: "1"
+      OPENAMR_RUN_STATE_FIXTURE_SCENARIO: ${OPENAMR_RUN_STATE_FIXTURE_SCENARIO:-success}
+      OPENAMR_RUN_STATE_FIXTURE_STEP_SECONDS: ${OPENAMR_RUN_STATE_FIXTURE_STEP_SECONDS:-3}
