@@ -8,6 +8,8 @@ skipped still reports a positive count. This script parses the XML files
 itself and reports total, skipped and executed separately. Executed is
 total minus skipped. It exits 1 when no result file is found or no test
 was executed (AGENTS.md: a suite that executes zero tests fails).
+Malformed or unreadable XML also fails the guard, even when other files
+contain executed tests. Well-formed non-JUnit XML is still ignored.
 
 Usage: python3 scripts/count_test_results.py [build_dir]   (default: build)
 """
@@ -38,15 +40,18 @@ def _count_suite(suite):
 
 
 def count(build_dir):
-    """Return {'files', 'total', 'skipped', 'executed'} for build_dir."""
+    """Return counts and errors; incomplete input must not look like a pass."""
     files = total = skipped = 0
+    errors = []
     for folder, _dirs, names in os.walk(build_dir):
         for name in sorted(names):
             if not name.endswith('.xml'):
                 continue
+            path = os.path.join(folder, name)
             try:
-                root = ET.parse(os.path.join(folder, name)).getroot()
-            except ET.ParseError:
+                root = ET.parse(path).getroot()
+            except (ET.ParseError, OSError) as error:
+                errors.append(f'{path}: {type(error).__name__}: {error}')
                 continue
             suites = _suites(root)
             if not suites:
@@ -56,7 +61,8 @@ def count(build_dir):
                 suite_total, suite_skipped = _count_suite(suite)
                 total += suite_total
                 skipped += suite_skipped
-    return {'files': files, 'total': total, 'skipped': skipped, 'executed': total - skipped}
+    return {'files': files, 'total': total, 'skipped': skipped,
+            'executed': total - skipped, 'errors': errors}
 
 
 def main(argv):
@@ -66,6 +72,11 @@ def main(argv):
     print(f"tests total: {result['total']}")
     print(f"tests skipped: {result['skipped']}")
     print(f"tests executed: {result['executed']}")
+    if result['errors']:
+        print('FAIL: incomplete XML results; counts above exclude unreadable files')
+        for error in result['errors']:
+            print(f'  {error}')
+        return 1
     if result['files'] == 0:
         print(f'FAIL: no JUnit result files under {build_dir}')
         return 1

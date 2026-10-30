@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -78,12 +79,58 @@ class CountTestResultsTest(unittest.TestCase):
         self.assertIn('tests skipped: 3', out)
         self.assertIn('tests executed: 1', out)
 
-    def test_non_junit_and_broken_xml_files_are_ignored(self):
+    def test_broken_xml_is_reported_not_ignored(self):
         self._write('pkg/package.xml', '<package><name>x</name></package>')
         self._write('pkg/broken.xml', '<testsuite')
         code, out = self._run()
         self.assertEqual(code, 1)
         self.assertIn('result files: 0', out)
+        self.assertIn('broken.xml', out)
+        self.assertIn('FAIL: incomplete XML results', out)
+
+
+    def test_passing_result_does_not_hide_truncated_xml(self):
+        self._write('good/pytest.xml', _suite(PASSED))
+        self._write('bad/test_results/pkg/truncated.xml', '<testsuite tests="2"><testcase')
+        code, out = self._run()
+        self.assertEqual(code, 1)
+        self.assertIn('tests executed: 1', out)
+        self.assertIn('truncated.xml', out)
+        self.assertIn('FAIL: incomplete XML results', out)
+
+    def test_passing_result_does_not_hide_unreadable_xml(self):
+        self._write('good/pytest.xml', _suite(PASSED))
+        self._write('bad/denied.xml', _suite(PASSED))
+        original_parse = count_test_results.ET.parse
+
+        def parse(path):
+            if str(path).endswith('denied.xml'):
+                raise PermissionError('fixture read denied')
+            return original_parse(path)
+
+        with patch.object(count_test_results.ET, 'parse', side_effect=parse):
+            code, out = self._run()
+        self.assertEqual(code, 1)
+        self.assertIn('tests executed: 1', out)
+        self.assertIn('denied.xml', out)
+        self.assertIn('fixture read denied', out)
+
+    def test_valid_non_junit_xml_does_not_fail_valid_results(self):
+        self._write('pkg/package.xml', '<package><name>x</name></package>')
+        self._write('pkg/pytest.xml', _suite(PASSED))
+        code, out = self._run()
+        self.assertEqual(code, 0)
+        self.assertIn('result files: 1', out)
+        self.assertIn('tests executed: 1', out)
+
+    def test_all_malformed_files_are_named(self):
+        self._write('good/pytest.xml', _suite(PASSED))
+        self._write('bad/first.xml', '<testsuite')
+        self._write('bad/second.xml', '<testsuites>')
+        code, out = self._run()
+        self.assertEqual(code, 1)
+        self.assertIn('first.xml', out)
+        self.assertIn('second.xml', out)
 
 
 if __name__ == '__main__':
