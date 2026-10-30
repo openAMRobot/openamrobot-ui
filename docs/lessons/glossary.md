@@ -83,7 +83,8 @@ together with configuration. See
 explicit `get_state`/`change_state` service calls rather than just
 running as soon as it starts — Nav2's `map_server`, `amcl`,
 `controller_server`, `planner_server`, and `bt_navigator` all work this
-way. See [`LifecycleStatus`](07-ui-components.md#lifecyclestatus--lifecyclestatusjsx).
+way. The UI only reads these states; the platform's lifecycle manager
+changes them. See [`LifecycleStatus`](07-ui-components.md#lifecyclestatus--lifecyclestatusjsx).
 
 **Message** — The typed data structure carried on a topic (e.g.
 `geometry_msgs/Twist`). See [Lesson 02](02-ros2-core-concepts.md#message).
