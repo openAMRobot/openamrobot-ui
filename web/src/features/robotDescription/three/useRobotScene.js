@@ -285,7 +285,13 @@ export default function useRobotScene({ manifest, layers, selected, onSelect, po
       });
     };
 
-    fetch(resolveRobotDescriptionUrl(manifest.urdfUrl))
+    // A manifest may carry the URDF inline (urdfText): the robot's own
+    // published robot_description. Otherwise it is fetched from the backend.
+    const urdfSource =
+      typeof manifest.urdfText === "string"
+        ? Promise.resolve({ ok: true, text: () => Promise.resolve(manifest.urdfText) })
+        : fetch(resolveRobotDescriptionUrl(manifest.urdfUrl));
+    urdfSource
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.text().catch(() => "");
