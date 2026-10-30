@@ -13,6 +13,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped, PoseArray, Pose, PoseSt
 from nav2_msgs.srv import LoadMap, SaveMap
 from std_msgs.msg import String, Empty
 from openamr_ui_msgs.msg import ArrayPoseStampedWithCovariance
+from openamr_ui_package import map_files
 
 # Mapping and navigation belong to the platform. This node never launches
 # them and never changes the lifecycle state of platform nodes; it only
@@ -286,19 +287,9 @@ class UIFoldersHandler(Node):
         except Exception as e:
             self.get_logger().info(f"Error in create_group_func: {e}")
 
-    # A map is <name>.yaml plus the image it names. Maps saved by the
-    # platform map saver (SaveMap) have only those two files; older maps
-    # also have a <name>_ros.yaml map_server parameter file, which is handled
-    # when it exists and skipped when it does not.
-
-    def _map_image(self, map_base):
-        """Return (image path on disk, image field) for <map_base>.yaml."""
-        with open(f'{map_base}.yaml', 'r') as file:
-            image = ((yaml.safe_load(file) or {}).get('image')
-                     or f'{os.path.basename(map_base)}.png')
-        if not os.path.isabs(image):
-            return os.path.join(os.path.dirname(map_base), image), image
-        return image, image
+    # Map files (<name>.yaml, its image, an optional <name>_ros.yaml) are
+    # renamed and deleted by map_files.py, which refuses an image outside the
+    # map's folder and keeps an image another map also uses.
 
     def _first_map_in(self, group_dir):
         """Return the first map name in group_dir, ignoring images and _ros files."""
@@ -314,33 +305,13 @@ class UIFoldersHandler(Node):
             new_map_file = f'{self.maps_folder}/{group}/{new}'
             old_route_folder_file = f'{self.routs_folder}/{group}/{old}'
             new_route_folder_file = f'{self.routs_folder}/{group}/{new}'
-            old_ros_file = f'{old_map_file}_ros.yaml'
-            new_ros_file = f'{new_map_file}_ros.yaml'
-            if os.path.exists(f'{new_map_file}.yaml'):
-                self._pub(f'A map named "{new}" already exists; nothing was renamed.')
+            try:
+                notes = map_files.rename_map(old_map_file, new_map_file)
+            except map_files.MapFileError as refused:
+                self._pub(f'Nothing was renamed: {refused}.')
                 return
-
-            old_image, image_field = self._map_image(old_map_file)
-            new_image = f'{new_map_file}{os.path.splitext(old_image)[1] or ".png"}'
-            with open(f'{old_map_file}.yaml', 'r') as file:
-                map_yaml = yaml.safe_load(file) or {}
-            map_yaml['image'] = (new_image if os.path.isabs(image_field)
-                                 else os.path.basename(new_image))
-            with open(f'{old_map_file}.yaml', 'w') as file:
-                yaml.dump(map_yaml, file)
-
-            if os.path.exists(old_ros_file):
-                with open(old_ros_file, 'r') as file:
-                    ros_yaml = yaml.safe_load(file) or {}
-                params = ros_yaml.get('map_server', {}).get('ros__parameters')
-                (params if isinstance(params, dict) else ros_yaml)['yaml_filename'] = f'{new}.yaml'
-                with open(old_ros_file, 'w') as file:
-                    yaml.dump(ros_yaml, file)
-                os.rename(old_ros_file, new_ros_file)
-
-            os.rename(f'{old_map_file}.yaml', f'{new_map_file}.yaml')
-            if os.path.exists(old_image):
-                os.rename(old_image, new_image)
+            for note in notes:
+                self._pub(note)
             if os.path.isdir(old_route_folder_file):
                 os.rename(old_route_folder_file, new_route_folder_file)
 
@@ -362,11 +333,13 @@ class UIFoldersHandler(Node):
             map_to_delete = f"{self.maps_folder}/{group}/{self.dict_cmd['map']}"
             route_map_folder_to_delete = (
                 f"{self.routs_folder}/{group}/{self.dict_cmd['map']}")
-            image, _field = self._map_image(map_to_delete)
-            os.remove(f'{map_to_delete}.yaml')
-            for optional in (f'{map_to_delete}_ros.yaml', image):
-                if os.path.exists(optional):
-                    os.remove(optional)
+            try:
+                notes = map_files.delete_map(map_to_delete)
+            except map_files.MapFileError as refused:
+                self._pub(f'Nothing was deleted: {refused}.')
+                return
+            for note in notes:
+                self._pub(note)
             if os.path.isdir(route_map_folder_to_delete):
                 shutil.rmtree(route_map_folder_to_delete)
 

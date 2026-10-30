@@ -34,6 +34,11 @@ ZX80 or on a robot.
 - Rename and delete work for maps saved by SaveMap (`<name>.yaml` and the
   image only); a legacy `<name>_ros.yaml` is handled when it exists. A
   failed save or load reaches the UI as a clear message.
+- Rename and delete change only files inside the map's own folder
+  (`map_files.py`). The yaml's `image` path is resolved, symlinks included;
+  an image outside the folder (absolute path, `..`, or a symlink out) refuses
+  the whole operation, changes nothing and tells the UI why. An image that
+  another map in the folder also names is kept (review of #40).
 - Owner decision (30 Oct): save service `/map_saver/save_map`; maps on the
   shared `openamrobot_maps` volume at `/data/maps` in the UI and platform
   containers (#53). The platform-side mount and launch are a platform-sw
