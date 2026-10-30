@@ -166,6 +166,20 @@ describe("priority conflicts", () => {
     expect(v.warnings).toContain("Navigation data is stale");
   });
 
+  // Owner decision: a known, engaged lock ranks above UNKNOWN navigation
+  // data in every form; only DISCONNECTED ranks higher.
+  it.each([
+    ["missing", [
+      [{ type: "connection", status: "connected" }, 0],
+      [{ type: "lock", msg: lock(true) }, 1000],
+    ]],
+    ["invalid", [...healthy(navStatus({ contract_version: 99 })), [{ type: "lock", msg: lock(true) }, 1000]]],
+  ])("an engaged lock wins over %s navigation status", (_label, events) => {
+    const v = view(events);
+    expect(v.display).toBe(DISPLAY.STOPPED_SOFTWARE);
+    expect(v.reason).toBe("The software stop lock is engaged");
+  });
+
   it("FAULTED wins over an active goal", () => {
     const v = view([...healthy(navStatus({ health: 3 })), [{ type: "goalStatus", msg: goalStatus(1, 2) }, 1000]]);
     expect(v.display).toBe(DISPLAY.FAULTED);

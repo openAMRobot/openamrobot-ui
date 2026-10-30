@@ -501,9 +501,12 @@ export const deriveReport = (state, nowMs) => {
   });
 
   // Priority, highest first. See docs/reporting-mode.md, "State priority".
+  // Owner decision (PR #54): a known, engaged software lock ranks above
+  // UNKNOWN navigation data (missing, stale or invalid); only DISCONNECTED
+  // ranks higher. An unknown lock is itself UNKNOWN.
   if (state.connection !== "connected") return make(DISPLAY.DISCONNECTED, "No connection to the robot");
-  if (lockState === LOCK_UNKNOWN) return make(DISPLAY.UNKNOWN, "Software stop lock state is unknown");
   if (lockState === LOCK_LOCKED) return make(DISPLAY.STOPPED_SOFTWARE, "The software stop lock is engaged");
+  if (lockState === LOCK_UNKNOWN) return make(DISPLAY.UNKNOWN, "Software stop lock state is unknown");
   if (state.nav.invalid && state.nav.receivedAt !== null && !navMsg) {
     return make(DISPLAY.UNKNOWN, "Navigation status is invalid");
   }

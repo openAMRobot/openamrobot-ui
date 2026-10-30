@@ -20,6 +20,7 @@ evidence, and a value shown here is never a safety indication.
 2. The page asks the browser to keep the screen on (Screen Wake Lock) when
    the browser supports it. The footer shows the result. Browsers only allow
    it on a secure (HTTPS) page, so over plain HTTP it shows "not supported".
+   On the panel the screen is kept on by the panel setup below instead.
 3. To leave, press and hold the "Hold to exit" control in the top right
    corner for 2 s. A short tap does nothing.
 4. Speech is off by default. "Speech off" in the footer switches it on for
@@ -30,6 +31,14 @@ evidence, and a value shown here is never a safety indication.
 Observable success: with the robot stack and rosbridge running, the page
 shows a state word (for example READY or WAITING), a reason, and a row of
 sources at the bottom with no "(stale)" marks.
+
+## Panel setup
+
+On the Getac ZX80 operator panel, set the screen timeout to Never in the
+Android display settings. Screen Wake Lock needs HTTPS, and the panel loads
+the UI over plain HTTP on the robot network, so the page cannot keep the
+screen on by itself there. The Wake Lock request stays in the page for
+browsers and deployments where it is allowed.
 
 ## Screenshots
 
@@ -94,8 +103,8 @@ The first rule that matches wins.
 | Priority | State | When |
 |---|---|---|
 | 1 | DISCONNECTED | rosbridge is not connected |
-| 2 | UNKNOWN | the stop lock has no sample or is stale |
-| 3 | STOPPED (SOFTWARE) | the stop lock is engaged |
+| 2 | STOPPED (SOFTWARE) | the stop lock is known and engaged |
+| 3 | UNKNOWN | the stop lock has no sample or is stale |
 | 4 | UNKNOWN | navigation status is missing, stale or invalid (wrong `contract_version`, out-of-range fields) |
 | 5 | FAULTED | navigation `health` is FAULT; stack state FAILED; stack state UNKNOWN with reason 1004 (node inactive); reason 1005 or 4009; any fresh `/diagnostics` entry at ERROR or STALE level |
 | 6 | NEEDS_ASSISTANCE | reason 5002 (recovery attempts used up) or 4007 (stuck); localization state LOST |
@@ -106,9 +115,11 @@ The first rule that matches wins.
 | 11 | READY | all of: health OK, `navigation_readiness` READY, `/diagnostics` fresh with no ERROR, battery fresh and above 25% |
 | 12 | WAITING | otherwise, with the first blocking reason shown |
 
-A known engaged lock ranks above unknown navigation data: the lock is the
-fact the operator acts on (Resume). Stale navigation data then shows as a
-warning. This order is a proposal for the Reporting Mode owner to confirm.
+A known, engaged software lock ranks above UNKNOWN navigation data (missing,
+stale or invalid); only DISCONNECTED ranks higher. This is the owner's
+decision: the lock is the fact the operator acts on (Resume). Stale or
+invalid navigation data then shows as a warning. An unknown lock is itself
+UNKNOWN.
 
 READY cannot appear on today's simulation: the navigation status node keeps
 `navigation_readiness` at NOT_READY with reason 9001 (no link to the base
