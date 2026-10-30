@@ -32,6 +32,7 @@
     "dev": "GENERATE_SOURCEMAP=false react-scripts start",
     "build": "GENERATE_SOURCEMAP=false react-scripts build",
     "test": "react-scripts test",
+    "test:e2e": "playwright test",
     "eject": "react-scripts eject",
     "lint:js": "eslint --fix --ext .js,.jsx .",
     "lint:prettier": "prettier --check \"**/*.*\" --write",
@@ -43,6 +44,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@playwright/test": "1.63.0",
     "eslint": "^8.50.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",

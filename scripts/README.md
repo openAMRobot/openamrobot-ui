@@ -31,6 +31,13 @@ Build ROS2 workspace (requires ROS2 + colcon):
 bash scripts/build_ros.sh
 ```
 
+Check that a colcon test run executed at least one test (used by CI; reads
+the JUnit files under the build folder and does not count skipped tests):
+
+```bash
+cd ros2 && python3 ../scripts/count_test_results.py build
+```
+
 Run UI backend (requires ROS2):
 
 ```bash
