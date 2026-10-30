@@ -104,6 +104,11 @@ ZX80 or on a robot.
   fails when no result file exists or executed (total minus skipped) is 0,
   so an all-skipped run fails (review of #48). Its own tests
   (`scripts/test_count_test_results.py`) run as a step of the same job.
+- Malformed or unreadable XML under the build folder also fails the guard,
+  even when another result file has executed tests; it names each such file
+  and labels the counts incomplete. Well-formed non-JUnit XML is still
+  ignored. This fix is Mohamed's #57, merged into `ui/ci` as
+  `bd82a1ada6f5a02dcb1f1d25385fb44e65e63216` (second review of #48).
 - Evidence: job steps reproduced locally; the jobs themselves run on the
   pull request.
 
@@ -125,11 +130,12 @@ ZX80 or on a robot.
   without a tracking issue, and most existing Python files are not flake8
   clean.
 
-## Focused B9 follow-up, 30 October 2026
+## Focused B9 follow-up, 30 October 2026 (#57)
 
-This branch is stacked on #48 at `216f79629636023c924fd070701f8b814f860cbd`.
-It does not contain the newer runtime changes from the other UI branches;
-the inherited item summaries above are not whole-stack acceptance.
+Written in #57, which was stacked on #48 at
+`216f79629636023c924fd070701f8b814f860cbd` and is now merged into `ui/ci`
+(#48) as `bd82a1ada6f5a02dcb1f1d25385fb44e65e63216`. The inherited item
+summaries above are not whole-stack acceptance.
 
 The counter now fails on malformed or unreadable XML under the requested
 build directory even when another result contains executed tests. It names
@@ -141,6 +147,6 @@ The existing standard-library test command runs nine cases with no skips.
 Keeping these tests and restoring the original helper produces three
 failures and one error; the fixed helper passes all nine. No ROS, Docker,
 web build, simulation or hardware run was performed locally for this fix.
-Hosted checks and Parth's adopt/adapt/reject decision are still required.
-After adoption, #48 and its dependent integration branches must incorporate
-the fix and rerun; no main branch or other PR branch was changed here.
+Hosted checks and Parth's adopt/adapt/reject decision on #48 are still
+required. #51 incorporates the fix by merging `ui/ci`; integration candidate
+#56 must be rebuilt by its owner to include it.
