@@ -26,7 +26,11 @@ The PR evidence check fails when STATE.md exists and a PR neither updates it nor
 - Configuration identity (column, base_plate, head_pitch, base_tilt, datums revision) shows
   "model or configuration unknown": no runtime producer exists (PR #14 known gaps). A reported
   hp25 would be flagged against the P-03 rev20.1 head pitch hp30.
-- Per-group freshness (lift, each arm, each gripper) uses the measured publish rate.
+- Freshness is tracked per joint from its measured publish rate. A group (lift, each arm, each
+  gripper) is Updating only when every joint has a finite, matching position inside its own
+  stale window; otherwise it is Partial or Stale with the missing, invalid or stale joints
+  named. NaN, Infinity and unmatched positions are rejected. A ROS reconnect clears positions
+  and sampling history (review of 2026-10-30 on e54753b).
 - Lift panel: shoulder height from the reported lift_joint and the published model, against
   L1000, L1175 and L1350. Stop sensors: not reported until the I8 producer exists
   (openamrobot-interfaces #30).
