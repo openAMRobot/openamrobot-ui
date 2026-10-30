@@ -124,3 +124,23 @@ ZX80 or on a robot.
 - `test_flake8.py`, `test_pep257.py` and `test_copyright.py` are skipped
   without a tracking issue, and most existing Python files are not flake8
   clean.
+
+## Focused B9 follow-up, 30 October 2026
+
+This branch is stacked on #48 at `216f79629636023c924fd070701f8b814f860cbd`.
+It does not contain the newer runtime changes from the other UI branches;
+the inherited item summaries above are not whole-stack acceptance.
+
+The counter now fails on malformed or unreadable XML under the requested
+build directory even when another result contains executed tests. It names
+each unreadable file and labels the counts incomplete. Well-formed
+non-JUnit XML remains ignored. Existing skipped-test counting is unchanged;
+colcon test-result still owns ordinary test-failure reporting.
+
+The existing standard-library test command runs nine cases with no skips.
+Keeping these tests and restoring the original helper produces three
+failures and one error; the fixed helper passes all nine. No ROS, Docker,
+web build, simulation or hardware run was performed locally for this fix.
+Hosted checks and Parth's adopt/adapt/reject decision are still required.
+After adoption, #48 and its dependent integration branches must incorporate
+the fix and rerun; no main branch or other PR branch was changed here.
