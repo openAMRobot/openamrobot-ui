@@ -2,6 +2,7 @@ import React, { useEffect, useCallback, useState } from "react";
 import {
   CAMERA_TOPIC_OPTIONS,
   DEFAULT_CAMERA_TOPIC,
+  HEAD_CAMERA_TOPIC,
 } from "../shared/constants/index";
 import { resolveRosbridgeHost } from "../shared/constants/runtimeConfig";
 import { useRuntimeConfig } from "../app/App";
@@ -72,6 +73,13 @@ const Camera = () => {
                 {label}
               </option>
             ))}
+            {HEAD_CAMERA_TOPIC ? (
+              <option value={HEAD_CAMERA_TOPIC}>Head camera</option>
+            ) : (
+              <option value="" disabled>
+                Head camera: not reported
+              </option>
+            )}
           </select>
           <select
             value={quality}
