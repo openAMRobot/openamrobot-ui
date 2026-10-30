@@ -126,3 +126,14 @@ def test_unreadable_metadata_is_refused(tmp_path):
     with pytest.raises(replay_policy.BagUnreadable, match='could not be read') as caught:
         replay_policy.read_bag_topics(str(tmp_path))
     assert caught.value.status == 500
+
+
+def test_module_docstring_describes_skipping_not_rejecting_a_recording():
+    # Review of #43: the opening docstring must match select_topics(): a
+    # recording with denied topics is filtered, only a request naming one is
+    # rejected.
+    doc = ' '.join(replay_policy.__doc__.split())
+    assert 'A request or a recording that contains' not in doc
+    assert 'Only a request that explicitly names' in doc
+    assert 'A recording that contains such topics is not rejected' in doc
+    assert 'skipped' in doc and 'HTTP 400' in doc and 'HTTP 409' in doc
