@@ -4,8 +4,10 @@ This guide contains the detailed installation and launch procedures. For the
 shortest Demo Mode path, start with the [main README](../README.md).
 
 > [!CAUTION]
-> **Stop (software)** is a non-latched software stop, not an emergency stop.
-> It does not replace a tested physical emergency stop on real hardware.
+> **Stop (software)** is today a one-shot software stop that does not latch,
+> not an emergency stop. It does not replace a tested physical emergency stop
+> on real hardware. When openamrobot-ui#50 merges, it is replaced by a
+> latched Stop (software) with an explicit Resume, and #50 updates these docs.
 
 ## Contents
 
@@ -321,8 +323,11 @@ copying or restoring backend data.
 
 ### Manual backend data
 
-Backend programs, locations, run history, recordings, maps, routes, and
-generated certificates live in `~/.openamr_ui/`, the data directory.
+Backend programs, locations, run history, recordings, routes, and generated
+certificates live in `~/.openamr_ui/`, the data directory. Maps live in
+`OPENAMROBOT_MAPS_DIR`, which defaults to `~/.openamr_ui/maps/`; back that up
+too if you set it elsewhere. In Docker, maps are on the `openamrobot_maps`
+volume at `/data/maps`.
 
 Back up:
 

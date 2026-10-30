@@ -13,10 +13,13 @@ safe real-robot session.
 ## Before touching a real robot
 
 > [!CAUTION]
-> **Stop (software)** is a software stop, not an emergency stop. It publishes
-> one zero-velocity command and asks Nav2 to cancel the active goal. It is not
-> latched or safety-rated and depends on the browser, network, rosbridge, and
-> robot controller. Always keep a tested physical emergency stop within reach.
+> **Stop (software)** is today a one-shot software stop that does not latch,
+> not an emergency stop. It publishes one zero-velocity command and asks Nav2
+> to cancel the active goal. It is not safety-rated and depends on the
+> browser, network, rosbridge, and robot controller. Always keep a tested
+> physical emergency stop within reach. When openamrobot-ui#50 merges, it is
+> replaced by a latched Stop (software) with an explicit Resume, and #50
+> updates this lesson.
 
 For real hardware:
 

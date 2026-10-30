@@ -43,8 +43,10 @@ the page itself, so every screenshot below shows them:
   ("Connected"/"Disconnected"), and the light/dark theme toggle.
 - The status strip right under it (`StatusBar.jsx`) — live battery
   percentage and a red **Stop (software)** button that zeroes `/cmd_vel` and
-  cancels the active Nav2 goal from anywhere, not just the Map page. This is a
-  non-latched software stop and does not replace a physical emergency stop.
+  cancels the active Nav2 goal from anywhere, not just the Map page. Today
+  this is a one-shot software stop that does not latch, and it does not
+  replace a physical emergency stop. openamrobot-ui#50 replaces it with a
+  latched Stop (software) with an explicit Resume and updates this text.
 - Whichever banner applies: a purple **Demo Mode** banner when
   [Demo Mode](#config--configpagejsx) is on, a replay banner while a
   [recording](#recordings--recordingspagejsx) is playing back, or an

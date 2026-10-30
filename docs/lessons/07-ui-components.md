@@ -121,8 +121,10 @@ Map page owns the actual `ROSLIB.Service` call to
 client is created once per page, not once per panel — the same service is
 also what the top-bar **Stop (software)** button
 ([`StatusBar.jsx`](06-the-pages.md#the-chrome-thats-on-every-page)) calls
-from outside this component entirely. This is a one-shot software intervention,
-not a latched or safety-rated physical emergency stop.
+from outside this component entirely. Today this is a one-shot software stop
+that does not latch, not a safety-rated physical emergency stop;
+openamrobot-ui#50 replaces it with a latched Stop (software) with an explicit
+Resume and updates this text.
 
 ## RobotState — `RobotState.jsx`
 
