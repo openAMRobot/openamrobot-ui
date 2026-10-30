@@ -13,13 +13,27 @@ const formatMs = (ms) => (ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.r
 export function freshnessLabel(status) {
   if (!status || status.state === "not_reported") return { text: "Not reported", tone: "text-themeTextGray" };
   if (status.state === "measuring") return { text: "Measuring publish rate", tone: "text-themeTextGray" };
-  if (status.state === "stale") {
-    return {
-      text: `Stale: no update for ${formatMs(status.ageMs)} (measured period ${formatMs(status.periodMs)})`,
-      tone: "text-statusYellow",
-    };
+  if (status.state === "partial" || status.state === "stale") {
+    const parts = [
+      status.missing?.length ? `not reported: ${status.missing.join(", ")}` : null,
+      status.invalid?.length ? `invalid: ${status.invalid.join(", ")}` : null,
+      status.stale?.length ? `stale: ${status.stale.join(", ")}` : null,
+    ].filter(Boolean);
+    const head =
+      status.state === "partial"
+        ? "Partial"
+        : status.ageMs === null || status.ageMs === undefined
+        ? "Stale"
+        : `Stale: no update for ${formatMs(status.ageMs)}`;
+    return { text: `${head} (${parts.join("; ")})`, tone: "text-statusYellow" };
   }
   return { text: `Updating, measured period ${formatMs(status.periodMs)}`, tone: "text-themeBlue" };
+}
+
+function jointValue(joint, positions, status) {
+  if (typeof positions?.[joint] === "number" && Number.isFinite(positions[joint])) return positions[joint].toFixed(3);
+  if (status?.invalid?.includes(joint)) return "invalid";
+  return "not reported";
 }
 
 const ConfigurationIdentity = ({ reportedConfiguration }) => {
@@ -74,7 +88,7 @@ const UpperBodyPanel = ({ positions, freshness, reportedConfiguration = null }) 
                 <li key={joint} className="flex justify-between gap-2">
                   <span className="truncate">{joint}</span>
                   <span className="text-textWhiteHover">
-                    {typeof positions?.[joint] === "number" ? positions[joint].toFixed(3) : "not reported"}
+                    {jointValue(joint, positions, freshness?.[group.id])}
                   </span>
                 </li>
               ))}

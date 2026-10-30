@@ -24,7 +24,7 @@ jest.mock("../features/robotDescription/api/robotDescriptionApi", () => ({
 let topics;
 let constructed;
 
-const topic = (name) => topics.find((t) => t.opts.name === name);
+const topic = (name) => [...topics].reverse().find((t) => t.opts.name === name);
 const deliver = (name, msg) =>
   act(() => {
     topic(name).subscribe.mock.calls.forEach(([cb]) => cb(msg));
@@ -145,6 +145,100 @@ it("shows reported arm and lift positions with a per-group freshness from the pu
     jest.advanceTimersByTime(1000);
   });
   expect(within(screen.getByTestId("joint-group-lift")).getByText(/Stale: no update for/)).toBeInTheDocument();
+});
+
+const LEFT_ARM = [1, 2, 3, 4, 5, 6, 7].map((i) => `openarm_left_joint${i}`);
+
+const sendAt10Hz = (names, positions, count = 4) => {
+  for (let i = 0; i < count; i += 1) {
+    deliver("/joint_states", { name: names, position: positions });
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+  }
+};
+
+it("does not show an arm as updating from a partial JointState", async () => {
+  await renderPage();
+  sendAt10Hz(["openarm_left_joint1"], [0.1]);
+  const arm = screen.getByTestId("joint-group-leftArm");
+  expect(within(arm).queryByText(/^Updating/)).toBeNull();
+  expect(
+    within(arm).getByText(
+      "Partial (not reported: openarm_left_joint2, openarm_left_joint3, openarm_left_joint4, openarm_left_joint5, openarm_left_joint6, openarm_left_joint7)",
+    ),
+  ).toBeInTheDocument();
+});
+
+it("names a permanently missing arm joint and keeps the arm partial", async () => {
+  await renderPage();
+  const six = LEFT_ARM.slice(0, 6);
+  sendAt10Hz(six, six.map(() => 0.2), 50);
+  const arm = screen.getByTestId("joint-group-leftArm");
+  expect(within(arm).getByText("Partial (not reported: openarm_left_joint7)")).toBeInTheDocument();
+  expect(within(arm).getAllByText("0.200")).toHaveLength(6);
+});
+
+it("rejects NaN and Infinity as positions", async () => {
+  await renderPage();
+  sendAt10Hz(LEFT_ARM, LEFT_ARM.map(() => 0.3));
+  expect(within(screen.getByTestId("joint-group-leftArm")).getByText(/^Updating/)).toBeInTheDocument();
+
+  deliver("/joint_states", { name: LEFT_ARM, position: [NaN, Infinity, -Infinity, 0.3, 0.3, 0.3, 0.3] });
+  act(() => {
+    jest.advanceTimersByTime(250);
+  });
+  const arm = screen.getByTestId("joint-group-leftArm");
+  expect(within(arm).getAllByText("invalid")).toHaveLength(3);
+  expect(within(arm).queryByText(/NaN|Infinity/)).toBeNull();
+  expect(
+    within(arm).getByText("Partial (invalid: openarm_left_joint1, openarm_left_joint2, openarm_left_joint3)"),
+  ).toBeInTheDocument();
+
+  // a lift that only ever reports NaN has no height and is never updating
+  deliver("/robot_description", { data: COMBINED_URDF });
+  sendAt10Hz(["lift_joint"], [NaN]);
+  expect(within(screen.getByTestId("lift-panel")).getByText("not reported")).toBeInTheDocument();
+  expect(screen.getByTestId("shoulder-height")).toHaveTextContent("unknown");
+  expect(within(screen.getByTestId("joint-group-lift")).getByText(/invalid: lift_joint/)).toBeInTheDocument();
+});
+
+it("clears positions and sampling history on a reconnect to a different source", async () => {
+  const rosA = { id: "A" };
+  const rosB = { id: "B" };
+  useRos.mockReturnValue(rosA);
+  const { rerender } = render(<RobotDescriptionPage />);
+  await act(async () => {});
+  deliver("/robot_description", { data: COMBINED_URDF });
+  sendAt10Hz(["lift_joint"], [0.175]);
+  expect(screen.getByTestId("shoulder-height")).toHaveTextContent("1175 mm");
+  const oldJointTopic = topics.find((t) => t.opts.name === "/joint_states" && t.opts.ros === rosA);
+
+  useRos.mockReturnValue(rosB);
+  rerender(<RobotDescriptionPage />);
+  await act(async () => {});
+
+  expect(oldJointTopic.unsubscribe).toHaveBeenCalled();
+  const lift = screen.getByTestId("joint-group-lift");
+  expect(within(lift).getByText("Not reported")).toBeInTheDocument();
+  expect(within(lift).queryByText("0.175")).toBeNull();
+
+  // a late message from the old connection is ignored
+  act(() => {
+    oldJointTopic.subscribe.mock.calls.forEach(([cb]) => cb({ name: ["lift_joint"], position: [0.35] }));
+  });
+  expect(within(screen.getByTestId("joint-group-lift")).getByText("Not reported")).toBeInTheDocument();
+
+  // the new source starts its own rate measurement from nothing
+  const newJointTopic = topics.find((t) => t.opts.name === "/joint_states" && t.opts.ros === rosB);
+  act(() => {
+    newJointTopic.subscribe.mock.calls.forEach(([cb]) => cb({ name: ["lift_joint"], position: [0] }));
+  });
+  act(() => {
+    jest.advanceTimersByTime(250);
+  });
+  expect(within(screen.getByTestId("joint-group-lift")).getByText("Measuring publish rate")).toBeInTheDocument();
+  expect(within(screen.getByTestId("joint-group-lift")).getByText("0.000")).toBeInTheDocument();
 });
 
 it("says Stop (software) is base only and offers no controls in the upper-body view", async () => {
