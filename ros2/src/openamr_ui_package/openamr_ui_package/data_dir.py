@@ -149,29 +149,26 @@ def _maps_in(folder):
 
 
 def migrate_maps(old_dir, new_dir, current_file):
-    """Copy every map from old_dir into new_dir once; never move, delete or overwrite.
+    """Copy every map from old_dir into new_dir; never move, delete or overwrite.
 
     A map is its yaml, the image it names and, if present, <name>_ros.yaml.
-    A map whose name already exists in new_dir is skipped and logged. A map
-    whose image resolves outside old_dir (an absolute path elsewhere, a ..
-    path or a symlink out) is skipped and logged too: nothing of it is
-    copied, so the old folder and new_dir both stay as they were. An
-    absolute image path inside old_dir is rewritten to new_dir in the copy
-    only. The selection is repointed when it names a map this call copied.
+    A map counts as migrated only when its image is inside old_dir, exists,
+    is readable, and was copied or found byte-identical in new_dir, and its
+    name is free in new_dir (or holds this map's identical earlier copy).
+    An absolute image path inside old_dir is rewritten to new_dir in the copy
+    only. Every other map is skipped and logged with its reason: an image
+    outside old_dir (an absolute path elsewhere, a .. path or a symlink out),
+    a missing or unreadable image or a copy that does not match, or a name
+    that already exists in new_dir. Nothing of a skipped map is copied or
+    selected, and old_dir is never changed.
 
-    A selected map whose name collides in new_dir blocks the migration for
-    that selection: the selection stays on old_dir, the reason is logged as
-    an error, and the marker is not written, so the migration runs again on
-    the next start. Maps an earlier pass already copied (identical files in
-    new_dir) count as migrated, not as collisions, so a retry is quiet and
-    completes once the collision is resolved.
-    A map counts as migrated only when its image exists, is readable, and
-    was copied or found byte-identical in new_dir. A map whose image is
-    missing or unreadable, or whose copy does not match, is skipped and
-    logged; it is never published or selected in new_dir, and the marker is
-    not written, so the migration runs again once the image is restored. If
-    that map is the selected one, the selection stays on old_dir and the
-    reason is logged as an error, as for a selected-name collision.
+    Owner decision of 30 Oct 2026: while any map is skipped, selected or
+    not, the marker is not written, so the migration runs again on every
+    start and logs each skipped map until it is fixed or removed. The
+    selection is repointed only when its map was migrated; a skipped
+    selected map keeps the old selection and the reason is logged as an
+    error. Maps an earlier pass already copied count as migrated, so a
+    retry does not report or rewrite them.
     Returns the map paths (relative to old_dir, without .yaml) that are
     migrated, including ones an earlier pass copied.
     """
@@ -184,6 +181,7 @@ def migrate_maps(old_dir, new_dir, current_file):
     os.makedirs(new_dir, exist_ok=True)
 
     copied = []
+    outside = []
     collided = []
     incomplete = []
     for base in maps:
@@ -196,7 +194,9 @@ def migrate_maps(old_dir, new_dir, current_file):
         image_path = image if os.path.isabs(image) else os.path.join(os.path.dirname(base), image)
         if not _resolves_inside(image_path, old_dir):
             LOG.warning('Map %s not migrated: its image %s is outside %s, so it was not '
-                        'copied and the map stays only in %s.', rel, image, old_dir, old_dir)
+                        'copied and the map stays only in %s. Move the image into the map '
+                        'folder or remove the map, then restart.', rel, image, old_dir, old_dir)
+            outside.append(rel)
             continue
         if not _readable_file(image_path):
             LOG.warning('Map %s not migrated: its image %s is missing or unreadable in %s. '
@@ -236,19 +236,25 @@ def migrate_maps(old_dir, new_dir, current_file):
                   'not written; rename or remove one of the two maps and restart to finish '
                   'the migration.', os.path.join(old_dir, f'{selected}.yaml'), selected,
                   new_dir, old_dir, MIGRATED_MARKER)
-        return copied
-    if selected in incomplete:
+    elif selected in incomplete:
         LOG.error('Map migration blocked: the selected map %s is not migrated because its '
                   'image is missing, unreadable or could not be copied. The selection stays '
                   'on %s and %s is not written; restore the image and restart to finish the '
                   'migration.', os.path.join(old_dir, f'{selected}.yaml'), old_dir,
                   MIGRATED_MARKER)
-        return copied
-    _repoint_selection(current_file, old_dir, new_dir, copied)
-    if incomplete:
-        LOG.error('Map migration not finished: %s not migrated because an image is missing, '
-                  'unreadable or could not be copied; %s is not written, so the migration '
-                  'runs again on the next start.', ', '.join(incomplete), MIGRATED_MARKER)
+    elif selected in outside:
+        LOG.error('Map migration blocked: the selected map %s is not migrated because its '
+                  'image is outside %s. The selection stays on %s and %s is not written; '
+                  'move the image into the map folder or remove the map and restart to '
+                  'finish the migration.', os.path.join(old_dir, f'{selected}.yaml'), old_dir,
+                  old_dir, MIGRATED_MARKER)
+    else:
+        _repoint_selection(current_file, old_dir, new_dir, copied)
+    skipped = outside + collided + incomplete
+    if skipped:
+        LOG.error('Map migration not finished: %s not migrated (see the reasons above); %s '
+                  'is not written, so the migration runs again on every start until each is '
+                  'fixed or removed.', ', '.join(sorted(skipped)), MIGRATED_MARKER)
         return copied
     _create_exclusive(marker, f'Maps from {old_dir} were copied here once; that folder '
                               'was left unchanged as a backup.\n')

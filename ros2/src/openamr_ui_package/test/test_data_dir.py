@@ -294,8 +294,14 @@ def _record_warnings(monkeypatch):
     return messages
 
 
+def _without_collision(new):
+    """Remove the fixture's Lab/Clash map from the new folder: nothing is skipped."""
+    os.remove(os.path.join(new, 'Lab', 'Clash.yaml'))
+
+
 def test_upgrade_copies_user_maps_and_repoints_the_selection(tmp_path):
     share, data, new, old, before = _upgrade_fixture(tmp_path)
+    _without_collision(new)
     _start(share, data, new)
     for name in ('Floor.yaml', 'Floor.png', 'Floor_ros.yaml'):
         with open(os.path.join(old, 'Lab', name), 'rb') as a, \
@@ -441,33 +447,115 @@ def test_selected_map_with_an_outside_image_keeps_its_selection(tmp_path, monkey
     selected = os.path.join(old, 'Lab', 'Ext.yaml')
     with open(os.path.join(data, 'current_map_route.yaml'), 'w') as f:
         yaml.safe_dump({'map_file': selected, 'route_file': ''}, f)
-    warnings = _record_warnings(monkeypatch)
+    errors = _record_errors(monkeypatch)
 
     _start(share, data, new)
 
     with open(os.path.join(data, 'current_map_route.yaml')) as f:
         assert yaml.safe_load(f)['map_file'] == selected
-    assert any('Selected map' in m and 'left as is' in m for m in warnings), warnings
+    assert any('blocked' in m and 'Ext.yaml' in m and 'outside' in m for m in errors), errors
+    assert not os.path.exists(os.path.join(new, data_dir.MIGRATED_MARKER))
+
+# Owner decision of 30 Oct 2026: while any map is skipped, selected or not,
+# .maps_migrated is not written; every start retries and logs the reason;
+# once fixed, the marker is written. One case per skip reason.
+
+def _skip_case(tmp_path, reason):
+    """old/ holds Good (always migratable) and Bad, skipped for `reason`.
+
+    Returns (old, new, current, fix) where fix() removes the reason.
+    """
+    old, new = str(tmp_path / 'old'), str(tmp_path / 'new')
+    elsewhere = str(tmp_path / 'elsewhere')
+    for d in (old, new, elsewhere):
+        os.makedirs(d)
+    for name in ('Good', 'Bad'):
+        with open(os.path.join(old, f'{name}.png'), 'wb') as f:
+            f.write(f'{name} image'.encode())
+    with open(os.path.join(old, 'Good.yaml'), 'w') as f:
+        f.write('image: Good.png\n')
+    bad_yaml = os.path.join(old, 'Bad.yaml')
+    if reason == 'outside':
+        os.rename(os.path.join(old, 'Bad.png'), os.path.join(elsewhere, 'Bad.png'))
+        with open(bad_yaml, 'w') as f:
+            f.write(f'image: {os.path.join(elsewhere, "Bad.png")}\n')
+
+        def fix():  # the operator moves the image into the map folder
+            os.rename(os.path.join(elsewhere, 'Bad.png'), os.path.join(old, 'Bad.png'))
+            with open(bad_yaml, 'w') as f:
+                f.write('image: Bad.png\n')
+    elif reason == 'missing':
+        os.remove(os.path.join(old, 'Bad.png'))
+        with open(bad_yaml, 'w') as f:
+            f.write('image: Bad.png\n')
+
+        def fix():  # the operator restores the image
+            with open(os.path.join(old, 'Bad.png'), 'wb') as f:
+                f.write(b'Bad image')
+    else:  # collision
+        with open(bad_yaml, 'w') as f:
+            f.write('image: Bad.png\n')
+        with open(os.path.join(new, 'Bad.yaml'), 'w') as f:
+            f.write('image: Other.png\n')
+
+        def fix():  # the operator removes the other map of that name
+            os.remove(os.path.join(new, 'Bad.yaml'))
+    current = str(tmp_path / 'current_map_route.yaml')
+    with open(current, 'w') as f:
+        yaml.safe_dump({'map_file': os.path.join(old, 'Good.yaml'), 'route_file': ''}, f)
+    return old, new, current, fix
 
 
-def test_a_skipped_map_is_not_retried_on_the_next_start(tmp_path, monkeypatch):
-    # Retry policy: migration runs once (.maps_migrated); a skipped map stays
-    # in the old folder, which is kept as a backup, and is not retried.
-    share, data, new, old, _before = _upgrade_fixture(tmp_path)
-    _outside_image_map(tmp_path, old, 'absolute')
-    _start(share, data, new)
-    assert os.path.isfile(os.path.join(new, data_dir.MIGRATED_MARKER))
+SKIP_LOG = {'outside': 'is outside', 'missing': 'missing or unreadable',
+            'collision': 'already exists'}
+
+
+@pytest.mark.parametrize('selected', [False, True])
+@pytest.mark.parametrize('reason', ['outside', 'missing', 'collision'])
+def test_a_skipped_map_withholds_the_marker_until_fixed(tmp_path, monkeypatch, reason,
+                                                         selected):
+    old, new, current, fix = _skip_case(tmp_path, reason)
+    if selected:
+        with open(current, 'w') as f:
+            yaml.safe_dump({'map_file': os.path.join(old, 'Bad.yaml'), 'route_file': ''}, f)
+    marker = os.path.join(new, data_dir.MIGRATED_MARKER)
     warnings = _record_warnings(monkeypatch)
+    errors = _record_errors(monkeypatch)
 
-    _start(share, data, new)
+    # First start: Bad is skipped with its reason; no marker.
+    assert data_dir.migrate_maps(old, new, current) == ['Good']
+    assert not os.path.exists(marker)
+    assert any('Map Bad not migrated' in m and SKIP_LOG[reason] in m for m in warnings), warnings
+    assert any('not finished' in m and 'Bad' in m for m in errors), errors
+    expected_selection = os.path.join(old, 'Bad.yaml') if selected else os.path.join(new, 'Good.yaml')
+    assert _current(current) == expected_selection
 
-    assert not os.path.lexists(os.path.join(new, 'Lab', 'Ext.yaml'))
-    assert not any('not migrated' in m for m in warnings), warnings
+    # Second start, nothing fixed: it retries and logs the reason again.
+    warnings.clear()
+    errors.clear()
+    assert data_dir.migrate_maps(old, new, current) == ['Good']
+    assert not os.path.exists(marker)
+    assert any('Map Bad not migrated' in m and SKIP_LOG[reason] in m for m in warnings), warnings
+    assert not any('Map Good' in m for m in warnings), warnings  # done maps stay quiet
 
+    # Fixed: the next start migrates Bad and writes the marker.
+    fix()
+    warnings.clear()
+    errors.clear()
+    assert sorted(data_dir.migrate_maps(old, new, current)) == ['Bad', 'Good']
+    assert os.path.isfile(marker)
+    assert errors == []
+    with open(os.path.join(new, 'Bad.png'), 'rb') as f:
+        assert f.read() == b'Bad image'
+    if selected:
+        assert _current(current) == os.path.join(new, 'Bad.yaml')
 
 def test_second_start_does_not_migrate_again(tmp_path):
+    # Once nothing is skipped the marker is written and the migration is done.
     share, data, new, old, before = _upgrade_fixture(tmp_path)
+    _without_collision(new)
     _start(share, data, new)
+    assert os.path.isfile(os.path.join(new, data_dir.MIGRATED_MARKER))
     floor = os.path.join(new, 'Lab', 'Floor.yaml')
     assert os.path.isfile(floor)
     os.remove(floor)  # The user deletes the migrated copy.

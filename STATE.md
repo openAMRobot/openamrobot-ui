@@ -108,32 +108,25 @@ ZX80 or on a robot.
   directory); routes stay in the data directory.
 - `docker-compose.yml` sets it to `/data/maps` on the named volume
   `openamrobot_maps`.
-- One-time, non-destructive migration: when `OPENAMROBOT_MAPS_DIR` differs
-  from the data directory's `maps` folder and that folder has maps, they are
-  copied (never moved or deleted; collisions skipped and logged), the
-  selection is repointed when its map was copied, and `.maps_migrated` is
-  written.
-- A map whose image resolves outside the old maps folder (absolute path
-  elsewhere, `..`, or a symlink out) is skipped and logged with the reason;
-  nothing of it is copied, and the old folder, the new folder and the outside
-  file stay unchanged. If it is the selected map, the selection stays on the
-  old folder and is logged. Skipped maps are not retried after
-  `.maps_migrated` is written; the old folder keeps them (review of #53).
-- A selected map whose name already exists in the new folder blocks the
-  migration for that selection (review of #53): the selection stays on the
-  old folder, an error names the collision and how to resolve it, and
-  `.maps_migrated` is not written, so the migration runs again on the next
-  start. Maps an earlier pass already copied (identical files) count as
-  migrated, so a retry is quiet; once the collision is resolved, the map is
-  copied, the selection repointed and the marker written.
-- A map counts as migrated only when its image exists, is readable, and was
-  copied or found byte-identical in the new folder (second review of #53).
-  A map with a missing or unreadable image, or a copy that does not match, is
-  skipped and logged; it is not published or selected in the new folder, and
-  `.maps_migrated` is not written, so the migration runs again once the
-  image is restored. If it is the selected map, the selection stays on the
-  old folder and the error says to restore the image. The check for an
-  earlier copy (`_already_copied`) needs every file present on both sides.
+- Non-destructive migration: when `OPENAMROBOT_MAPS_DIR` differs from the
+  data directory's `maps` folder and that folder has maps, they are copied
+  (never moved, deleted or overwritten; the old folder stays as a backup)
+  and the selection is repointed when its map was copied.
+- A map counts as migrated only when its image is inside the old folder,
+  exists, is readable, and was copied or found byte-identical in the new
+  folder, and its name is free there (reviews of #53). Otherwise it is
+  skipped and logged with its reason: an image outside the old folder
+  (absolute path elsewhere, `..`, or a symlink out), a missing or unreadable
+  image, or a name that already exists in the new folder. Nothing of a
+  skipped map is copied or selected, and the outside file is not touched.
+- Owner decision of 30 Oct 2026: while any map is skipped, selected or not,
+  `.maps_migrated` is not written; the migration runs again on every start
+  and logs each skipped map with its reason until it is fixed or removed.
+  Once nothing is skipped, the marker is written. A skipped selected map
+  keeps the old selection, with an error that says why and how to fix it.
+  Maps an earlier pass already copied count as migrated, so a retry does
+  not report or rewrite them; the check (`_already_copied`) needs every file
+  present and identical on both sides.
 - Open, outside this repository: the platform compose must mount the same
   `openamrobot_maps` volume at `/data/maps` (a pending platform-sw change).
 - Evidence: unit tests (pure and rclpy) and a compose file check.
