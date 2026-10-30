@@ -97,7 +97,13 @@ class BagRecoveryApiTest(unittest.TestCase):
         self.assertIn(4242, self.table.processes)
 
     def _replayable(self, rec_id='rec_old'):
-        os.makedirs(os.path.join(self.app.RECORDINGS_DIR, rec_id))
+        # A finished recording with one telemetry topic, valid also under the
+        # replay topic policy of #43.
+        bag = os.path.join(self.app.RECORDINGS_DIR, rec_id)
+        os.makedirs(bag)
+        with open(os.path.join(bag, 'metadata.yaml'), 'w') as f:
+            json.dump({'rosbag2_bagfile_information': {'topics_with_message_count': [
+                {'topic_metadata': {'name': '/ui/map'}}]}}, f)
         entries = self.app.read_recordings_index()
         entries.append({'id': rec_id, 'name': rec_id, 'status': 'complete'})
         self.app.write_recordings_index(entries)
