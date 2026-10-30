@@ -11,7 +11,7 @@ TIMEOUT = 'TIMEOUT'
 UNKNOWN = 'UNKNOWN'
 
 # Seconds one waypoint may take before its goal is canceled and the route
-# ends with TIMEOUT. Proposed default, owner to confirm: at the UI's 0.2 m/s
+# ends with TIMEOUT. Accepted default (30 Oct 2026): at the UI's 0.2 m/s
 # linear limit this allows a 60 m leg. Overridden by the waypoint_timeout_s
 # parameter of waypoint_nav.
 DEFAULT_WAYPOINT_TIMEOUT_S = 300.0
