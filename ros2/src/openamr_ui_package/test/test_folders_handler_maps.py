@@ -244,6 +244,31 @@ class FoldersHandlerMapsTest(unittest.TestCase):
         self.assertEqual(self._files(group), [])
         self.assertIn('No maps in the group', self.messages)
 
+    def _write_map_with_outside_image(self):
+        group = self._write_map('A', ros_yaml=False)
+        outside = os.path.join(self.tmp, 'outside.png')
+        with open(outside, 'wb') as f:
+            f.write(b'outside')
+        with open(os.path.join(group, 'A.yaml'), 'w') as f:
+            f.write(f'image: {outside}\nresolution: 0.05\n')
+        return group, outside
+
+    def test_delete_refuses_an_image_outside_the_map_folder(self):
+        group, outside = self._write_map_with_outside_image()
+        self._command('delete_map/{"group": "G", "map": "A"}')
+        self.assertTrue(os.path.exists(outside))
+        self.assertEqual(self._files(group), ['A.png', 'A.yaml'])
+        self.assertTrue(any(m.startswith('Nothing was deleted') and 'outside the map folder' in m
+                            for m in self.messages), self.messages)
+
+    def test_rename_refuses_an_image_outside_the_map_folder(self):
+        group, outside = self._write_map_with_outside_image()
+        self._command('rename_map/{"group": "G", "map_old": "A", "map_new": "B"}')
+        self.assertTrue(os.path.exists(outside))
+        self.assertEqual(self._files(group), ['A.png', 'A.yaml'])
+        self.assertTrue(any(m.startswith('Nothing was renamed') and 'outside the map folder' in m
+                            for m in self.messages), self.messages)
+
     def test_handler_has_no_initialpose_publisher(self):
         topics = [name for name, _types in self.node.get_publisher_names_and_types_by_node(
             'ui_folders', '/')]
