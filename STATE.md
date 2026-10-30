@@ -44,6 +44,15 @@ ZX80 or on a robot.
 - Next step: once B1 is merged, delete the kept files in a follow-up.
 - Evidence: unit test (pure).
 
+### B12 `ui/remove-nav-launches` (branched from `ui/no-ui-nav-launch`)
+
+- Deletes `mapping_launch.py`, `navigation_launch.py`, `gmapping_launch.py`,
+  `move_base_launch.py`, `amcl_launch.py` and `param/move_base/`. This is
+  the follow-up named under B2; it needs B1, which removed the last code
+  that launched them.
+- Keeps `launch/map_server_launch.py`; B2 deletes it.
+- Evidence: unit test (pure source and file check).
+
 ### B3 `ui/lifecycle-read-only`
 
 - The lifecycle panel only calls `GetState`; the Prepare, Start, Pause and
