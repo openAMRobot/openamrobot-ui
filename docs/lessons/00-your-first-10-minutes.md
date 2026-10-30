@@ -13,8 +13,8 @@ safe real-robot session.
 ## Before touching a real robot
 
 > [!CAUTION]
-> The dashboard's red **E-STOP** is a software stop. It publishes one
-> zero-velocity command and asks Nav2 to cancel the active goal. It is not
+> **Stop (software)** is a software stop, not an emergency stop. It publishes
+> one zero-velocity command and asks Nav2 to cancel the active goal. It is not
 > latched or safety-rated and depends on the browser, network, rosbridge, and
 > robot controller. Always keep a tested physical emergency stop within reach.
 

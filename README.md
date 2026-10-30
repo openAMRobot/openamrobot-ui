@@ -101,11 +101,11 @@ ros2 launch openamr_ui_bringup ui.launch.py
 Before enabling motion:
 
 > [!CAUTION]
-> The red **E-STOP** in the dashboard is a *software* stop: it sends one
-> zero-velocity command and asks Nav2 to cancel the active goal. It is not
-> latched, not safety-rated, and not independent of the browser, network,
-> rosbridge, or robot controller. Keep a tested physical emergency stop
-> within reach whenever you operate real hardware.
+> **Stop (software)** in the status bar sends one zero-velocity command and
+> asks Nav2 to cancel the active goal. It is not latched, not safety-rated,
+> and not independent of the browser, network, rosbridge, or robot
+> controller. It is not an emergency stop. Keep a tested physical emergency
+> stop within reach whenever you operate real hardware.
 
 1. Turn Demo Mode off.
 2. Confirm the correct robot connection profile.
@@ -134,6 +134,7 @@ Before enabling motion:
 | Node.js | 18–20 | Enforced by `web/package.json` `engines` (`>=18 <21`); CI validates on Node 20 |
 | `openamr-platform-sw` | `main` branch | Pin it to a commit you've validated against this UI version — treat that pin as part of your deployment configuration, not a fixed release |
 | Robot hardware | Topic-compatible OpenAMRobot platform | Hardware revision is not yet pinned; validate drivers, limits, docking, and E-stop behavior per robot |
+| Operator panel | Getac ZX80 | Target panel for OpenAMRobot 2.0; not yet verified on the device |
 
 For complete installation details, Docker Desktop networking, simulation
 commands, and dependency explanations, see the
@@ -225,7 +226,7 @@ This should list `openamr_ui_bringup`, `openamr_ui_msgs`, and
 | Parameters | `/params` | Read or change Nav2 parameters |
 | Fleet | `/fleet` | Robot profiles and active-robot selection |
 | Config | `/config` | Connections, Demo Mode, limits, and preferences |
-| Notes | `/notes` | Example plugin page |
+| Notes | `/notes` | Example plugin page (added by `web/src/plugins/notesPlugin`) |
 
 Scheduler and Missions run in the browser tab — keep the tab open for
 scheduled actions, and don't assume an interrupted browser session resumes
@@ -276,10 +277,27 @@ Requesting either currently falls back to `open` and shows a warning.
 
 | Data | Location |
 | --- | --- |
-| Backend programs, locations, history, recordings, and certificates | `~/.openamr_ui/` |
-| Docker backend data | Named `openamr_ui_data` volume |
+| Backend programs, locations, history, recordings, and certificates | `~/.openamr_ui/` (the data directory) |
+| Maps, routes, and the active map/route selection | `~/.openamr_ui/maps/`, `~/.openamr_ui/paths/`, `~/.openamr_ui/current_map_route.yaml` |
+| Docker backend data | Named `openamr_ui_data` volume, mounted at the container's `~/.openamr_ui/` |
 | Schedules, missions, devices, profiles, metrics, and preferences | Current browser profile's `localStorage` |
-| Maps and routes | `ros2/src/openamr_ui_package/maps/` and `paths/` |
+
+The UI writes maps and routes only to the data directory, never into the
+package share directory or the source tree. On first start it copies the
+example maps and routes shipped in `ros2/src/openamr_ui_package/maps/` and
+`paths/` into it, without overwriting files that are already there, so
+rebuilding or reinstalling the package keeps saved maps and routes.
+
+### Recording replay policy
+
+Replay publishes only the telemetry topics listed in
+`ros2/src/openamr_ui_package/param/replay_topics.yaml`; the backend passes
+exactly those to `ros2 bag play --topics`. Before any process starts, it
+refuses (HTTP 400, with the reason) a replay request or a recording that
+contains `/cmd_vel`, `/ui/cmd_vel`, any `cmd_vel*` topic, `/tf`,
+`/tf_static`, `/goal_pose`, `/initialpose`, `/safety/*`, or an action or
+service topic. A recording made with "Record all topics" therefore cannot be
+replayed; record the telemetry topics you want to replay instead.
 
 Browser-local data doesn't automatically move to another browser or computer.
 Back it up before reinstalling, clearing browser storage, or removing Docker

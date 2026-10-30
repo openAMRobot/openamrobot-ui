@@ -83,7 +83,7 @@ sends a goal pose, watches feedback (distance remaining) and status
 [`web/src/components/NavStatus.jsx`](../../web/src/components/NavStatus.jsx)
 for the feedback/status side, and the cancel-goal service call in
 [`web/src/pages/MapPage.jsx`](../../web/src/pages/MapPage.jsx) (also called
-directly by the E-STOP button in
+directly by the **Stop (software)** button in
 [`web/src/components/StatusBar.jsx`](../../web/src/components/StatusBar.jsx),
 visible on every page). That dashboard button is a non-latched software stop,
 not a physical or safety-rated emergency stop.

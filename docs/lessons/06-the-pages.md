@@ -42,7 +42,7 @@ the page itself, so every screenshot below shows them:
 - The top bar (`Header.jsx`) — the sidebar/nav, a connection dot
   ("Connected"/"Disconnected"), and the light/dark theme toggle.
 - The status strip right under it (`StatusBar.jsx`) — live battery
-  percentage and a big red **E-STOP** button that zeroes `/cmd_vel` and
+  percentage and a red **Stop (software)** button that zeroes `/cmd_vel` and
   cancels the active Nav2 goal from anywhere, not just the Map page. This is a
   non-latched software stop and does not replace a physical emergency stop.
 - Whichever banner applies: a purple **Demo Mode** banner when
@@ -374,6 +374,12 @@ debugging, demos, and dataset collection.
   waits, rather than looking stuck.
 - Replayed telemetry is always clearly labeled as a replay, never presented
   as if it were a live robot.
+- Replay publishes only the telemetry topics on the allowlist in
+  `param/replay_topics.yaml`. A recording that contains a velocity command,
+  `/tf`, `/tf_static`, goal, initial pose, safety, action or service topic is
+  refused before playback starts, so replay does not publish command or
+  transform topics. This is a UI check, not safety evidence. See
+  [Recording replay policy](../../README.md#recording-replay-policy).
 
 ## Events — `EventsPage.jsx`
 
