@@ -38,6 +38,9 @@ class ReplayApiTest(unittest.TestCase):
         flask_app.app.config.update(TESTING=True)
         self.client = flask_app.app.test_client()
 
+    def app_replay_reset(self):
+        self.flask_app._replay.update({'proc': None, 'id': None})
+
     def _recording(self, topics, rec_id='rec_1'):
         bag = os.path.join(self.flask_app.RECORDINGS_DIR, rec_id)
         os.makedirs(bag)
@@ -51,17 +54,23 @@ class ReplayApiTest(unittest.TestCase):
     def _start(self, body=None, rec_id='rec_1'):
         return self.client.post(f'/api/recordings/{rec_id}/replay/start', json=body or {})
 
-    def test_recording_with_each_denied_topic_is_rejected_before_any_process(self):
+    def test_without_a_topic_list_only_allowlisted_topics_play_and_skips_are_listed(self):
         for number, topic in enumerate(DENIED):
             with self.subTest(topic=topic):
                 rec_id = f'rec_{number}'
-                self._recording(['/ui/map', topic], rec_id)
+                self._recording(['/ui/map', '/scan_filtered', topic], rec_id)
+                self.popen.reset_mock()
+                self.app_replay_reset()
                 response = self._start(rec_id=rec_id)
-                self.assertEqual(response.status_code, 400)
-                self.assertIn(topic, response.get_json()['message'])
-        self.popen.assert_not_called()
+                self.assertEqual(response.status_code, 201, response.get_json())
+                cmd = self.popen.call_args.args[0]
+                self.assertEqual(cmd[cmd.index('--topics') + 1:], ['/ui/map'])
+                body = response.get_json()
+                self.assertEqual(body['topics'], ['/ui/map'])
+                self.assertEqual([s['topic'] for s in body['skipped']],
+                                 ['/scan_filtered', topic])
 
-    def test_request_with_each_denied_topic_is_rejected_before_any_process(self):
+    def test_request_naming_each_denied_topic_is_a_400_before_any_process(self):
         self._recording(['/ui/map'])
         for topic in DENIED:
             with self.subTest(topic=topic):
@@ -70,10 +79,18 @@ class ReplayApiTest(unittest.TestCase):
                 self.assertIn(topic, response.get_json()['message'])
         self.popen.assert_not_called()
 
-    def test_request_off_the_allowlist_is_rejected(self):
+    def test_requested_topic_off_the_allowlist_is_skipped_not_refused(self):
         self._recording(['/ui/map', '/scan_filtered'])
-        response = self._start({'topics': ['/scan_filtered']})
-        self.assertEqual(response.status_code, 400)
+        response = self._start({'topics': ['/ui/map', '/scan_filtered']})
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.get_json()['skipped'],
+                         [{'topic': '/scan_filtered',
+                           'reason': 'not on the replay telemetry allowlist'}])
+
+    def test_nothing_to_play_is_a_409_and_starts_no_process(self):
+        self._recording(['/scan_filtered', '/cmd_vel'])
+        response = self._start()
+        self.assertEqual(response.status_code, 409)
         self.popen.assert_not_called()
 
     def test_play_passes_only_allowlisted_topics(self):

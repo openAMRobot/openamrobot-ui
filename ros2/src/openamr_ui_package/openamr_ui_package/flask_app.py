@@ -1108,19 +1108,19 @@ def start_replay(recording_id):
     if rate <= 0 or rate > 10:
         abort(400, "rate must be between 0 and 10.")
 
-    # Every check happens before any process starts: a denied topic in the
-    # request or in the recording is a 400, and only allowlisted telemetry
-    # is passed to --topics.
+    # Every check happens before any process starts. Only a request that
+    # names a denied topic is a 400; otherwise only allowlisted telemetry in
+    # the recording is passed to --topics and the rest is reported skipped.
     try:
         allowlist = replay_policy.load_allowlist(REPLAY_ALLOWLIST_FILE)
     except (OSError, ValueError) as error:
         abort(500, f'Replay is disabled: the telemetry allowlist is invalid ({error}).')
     try:
-        topics = replay_policy.select_topics(
+        topics, skipped = replay_policy.select_topics(
             payload.get('topics'), replay_policy.read_bag_topics(bag_path), allowlist
         )
     except replay_policy.ReplayPolicyError as error:
-        abort(400, str(error))
+        abort(error.status, str(error))
 
     cmd = ["ros2", "bag", "play", bag_path, "--disable-keyboard-controls", "-r", str(rate)]
     cmd += ['--topics', *topics]
@@ -1134,7 +1134,8 @@ def start_replay(recording_id):
         {"proc": proc, "id": recording_id, "started_at": started_at, "paused": False, "rate": rate}
     )
     return jsonify(
-        {'id': recording_id, 'startedAt': started_at, 'rate': rate, 'topics': topics}
+        {'id': recording_id, 'startedAt': started_at, 'rate': rate, 'topics': topics,
+         'skipped': skipped}
     ), 201
 
 
