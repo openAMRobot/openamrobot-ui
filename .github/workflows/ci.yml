@@ -111,14 +111,17 @@ jobs:
           colcon test --packages-select openamr_ui_package openamr_ui_msgs
           colcon test-result --verbose
 
-      # A run that executes zero tests is a failure, not a pass.
-      - name: Fail on zero tests
+      # The guard's own tests, so a broken counter cannot pass silently.
+      - name: Test the zero-test guard
+        run: python3 -m unittest discover -v -s scripts -p 'test_count_test_results.py'
+
+      # A run that executes zero tests is a failure, not a pass. Skipped
+      # tests are not executed: an all-skipped run fails too. The counts come
+      # from the JUnit files colcon test-result reads, not its summary line,
+      # whose total includes skipped tests.
+      - name: Fail on zero executed tests
         working-directory: ros2
-        run: |
-          source /opt/ros/jazzy/setup.bash
-          total=$(colcon test-result --all | sed -n 's/^Summary: \([0-9]*\) tests.*/\1/p')
-          echo "tests executed: ${total:-0}"
-          test "${total:-0}" -gt 0
+        run: python3 ../scripts/count_test_results.py build
 
   links:
     name: Markdown link check

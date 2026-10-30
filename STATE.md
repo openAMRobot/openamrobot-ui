@@ -97,8 +97,13 @@ ZX80 or on a robot.
 ### B9 `ui/ci`
 
 - CI gains a `ros` job (ros:jazzy container, colcon build and test, fails on
-  zero tests) and an `e2e` job (Playwright, every page in Demo Mode at
-  1280 x 800 and 1920 x 1200, no console errors).
+  zero executed tests) and an `e2e` job (Playwright, every page in Demo Mode
+  at 1280 x 800 and 1920 x 1200, no console errors).
+- The zero-test guard is `scripts/count_test_results.py`. It reads the JUnit
+  files colcon writes, prints total, skipped and executed separately, and
+  fails when no result file exists or executed (total minus skipped) is 0,
+  so an all-skipped run fails (review of #48). Its own tests
+  (`scripts/test_count_test_results.py`) run as a step of the same job.
 - Evidence: job steps reproduced locally; the jobs themselves run on the
   pull request.
 
