@@ -83,10 +83,12 @@ sends a goal pose, watches feedback (distance remaining) and status
 [`web/src/components/NavStatus.jsx`](../../web/src/components/NavStatus.jsx)
 for the feedback/status side, and the cancel-goal service call in
 [`web/src/pages/MapPage.jsx`](../../web/src/pages/MapPage.jsx) (also called
-directly by the E-STOP button in
+directly by the **Stop (software)** button in
 [`web/src/components/StatusBar.jsx`](../../web/src/components/StatusBar.jsx),
-visible on every page). That dashboard button is a non-latched software stop,
-not a physical or safety-rated emergency stop.
+visible on every page). That dashboard button is today a one-shot software
+stop that does not latch, not a physical or safety-rated emergency stop.
+openamrobot-ui#50 replaces it with a latched Stop (software) with an explicit
+Resume and updates this text.
 
 Concretely, that one navigation looks like three separate messages over
 time: a goal pose sent once ("go to x=2, y=1"), a stream of feedback
