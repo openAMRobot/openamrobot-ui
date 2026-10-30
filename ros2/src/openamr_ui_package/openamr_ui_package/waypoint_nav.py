@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 
-import threading
-import rclpy
-from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.callback_groups import ReentrantCallbackGroup
-from ament_index_python.packages import get_package_share_directory
-import os
 import csv
+import os
+import threading
 import time
-import yaml
 
-from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
-from geometry_msgs.msg import (
-    PoseWithCovarianceStamped, PoseArray, PoseStamped, PoseWithCovariance
-)
-from std_msgs.msg import String, Bool
+from ament_index_python.packages import get_package_share_directory
+from geometry_msgs.msg import PoseStamped, PoseWithCovariance
+from nav2_simple_commander.robot_navigator import BasicNavigator
 from nav_msgs.msg import Odometry
 from openamr_ui_msgs.msg import ArrayPoseStampedWithCovariance
+from openamr_ui_package import route_outcomes
+import rclpy
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
+from std_msgs.msg import String
+import yaml
 
 
 class WayPointMover(Node):
@@ -28,6 +27,10 @@ class WayPointMover(Node):
         self.current_wp = 0
         self.on_the_route = False
         self.break_mission = False
+        self.last_route_outcome = None
+        self.declare_parameter('waypoint_timeout_s', route_outcomes.DEFAULT_WAYPOINT_TIMEOUT_S)
+        self.waypoint_timeout_s = (
+            self.get_parameter('waypoint_timeout_s').get_parameter_value().double_value)
 
         package_share_dir = get_package_share_directory('openamr_ui_package')
         self.current_files = os.path.join(
@@ -105,15 +108,25 @@ class WayPointMover(Node):
     # Navigation primitives
     # ------------------------------------------------------------------
 
-    def _send_pose(self, pose: PoseStamped) -> bool:
-        """Send a NavigateToPose goal and block until complete. Returns True on success."""
-        self.navigator.goToPose(pose)
+    def _send_pose(self, pose: PoseStamped) -> str:
+        """Send a NavigateToPose goal, block until it ends, return its outcome.
+
+        The outcome is the Nav2 result (SUCCEEDED, ABORTED, CANCELED), or
+        TIMEOUT when the goal ran longer than waypoint_timeout_s and was
+        canceled here.
+        """
+        if not self.navigator.goToPose(pose):
+            return route_outcomes.ABORTED
+        started = time.monotonic()
         while not self.navigator.isTaskComplete():
             if self.break_mission:
                 self.navigator.cancelTask()
-                return False
+                return route_outcomes.CANCELED
+            if time.monotonic() - started > self.waypoint_timeout_s:
+                self.navigator.cancelTask()
+                return route_outcomes.TIMEOUT
             time.sleep(0.1)
-        return self.navigator.getResult() == TaskResult.SUCCEEDED
+        return route_outcomes.outcome_from_task_result(self.navigator.getResult())
 
     # ------------------------------------------------------------------
     # Route operations (run in daemon threads to avoid blocking the executor)
@@ -125,28 +138,24 @@ class WayPointMover(Node):
         self.current_wp = 0
         self.read_wp()
 
+        outcomes = []
         for index, (pose, _, purpose) in enumerate(self.waypoints):
             if self.break_mission:
-                self._pub("break_mission")
                 break
-
-            self._pub(f"Following to {index + 1} waypoint...")
-            success = self._send_pose(pose)
+            self._pub(f'Following to {index + 1} waypoint...')
+            outcome = self._send_pose(pose)
+            outcomes.append(outcome)
             self.current_wp = index + 1
-
-            if self.break_mission:
+            self._pub(f'Waypoint {index + 1}: {outcome}')
+            if outcome != route_outcomes.SUCCEEDED:
                 break
-
-            if success:
-                self._pub(f"Doing some action #{purpose} on {index + 1} point")
-            else:
-                self._pub(f"Failed to reach waypoint {index + 1}")
-                break
-
+            self._pub(f'Doing some action #{purpose} on {index + 1} point')
             time.sleep(0.1)
 
-        time.sleep(1)
-        self._pub("Current route was successfully completed")
+        # A route succeeds only if every waypoint succeeded.
+        result, message = route_outcomes.route_outcome(outcomes, len(self.waypoints))
+        self.last_route_outcome = result
+        self._pub(message)
         self.on_the_route = False
 
     def follow_func(self):
@@ -163,11 +172,10 @@ class WayPointMover(Node):
         self.current_wp = max(1, min(self.current_wp + direction, len(self.waypoints)))
         pose, _, purpose = self.waypoints[self.current_wp - 1]
         self._pub(f"Following to {self.current_wp} waypoint...")
-        if self._send_pose(pose):
-            self._pub(f"Point #{self.current_wp} successfully reached")
+        outcome = self._send_pose(pose)
+        self._pub(f'Waypoint {self.current_wp}: {outcome}')
+        if outcome == route_outcomes.SUCCEEDED:
             self._pub(f"Doing some action #{purpose} on {self.current_wp} point")
-        else:
-            self._pub(f"Failed to reach waypoint {self.current_wp}")
 
     def next_wp_func(self):
         self.get_logger().info("Following to next waypoint...")
