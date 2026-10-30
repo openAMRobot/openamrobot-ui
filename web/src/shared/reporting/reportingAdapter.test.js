@@ -127,7 +127,7 @@ describe("display states", () => {
     ["navigation degraded", healthy(navStatus({ health: 2 })), "Navigation health is not OK"],
     ["battery low", [...healthy(), [{ type: "battery", msg: battery(25) }, 1000]], "Battery low (25%)"],
     ["no battery data", healthy().filter(([e]) => e.type !== "battery"), "No battery data"],
-    ["no diagnostics", healthy().filter(([e]) => e.type !== "diagnostics"), "No diagnostics received"],
+    ["no diagnostics", healthy().filter(([e]) => e.type !== "diagnostics"), "No valid diagnostics received"],
   ])("not READY when %s: WAITING with the blocking reason", (_label, events, reason) => {
     const v = view(events);
     expect(v.display).toBe(DISPLAY.WAITING);
@@ -377,5 +377,94 @@ describe("runs and results", () => {
       [{ type: "uiRun", kind: "route", run: { runId: "r1", name: "Waypoint queue", step: 2, total: 4, status: "failed", reason: "Goal failed" } }, 1000],
     ]);
     expect(done.result).toEqual(expect.objectContaining({ outcome: "FAILED", reason: "Goal failed" }));
+  });
+});
+
+// Owner decision (30 Oct 2026, review of #54): validate every /diagnostics
+// message and judge freshness per entry name.
+describe("diagnostics validation and per-entry freshness", () => {
+  // healthy() with its diagnostics event replaced by `msg`.
+  const healthyWithDiagnostics = (msg) =>
+    healthy().map(([e, at]) => (e.type === "diagnostics" ? [{ type: "diagnostics", msg }, at] : [e, at]));
+  const recovery = [[{ type: "diagnostics", msg: diagnostics(0) }, 1000]];
+  const diagRow = (v) => v.rows.find((r) => r.label === "Diagnostics");
+
+  it.each([
+    ["{}", {}],
+    ["{ status: [] }", { status: [] }],
+    ["an entry with an invalid level (7)", { status: [{ name: "lidar", level: 7, message: "" }] }],
+    ["an entry with a level that is not a number", { status: [{ name: "lidar", level: "2", message: "" }] }],
+    ["an entry with an empty name", { status: [{ name: "  ", level: 0, message: "" }] }],
+  ])("diagnostics replaced by %s: not READY, then valid recovery data gives READY", (_label, msg) => {
+    const { state, logs } = apply(healthyWithDiagnostics(msg));
+    const v = deriveReport(state, 1000);
+    expect(v.display).toBe(DISPLAY.WAITING);
+    expect(v.reason).toBe("No valid diagnostics received");
+    expect(diagRow(v).value).toBe("Unknown");
+    if (Array.isArray(msg.status) && msg.status.length === 0) expect(logs).toHaveLength(0);
+    else expect(logs.some((l) => /diagnostics/.test(l.message))).toBe(true);
+
+    const after = apply(recovery, state).state;
+    const v2 = deriveReport(after, 1000);
+    expect(v2.display).toBe(DISPLAY.READY);
+    expect(diagRow(v2).value).toBe("OK");
+  });
+
+  it("an invalid entry is ignored while a valid entry in the same message counts", () => {
+    const msg = { status: [{ name: "bad", level: 9 }, { name: "lidar", level: 1, message: "rate low" }] };
+    const { state, logs } = apply(healthyWithDiagnostics(msg));
+    const v = deriveReport(state, 1000);
+    expect(v.display).toBe(DISPLAY.READY);
+    expect(diagRow(v).value).toBe("Warning");
+    expect(logs).toHaveLength(1);
+  });
+
+  it("an unrelated diagnostic never refreshes a stale entry", () => {
+    // lidar reports ERROR at t=1000; a different name reports OK at t=1500.
+    const base = [
+      ...healthyWithDiagnostics(diagnostics(2, "lidar", "no data")),
+      [{ type: "diagnostics", msg: diagnostics(0, "imu") }, 1500],
+    ];
+    expect(view(base, 1500).display).toBe(DISPLAY.FAULTED);
+    // At t=2001 the lidar entry is older than 1 s and drops out; the imu
+    // message at 1500 must not have refreshed it.
+    const at = 2001;
+    const v = view(
+      [
+        ...base,
+        [{ type: "lock", msg: lock(false) }, at],
+        [{ type: "navigationStatus", msg: navStatus() }, at],
+        [{ type: "battery", msg: battery(80) }, at],
+      ],
+      at,
+    );
+    expect(v.display).toBe(DISPLAY.READY);
+    expect(diagRow(v).value).toBe("OK");
+  });
+
+  it("every entry stale: WAITING, Diagnostics row Unknown and stale", () => {
+    const at = 2500;
+    const v = view(
+      [
+        ...healthy(),
+        [{ type: "lock", msg: lock(false) }, at],
+        [{ type: "navigationStatus", msg: navStatus() }, at],
+        [{ type: "battery", msg: battery(80) }, at],
+      ],
+      at,
+    );
+    expect(v.display).toBe(DISPLAY.WAITING);
+    expect(v.reason).toBe("Diagnostics are stale");
+    expect(diagRow(v)).toEqual(expect.objectContaining({ value: "Unknown", freshness: "Stale" }));
+  });
+
+  it("a fresh ERROR shows FAULTED and the row Error; a fresh STALE level blocks READY", () => {
+    const err = view(healthyWithDiagnostics(diagnostics(2, "lidar", "no data")));
+    expect(err.display).toBe(DISPLAY.FAULTED);
+    expect(diagRow(err).value).toBe("Error");
+    const staleLevel = view(healthyWithDiagnostics(diagnostics(3, "camera")));
+    expect(staleLevel.display).toBe(DISPLAY.WAITING);
+    expect(staleLevel.reason).toBe("Diagnostics report stale data: camera");
+    expect(diagRow(staleLevel).value).toBe("Error");
   });
 });

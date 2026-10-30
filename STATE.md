@@ -193,8 +193,13 @@ Branched from A1 (`ui/gate-a-command-path`); merges after A1.
   (docs/reporting-mode.md, Panel setup).
 - `.github/decisions.yaml` entry for the Reporting Mode display vocabulary:
   handled separately in openAMRobot/.github.
-- To confirm (proposed defaults): type sizes, 2 s exit long press, stale
-  multipliers, 25% low battery.
+- Thresholds (stale multipliers, 25% low battery) are accepted defaults
+  (owner decision, 30 Oct 2026). Type sizes and the 2 s exit long press stay
+  proposed until checked on the ZX80.
+- `/diagnostics` validation (owner decision, 30 Oct 2026, from the #54
+  review): status array required; each entry needs a name and a level 0 to
+  3, invalid entries are ignored and logged; freshness is per entry name;
+  READY needs a valid fresh entry and no fresh ERROR or STALE entry.
 - Evidence: unit, component and browser (Playwright at 1920 x 1200 against
   a scripted rosbridge stand-in). Not run against simulation, on the panel
   or on a robot.

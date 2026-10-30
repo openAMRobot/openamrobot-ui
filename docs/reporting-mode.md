@@ -73,15 +73,15 @@ evidence only, not the robot):
 | Connection | rosbridge WebSocket (roslibjs `connection`, `close`, `error`) | rosbridge_suite 2.7.1 has WebSocket ping off by default (`websocket_ping_interval` 0.0) and a browser cannot observe pings, so there is no protocol heartbeat | Disconnected on `close` or `error` |
 | Software stop lock | `/safety/stop_lock`, `std_msgs/Bool` | Republished on every 10 Hz tick of the stop gate | 1 s (10 missed ticks). This also serves as the link heartbeat. |
 | Navigation | `/navigation/status`, `openamr_nav_msgs/NavigationStatus` (contract version 1) | On change, and at least once per 2 Hz heartbeat | 1.5 s (3 heartbeats) |
-| Diagnostics | `/diagnostics`, `diagnostic_msgs/DiagnosticArray` | The navigation status node mirrors it on every 10 Hz tick | 1 s (10 ticks) |
+| Diagnostics | `/diagnostics`, `diagnostic_msgs/DiagnosticArray` | The navigation status node mirrors it on every 10 Hz tick | 1 s (10 ticks), per entry name |
 | Battery | `/battery_status`, `std_msgs/Float32` percent | 1 s timer in `battery.py` | 3 s (3 periods) |
 | Goal status | `/ui/navigate_to_pose/status`, `action_msgs/GoalStatusArray` | On change (relayed from `/navigate_to_pose/_action/status`) | Not a freshness source |
 | Goal progress | `/navigate_to_pose/_action/feedback`, `NavigateToPose_FeedbackMessage` | On progress | Shown only while the goal is active |
 | Mission | browser mission runner store | This browser tab only | Not a freshness source |
 | Program, route | browser run store (`shared/runs/uiRunStore.js`) | This browser tab only | Not a freshness source |
 
-The multipliers (3 heartbeats, 10 ticks, 3 periods) are proposed defaults
-for the Reporting Mode owner to confirm. The view is re-derived every
+The thresholds (3 heartbeats, 10 ticks, 3 periods) and the 25% battery
+limit are accepted defaults (owner decision, 30 Oct 2026). The view is re-derived every
 250 ms, so a source turns stale on screen without new data.
 
 Mission, program and route runs are what this browser tab is running. They
@@ -106,13 +106,13 @@ The first rule that matches wins.
 | 2 | STOPPED (SOFTWARE) | the stop lock is known and engaged |
 | 3 | UNKNOWN | the stop lock has no sample or is stale |
 | 4 | UNKNOWN | navigation status is missing, stale or invalid (wrong `contract_version`, out-of-range fields) |
-| 5 | FAULTED | navigation `health` is FAULT; stack state FAILED; stack state UNKNOWN with reason 1004 (node inactive); reason 1005 or 4009; any fresh `/diagnostics` entry at ERROR or STALE level |
+| 5 | FAULTED | navigation `health` is FAULT; stack state FAILED; stack state UNKNOWN with reason 1004 (node inactive); reason 1005 or 4009; a fresh, valid `/diagnostics` entry at ERROR level |
 | 6 | NEEDS_ASSISTANCE | reason 5002 (recovery attempts used up) or 4007 (stuck); localization state LOST |
 | 7 | RECOVERING | task state RECOVERING, or a recovery action is running |
 | 8 | BLOCKED | an active reason 4002, 4003, 4004 or 4008 |
 | 9 | WAITING | a mission is in a wait step |
 | 10 | EXECUTING | navigation task ACTIVE, a goal ACCEPTED, EXECUTING or CANCELING, or a mission, program or route running |
-| 11 | READY | all of: health OK, `navigation_readiness` READY, `/diagnostics` fresh with no ERROR, battery fresh and above 25% |
+| 11 | READY | all of: health OK, `navigation_readiness` READY, at least one valid, fresh `/diagnostics` entry and no fresh ERROR or STALE entry, battery fresh and above 25% |
 | 12 | WAITING | otherwise, with the first blocking reason shown |
 
 A known, engaged software lock ranks above UNKNOWN navigation data (missing,
@@ -127,7 +127,29 @@ controller) until a base status adapter exists. The page then shows WAITING
 with "No link to the base controller", which is the correct reading.
 
 Low battery: 25% or less blocks READY. Basis: the UI plan's initial battery
-policy "return at 25% SOC", subject to commissioning. Proposed default.
+policy "return at 25% SOC", subject to commissioning. Accepted default
+(30 Oct 2026).
+
+### Diagnostics validation
+
+Owner decision, 30 Oct 2026:
+
+- A `/diagnostics` message must have a `status` array. One without it is
+  ignored and logged to the event log.
+- Each entry needs a non-empty `name` and a `level` of exactly 0, 1, 2 or 3
+  (OK, WARN, ERROR, STALE; rosbridge sends the byte as an integer). An
+  invalid entry is ignored and logged. A message with no valid entries does
+  not count as received.
+- Each valid entry is stored with its own receive time, by name. An entry
+  older than 1 s drops out of evaluation. A message about one name never
+  refreshes another name's entry.
+- READY needs at least one valid, fresh entry and no fresh ERROR or STALE
+  entry. With no valid fresh entry the page shows WAITING ("No valid
+  diagnostics received" or "Diagnostics are stale"). A fresh ERROR shows
+  FAULTED with the entry's name and message. A fresh STALE entry shows
+  WAITING ("Diagnostics report stale data: name").
+- The Diagnostics row shows Unknown (no valid fresh entry), OK, Warning, or
+  Error (a fresh ERROR or STALE entry).
 
 ### Next permitted action
 
@@ -175,6 +197,9 @@ checks this at runtime with a mocked ROSLIB and statically over the source
 files.
 
 ## Proposed defaults to confirm on the panel
+
+The stale thresholds and the battery limit above are accepted. These
+display values remain proposed until checked on the ZX80:
 
 | Item | Value |
 |---|---|
