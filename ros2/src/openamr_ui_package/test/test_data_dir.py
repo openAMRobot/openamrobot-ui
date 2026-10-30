@@ -287,6 +287,13 @@ def _start(share, data, new):
     return data_dir.seed(share, data, environ={'OPENAMROBOT_MAPS_DIR': new})
 
 
+def _record_warnings(monkeypatch):
+    """Collect data_dir's warnings directly, independent of logging setup."""
+    messages = []
+    monkeypatch.setattr(data_dir.LOG, 'warning', lambda msg, *a: messages.append(msg % a))
+    return messages
+
+
 def test_upgrade_copies_user_maps_and_repoints_the_selection(tmp_path):
     share, data, new, old, before = _upgrade_fixture(tmp_path)
     _start(share, data, new)
@@ -311,29 +318,28 @@ def test_absolute_image_path_is_rewritten_in_the_copy_only(tmp_path):
     assert os.path.isfile(os.path.join(new, 'Lab', 'Abs.png'))
 
 
-def test_colliding_map_is_skipped_logged_and_both_copies_kept(tmp_path, caplog):
+def test_colliding_map_is_skipped_logged_and_both_copies_kept(tmp_path, monkeypatch):
     share, data, new, old, before = _upgrade_fixture(tmp_path)
-    with caplog.at_level('WARNING'):
-        _start(share, data, new)
+    warnings = _record_warnings(monkeypatch)
+    _start(share, data, new)
     with open(os.path.join(new, 'Lab', 'Clash.yaml')) as f:
         assert f.read() == 'image: Clash.png\nresolution: 0.1\n'
     assert not os.path.exists(os.path.join(new, 'Lab', 'Clash.png'))
     assert _tree(old) == before
-    assert any('Lab/Clash not migrated' in r.getMessage() for r in caplog.records)
+    assert any('Lab/Clash not migrated' in m for m in warnings), warnings
     assert os.path.isfile(os.path.join(new, 'Lab', 'Floor.yaml'))
 
 
-def test_selection_of_a_skipped_map_is_left_unchanged_and_logged(tmp_path, caplog):
+def test_selection_of_a_skipped_map_is_left_unchanged_and_logged(tmp_path, monkeypatch):
     share, data, new, old, before = _upgrade_fixture(tmp_path)
+    warnings = _record_warnings(monkeypatch)
     selected = os.path.join(old, 'Lab', 'Clash.yaml')
     with open(os.path.join(data, 'current_map_route.yaml'), 'w') as f:
         yaml.safe_dump({'map_file': selected, 'route_file': ''}, f)
-    with caplog.at_level('WARNING'):
-        _start(share, data, new)
+    _start(share, data, new)
     with open(os.path.join(data, 'current_map_route.yaml')) as f:
         assert yaml.safe_load(f)['map_file'] == selected
-    assert any('Selected map' in r.getMessage() and 'left as is' in r.getMessage()
-               for r in caplog.records)
+    assert any('Selected map' in m and 'left as is' in m for m in warnings), warnings
 
 
 def test_second_start_does_not_migrate_again(tmp_path):
