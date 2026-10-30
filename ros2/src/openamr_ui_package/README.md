@@ -13,15 +13,12 @@ build commands, run commands, ports, topics, and troubleshooting.
   relays.
 - `launch/physnode_launch.py`: starts optional map/route file-operation and
   waypoint route-following helper nodes.
-- `launch/mapping_launch.py` (includes `gmapping_launch.py` +
-  `move_base_launch.py`) and `launch/navigation_launch.py` (includes
-  `move_base_launch.py` + `amcl_launch.py`): legacy. They start a second
-  SLAM, AMCL and Nav2 controller stack next to the platform's own, which is
-  what openamrobot-ui#32 removes. Do not launch them. They stay in the package
-  only while `folders_handler.py` still names them; delete them, together
-  with `param/move_base/`, once no code references them.
-- The platform owns `map_server`. This package has no launch file that starts
-  one.
+- No launch file in this package starts SLAM, AMCL, the Nav2 controller,
+  planner or navigator, or a map_server. The legacy mapping and navigation
+  launches, `param/move_base/` (openamrobot-ui#52) and `map_server_launch.py`
+  (openamrobot-ui#41) are deleted. The platform owns `map_server`; mapping and
+  navigation run on the robot platform, and the Maps page saves and loads maps
+  through the platform's map services (openamrobot-ui#32).
 
 ## Runtime pieces
 
