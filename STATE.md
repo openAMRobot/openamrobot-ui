@@ -50,8 +50,13 @@ ZX80 or on a robot.
   `move_base_launch.py`, `amcl_launch.py` and `param/move_base/`. This is
   the follow-up named under B2; it needs B1, which removed the last code
   that launched them.
-- Keeps `launch/map_server_launch.py`; B2 deletes it.
-- Evidence: unit test (pure source and file check).
+- Keeps `launch/map_server_launch.py`; B2 (#41) deletes it, and the READMEs
+  say so.
+- Its reference test scans only runtime and configuration consumers (launch
+  files, package code, setup.py, setup.cfg, package.xml, Dockerfile,
+  docker-compose.yml, scripts/), not test directories.
+- Evidence: unit test (pure source and file check); combined with B1 and B2
+  in a local scratch merge.
 
 ### B3 `ui/lifecycle-read-only`
 

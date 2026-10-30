@@ -24,7 +24,28 @@ PLATFORM_NODE_PACKAGES = (
     'nav2_amcl', 'slam_toolbox', 'slam_gmapping',
     'nav2_controller', 'nav2_planner', 'nav2_bt_navigator',
 )
-CODE_PATTERNS = ('**/*.py', '**/*.sh', '**/*.yml', '**/*.yaml', '**/*.xml', '**/Dockerfile')
+SRC_DIR = os.path.dirname(PACKAGE_DIR)
+
+
+def runtime_consumers():
+    """Return the files that can launch or install a launch file at run time.
+
+    Launch files, Python package code, setup.py, setup.cfg and package.xml of
+    every package under ros2/src, plus Dockerfile, docker-compose.yml and
+    scripts/. Test directories are left out: tests are not runtime callers,
+    and test_launch_files.py names the removed files on purpose.
+    """
+    paths = []
+    for package in sorted(glob.glob(os.path.join(SRC_DIR, '*', 'package.xml'))):
+        root = os.path.dirname(package)
+        name = os.path.basename(root)
+        paths += glob.glob(os.path.join(root, 'launch', '*.py'))
+        paths += glob.glob(os.path.join(root, name, '**', '*.py'), recursive=True)
+        paths += [os.path.join(root, f) for f in ('setup.py', 'setup.cfg', 'package.xml')]
+    paths += [os.path.join(REPO_ROOT, 'Dockerfile'), os.path.join(REPO_ROOT, 'docker-compose.yml')]
+    paths += glob.glob(os.path.join(REPO_ROOT, 'scripts', '**', '*'), recursive=True)
+    return sorted(p for p in set(paths)
+                  if os.path.isfile(p) and os.sep + 'test' + os.sep not in p)
 
 
 def _read(path):
@@ -44,14 +65,15 @@ def test_no_launch_file_starts_a_platform_navigation_node():
             assert package not in text, f'{path} starts {package}'
 
 
-def test_no_code_or_config_names_a_removed_file():
+def test_no_runtime_consumer_names_a_removed_file():
     names = [os.path.basename(rel) for rel in REMOVED[:-1]] + ['param/move_base']
-    skip = ('node_modules', os.sep + 'build' + os.sep, os.sep + 'install' + os.sep,
-            os.sep + 'log' + os.sep, os.path.abspath(__file__))
-    for pattern in CODE_PATTERNS:
-        for path in glob.glob(os.path.join(REPO_ROOT, pattern), recursive=True):
-            if any(part in path for part in skip) or not os.path.isfile(path):
-                continue
-            text = _read(path)
-            for name in names:
-                assert name not in text, f'{path} names {name}'
+    consumers = runtime_consumers()
+    assert os.path.join(PACKAGE_DIR, 'launch', 'new_ui_launch.py') in consumers
+    for path in consumers:
+        text = _read(path)
+        for name in names:
+            assert name not in text, f'{path} names {name}'
+
+
+def test_test_directories_are_not_scanned():
+    assert not any(os.sep + 'test' + os.sep in p for p in runtime_consumers())
