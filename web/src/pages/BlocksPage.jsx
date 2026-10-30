@@ -61,6 +61,8 @@ import {
 import { AppConfig } from "../shared/constants";
 import { StatusBadge } from "../shared/ui/Dashboard";
 
+export const BLOCKLY_MEDIA_PATH = `${process.env.PUBLIC_URL || ""}/blockly-media/`;
+
 const STORAGE_KEY = "openamr_blockly_workspace";
 
 const defaultWorkspace = {
@@ -317,6 +319,9 @@ const BlocksPage = () => {
     registerOpenAmrBlocks();
 
     const workspace = Blockly.inject(blocklyDivRef.current, {
+      // Served by this app (scripts/copy-blockly-media.js), not Blockly's
+      // default internet host, so the page works on a robot without internet.
+      media: BLOCKLY_MEDIA_PATH,
       toolbox: openAmrToolbox,
       theme: theme === "dark" ? openAmrDarkTheme : Blockly.Themes.Classic,
       grid: {
