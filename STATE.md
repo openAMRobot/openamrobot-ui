@@ -57,6 +57,8 @@ ZX80 or on a robot.
   topics and lists the skipped ones; HTTP 400 only when a request names a
   command, transform, goal, pose-reset, safety, action or service topic.
 - The allowlist is the accepted default (owner decision, 30 Oct).
+- `replay_policy.py`'s opening docstring now says the same: a recording with
+  denied topics is filtered, not rejected (review of #43).
 - Evidence: unit tests (pure and Flask test client).
 
 ### B5 `ui/bag-process-recovery`
