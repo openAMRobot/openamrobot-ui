@@ -324,8 +324,11 @@ copying or restoring backend data.
 
 ### Manual backend data
 
-Backend programs, locations, run history, recordings, maps, routes, and
-generated certificates live in `~/.openamr_ui/`, the data directory.
+Backend programs, locations, run history, recordings, routes, and generated
+certificates live in `~/.openamr_ui/`, the data directory. Maps live in
+`OPENAMROBOT_MAPS_DIR`, which defaults to `~/.openamr_ui/maps/`; back that up
+too if you set it elsewhere. In Docker, maps are on the `openamrobot_maps`
+volume at `/data/maps`.
 
 Back up:
 
