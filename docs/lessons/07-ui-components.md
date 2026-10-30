@@ -119,10 +119,12 @@ itself — it calls an `onCancelGoal` callback passed in as a prop, and the
 Map page owns the actual `ROSLIB.Service` call to
 `AppConfig.NAV_CANCEL_GOAL_SERVICE`. That split exists so the cancel-service
 client is created once per page, not once per panel — the same service is
-also what the Map page's top-bar E-STOP button
+also what the top-bar **Stop (software)** button
 ([`StatusBar.jsx`](06-the-pages.md#the-chrome-thats-on-every-page)) calls
-from outside this component entirely. This is a one-shot software intervention,
-not a latched or safety-rated physical emergency stop.
+from outside this component entirely. Today this is a one-shot software stop
+that does not latch, not a safety-rated physical emergency stop;
+openamrobot-ui#50 replaces it with a latched Stop (software) with an explicit
+Resume and updates this text.
 
 ## RobotState — `RobotState.jsx`
 
@@ -274,7 +276,7 @@ console drawer's open/closed state (passed down to `Header` as props — see
 **Always-mounted alongside the active page.** `AppLayout` also renders a
 handful of components that have nothing to do with whichever page is
 currently showing, and stay mounted across every navigation instead of
-belonging to one page: `StatusBar` (battery + E-STOP, see
+belonging to one page: `StatusBar` (battery + Stop (software), see
 [Lesson 06](06-the-pages.md#the-chrome-thats-on-every-page)),
 `NotificationsWatcher` and `EventRecorder` (feed the browser-notification
 and [Events page](06-the-pages.md#events--eventspagejsx) logs respectively,

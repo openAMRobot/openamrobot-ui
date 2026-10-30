@@ -42,9 +42,11 @@ the page itself, so every screenshot below shows them:
 - The top bar (`Header.jsx`) — the sidebar/nav, a connection dot
   ("Connected"/"Disconnected"), and the light/dark theme toggle.
 - The status strip right under it (`StatusBar.jsx`) — live battery
-  percentage and a big red **E-STOP** button that zeroes `/cmd_vel` and
-  cancels the active Nav2 goal from anywhere, not just the Map page. This is a
-  non-latched software stop and does not replace a physical emergency stop.
+  percentage and a red **Stop (software)** button that zeroes `/cmd_vel` and
+  cancels the active Nav2 goal from anywhere, not just the Map page. Today
+  this is a one-shot software stop that does not latch, and it does not
+  replace a physical emergency stop. openamrobot-ui#50 replaces it with a
+  latched Stop (software) with an explicit Resume and updates this text.
 - Whichever banner applies: a purple **Demo Mode** banner when
   [Demo Mode](#config--configpagejsx) is on, a replay banner while a
   [recording](#recordings--recordingspagejsx) is playing back, or an
@@ -374,6 +376,12 @@ debugging, demos, and dataset collection.
   waits, rather than looking stuck.
 - Replayed telemetry is always clearly labeled as a replay, never presented
   as if it were a live robot.
+- Replay publishes only the telemetry topics on the allowlist in
+  `param/replay_topics.yaml`; velocity command, `/tf`, `/tf_static`, goal,
+  initial pose, safety, action and service topics in a recording are
+  skipped and listed, and a request that names one is refused before
+  playback starts. This is a UI check, not safety evidence. See
+  [Recording replay policy](../../README.md#recording-replay-policy).
 
 ## Events — `EventsPage.jsx`
 
