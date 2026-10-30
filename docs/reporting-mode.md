@@ -105,15 +105,16 @@ The first rule that matches wins.
 | 1 | DISCONNECTED | rosbridge is not connected |
 | 2 | STOPPED (SOFTWARE) | the stop lock is known and engaged |
 | 3 | UNKNOWN | the stop lock has no sample or is stale |
-| 4 | UNKNOWN | navigation status is missing, stale or invalid (wrong `contract_version`, out-of-range fields) |
-| 5 | FAULTED | navigation `health` is FAULT; stack state FAILED; stack state UNKNOWN with reason 1004 (node inactive); reason 1005 or 4009; a fresh, valid `/diagnostics` entry at ERROR level |
-| 6 | NEEDS_ASSISTANCE | reason 5002 (recovery attempts used up) or 4007 (stuck); localization state LOST |
-| 7 | RECOVERING | task state RECOVERING, or a recovery action is running |
-| 8 | BLOCKED | an active reason 4002, 4003, 4004 or 4008 |
-| 9 | WAITING | a mission is in a wait step |
-| 10 | EXECUTING | navigation task ACTIVE, a goal ACCEPTED, EXECUTING or CANCELING, or a mission, program or route running |
-| 11 | READY | all of: health OK, `navigation_readiness` READY, at least one valid, fresh `/diagnostics` entry and no fresh ERROR or STALE entry, battery fresh and above 25% |
-| 12 | WAITING | otherwise, with the first blocking reason shown |
+| 4 | FAULTED | a `/diagnostics` source is latched in fault (see "Diagnostics fault latch") |
+| 5 | UNKNOWN | navigation status is missing, stale or invalid (wrong `contract_version`, out-of-range fields) |
+| 6 | FAULTED | navigation `health` is FAULT; stack state FAILED; stack state UNKNOWN with reason 1004 (node inactive); reason 1005 or 4009 |
+| 7 | NEEDS_ASSISTANCE | reason 5002 (recovery attempts used up) or 4007 (stuck); localization state LOST |
+| 8 | RECOVERING | task state RECOVERING, or a recovery action is running |
+| 9 | BLOCKED | an active reason 4002, 4003, 4004 or 4008 |
+| 10 | WAITING | a mission is in a wait step |
+| 11 | EXECUTING | navigation task ACTIVE, a goal ACCEPTED, EXECUTING or CANCELING, or a mission, program or route running |
+| 12 | READY | all of: health OK, `navigation_readiness` READY, at least one valid, fresh `/diagnostics` entry and no source latched in fault, battery fresh and above 25% |
+| 13 | WAITING | otherwise, with the first blocking reason shown |
 
 A known, engaged software lock ranks above UNKNOWN navigation data (missing,
 stale or invalid); only DISCONNECTED ranks higher. This is the owner's
@@ -143,13 +144,32 @@ Owner decision, 30 Oct 2026:
 - Each valid entry is stored with its own receive time, by name. An entry
   older than 1 s drops out of evaluation. A message about one name never
   refreshes another name's entry.
-- READY needs at least one valid, fresh entry and no fresh ERROR or STALE
-  entry. With no valid fresh entry the page shows WAITING ("No valid
-  diagnostics received" or "Diagnostics are stale"). A fresh ERROR shows
-  FAULTED with the entry's name and message. A fresh STALE entry shows
-  WAITING ("Diagnostics report stale data: name").
-- The Diagnostics row shows Unknown (no valid fresh entry), OK, Warning, or
-  Error (a fresh ERROR or STALE entry).
+- READY needs at least one valid, fresh entry and no source latched in
+  fault. With no valid fresh entry the page shows WAITING ("No valid
+  diagnostics received" or "Diagnostics are stale").
+- The Diagnostics row shows Error while any source is latched in fault,
+  otherwise Unknown (no valid fresh entry), Warning or OK.
+
+### Diagnostics fault latch
+
+Owner decision, 30 Oct 2026 (second review point on #54):
+
+- When an entry with a given name reports ERROR or STALE, that name stays
+  in fault until the same name reports a valid OK or WARN. Ageing out never
+  clears a fault, and reports from other names never clear it. An invalid
+  entry for that name does not clear it either.
+- While any name is in fault the page shows FAULTED, and READY is
+  impossible. The reason names the source and the panel's local time of its
+  last error report, for example "Diagnostics error: lidar: no data (last
+  error at 09:41:05)". With several sources in fault, the one that reported
+  last is the reason and the others are listed as warnings.
+- A latched fault ranks below DISCONNECTED and the software stop lock rules
+  (priorities 1 to 3) and above missing or stale navigation data.
+- A fault is cleared only by a recovery report (OK or WARN) from the same
+  name, or by a new rosbridge connection. A new connection starts with no
+  diagnostics at all, so the page shows WAITING ("No valid diagnostics
+  received") until valid diagnostics arrive again. A source still in fault
+  then latches again on its next ERROR or STALE report.
 
 ### Next permitted action
 

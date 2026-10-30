@@ -139,7 +139,10 @@ export const initialReportingState = () => ({
   lock: { lastValue: null, lastSampleMs: null },
   nav: { msg: null, receivedAt: null, invalid: "" },
   battery: { percent: null, receivedAt: null, invalid: "" },
-  // Valid /diagnostics entries by name, each with its own receive time.
+  // Valid /diagnostics entries by name, each with its own receive time
+  // (local monotonic) and wall-clock time. An entry whose last report was
+  // ERROR or STALE is a latched fault until the same name reports OK or
+  // WARN, or a new connection starts (owner decision, 30 Oct 2026).
   diagnostics: { entries: {} },
   goal: null, // { id, stampS, status, distance0, distance, eta, recoveries }
   seenGoals: [],
@@ -303,9 +306,11 @@ const DIAG_LEVELS = [0, 1, 2, 3]; // OK, WARN, ERROR, STALE
  * level of exactly 0, 1, 2 or 3. Invalid entries are ignored and logged.
  * Each valid entry is stored with its own receive time, so a message about
  * one name never refreshes another; a message with no valid entries changes
- * nothing and does not count as received.
+ * nothing and does not count as received. Entries are kept until the next
+ * connection, so an ERROR or STALE report stays latched after it ages out
+ * and is replaced only by a later report from the same name.
  */
-const reduceDiagnostics = (state, msg, nowMs, logs) => {
+const reduceDiagnostics = (state, msg, nowMs, wallMs, logs) => {
   if (!msg || typeof msg !== "object" || !Array.isArray(msg.status)) {
     logs.push({
       type: "system",
@@ -327,6 +332,7 @@ const reduceDiagnostics = (state, msg, nowMs, logs) => {
       level,
       message: typeof s.message === "string" ? s.message : "",
       receivedAt: nowMs,
+      receivedWallMs: wallMs,
     };
   });
   if (invalid) {
@@ -351,15 +357,16 @@ const reduceDiagnostics = (state, msg, nowMs, logs) => {
  *   { type: "mission", run, name }       shared/missions/missionRunner run
  *   { type: "uiRun", kind, run }         shared/runs/uiRunStore run
  */
-export const reduceReporting = (state, event, nowMs) => {
+export const reduceReporting = (state, event, nowMs, wallMs = null) => {
   const logs = [];
   let next = state;
   switch (event.type) {
     case "connection":
       if (event.status === state.connection) break;
       // A new connection starts with no data: nothing from before the
-      // disconnect may look fresh or known. The current run and last result
-      // stay on screen; stale sources are shown as such.
+      // disconnect may look fresh or known, and latched diagnostics faults
+      // are cleared (a new connection epoch). The current run and last
+      // result stay on screen; stale sources are shown as such.
       next = {
         ...initialReportingState(),
         connection: event.status,
@@ -389,7 +396,7 @@ export const reduceReporting = (state, event, nowMs) => {
       break;
     }
     case "diagnostics":
-      next = reduceDiagnostics(state, event.msg, nowMs, logs);
+      next = reduceDiagnostics(state, event.msg, nowMs, wallMs, logs);
       break;
     case "goalStatus":
       next = reduceGoalStatus(state, event.msg, logs);
@@ -462,6 +469,19 @@ const progressView = (state) => {
   };
 };
 
+const pad2 = (n) => String(n).padStart(2, "0");
+
+/** Wall-clock time of day (panel local time), for example "09:41:05". */
+export const formatClockTime = (wallMs) => {
+  if (!isFiniteNumber(wallMs)) return "unknown time";
+  const d = new Date(wallMs);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+};
+
+const diagFaultText = (name, e) =>
+  `Diagnostics ${e.level === DIAG_LEVEL.STALE ? "stale" : "error"}: ${name}${e.message ? `: ${e.message}` : ""}` +
+  ` (last error at ${formatClockTime(e.receivedWallMs)})`;
+
 /** Everything a consumer renders, for the time nowMs. */
 export const deriveReport = (state, nowMs) => {
   const warnings = [];
@@ -474,8 +494,11 @@ export const deriveReport = (state, nowMs) => {
   const diagAll = Object.entries(state.diagnostics.entries);
   const diagEntries = diagAll.filter(([, e]) => fresh(e.receivedAt, STALE_AFTER_MS.diagnostics, nowMs));
   const diagFresh = diagEntries.length > 0;
-  const diagErrors = diagEntries.filter(([, e]) => e.level === DIAG_LEVEL.ERROR);
-  const diagStaleLevel = diagEntries.filter(([, e]) => e.level === DIAG_LEVEL.STALE);
+  // Latched faults: every name whose last report was ERROR or STALE, fresh
+  // or not. Ageing out and reports from other names never clear them.
+  const diagFaults = diagAll
+    .filter(([, e]) => e.level === DIAG_LEVEL.ERROR || e.level === DIAG_LEVEL.STALE)
+    .sort(([, a], [, b]) => b.receivedAt - a.receivedAt);
   const diagWarns = diagEntries.filter(([, e]) => e.level === DIAG_LEVEL.WARN);
 
   const rows = [
@@ -502,10 +525,10 @@ export const deriveReport = (state, nowMs) => {
     },
     {
       label: "Diagnostics",
-      value: !diagFresh
-        ? "Unknown"
-        : diagErrors.length || diagStaleLevel.length
-          ? "Error"
+      value: diagFaults.length
+        ? "Error"
+        : !diagFresh
+          ? "Unknown"
           : diagWarns.length
             ? "Warning"
             : "OK",
@@ -556,6 +579,13 @@ export const deriveReport = (state, nowMs) => {
   if (state.connection !== "connected") return make(DISPLAY.DISCONNECTED, "No connection to the robot");
   if (lockState === LOCK_LOCKED) return make(DISPLAY.STOPPED_SOFTWARE, "The software stop lock is engaged");
   if (lockState === LOCK_UNKNOWN) return make(DISPLAY.UNKNOWN, "Software stop lock state is unknown");
+  // A latched diagnostics fault shows FAULTED whatever the navigation data
+  // says; READY is impossible while one is latched.
+  if (diagFaults.length) {
+    const [name, e] = diagFaults[0];
+    diagFaults.slice(1).forEach(([other, o]) => warnings.push(`Also in fault: ${diagFaultText(other, o)}`));
+    return make(DISPLAY.FAULTED, diagFaultText(name, e));
+  }
   if (state.nav.invalid && state.nav.receivedAt !== null && !navMsg) {
     return make(DISPLAY.UNKNOWN, "Navigation status is invalid");
   }
@@ -580,10 +610,6 @@ export const deriveReport = (state, nowMs) => {
   }
   const faultCode = all.find((c) => FAULT_REASONS.has(c));
   if (faultCode) return make(DISPLAY.FAULTED, reasonText(faultCode));
-  if (diagErrors.length) {
-    const [name, e] = diagErrors[0];
-    return make(DISPLAY.FAULTED, `Diagnostics error: ${name}${e.message ? `: ${e.message}` : ""}`);
-  }
 
   // NEEDS_ASSISTANCE
   const assistCode = all.find((c) => ASSISTANCE_REASONS.has(c));
@@ -618,7 +644,6 @@ export const deriveReport = (state, nowMs) => {
     blocking.push(reasonText(notReady[0]) || "Navigation is not ready");
   }
   if (!diagFresh) blocking.push(diagAll.length ? "Diagnostics are stale" : "No valid diagnostics received");
-  else if (diagStaleLevel.length) blocking.push(`Diagnostics report stale data: ${diagStaleLevel[0][0]}`);
   if (!batteryFresh) blocking.push(state.battery.receivedAt === null ? "No battery data" : "Battery data is stale or invalid");
   else if (batteryLow) blocking.push(`Battery low (${Math.round(state.battery.percent)}%)`);
   if (blocking.length) return make(DISPLAY.WAITING, blocking[0]);

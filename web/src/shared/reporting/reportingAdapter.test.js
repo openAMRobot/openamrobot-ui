@@ -8,12 +8,16 @@ import {
 } from "./reportingAdapter";
 import { battery, diagnostics, goalStatus, lock, navFeedback, navStatus } from "./testing/fixtures";
 
+// Wall clock for local time 0: 30 Oct 2026, 09:00:00 panel local time, so
+// local time 1000 is shown as 09:00:01.
+const WALL0 = new Date(2026, 9, 30, 9, 0, 0).getTime();
+
 // Build a state by applying events at the given local times.
 const apply = (events, start = initialReportingState()) => {
   let state = start;
   const logs = [];
   events.forEach(([event, at]) => {
-    const r = reduceReporting(state, event, at);
+    const r = reduceReporting(state, event, at, WALL0 + at);
     state = r.state;
     logs.push(...r.logs);
   });
@@ -66,7 +70,7 @@ describe("display states", () => {
   it("FAULTED on a /diagnostics ERROR", () => {
     const v = view([...healthy(), [{ type: "diagnostics", msg: diagnostics(2, "lidar", "no data") }, 1000]]);
     expect(v.display).toBe(DISPLAY.FAULTED);
-    expect(v.reason).toBe("Diagnostics error: lidar: no data");
+    expect(v.reason).toBe("Diagnostics error: lidar: no data (last error at 09:00:01)");
   });
 
   it("FAULTED when a node is inactive and the stack state is unknown", () => {
@@ -388,6 +392,12 @@ describe("diagnostics validation and per-entry freshness", () => {
     healthy().map(([e, at]) => (e.type === "diagnostics" ? [{ type: "diagnostics", msg }, at] : [e, at]));
   const recovery = [[{ type: "diagnostics", msg: diagnostics(0) }, 1000]];
   const diagRow = (v) => v.rows.find((r) => r.label === "Diagnostics");
+  // Fresh lock, navigation and battery at `at`, without diagnostics.
+  const refreshAt = (at) => [
+    [{ type: "lock", msg: lock(false) }, at],
+    [{ type: "navigationStatus", msg: navStatus() }, at],
+    [{ type: "battery", msg: battery(80) }, at],
+  ];
 
   it.each([
     ["{}", {}],
@@ -420,26 +430,17 @@ describe("diagnostics validation and per-entry freshness", () => {
   });
 
   it("an unrelated diagnostic never refreshes a stale entry", () => {
-    // lidar reports ERROR at t=1000; a different name reports OK at t=1500.
-    const base = [
-      ...healthyWithDiagnostics(diagnostics(2, "lidar", "no data")),
-      [{ type: "diagnostics", msg: diagnostics(0, "imu") }, 1500],
-    ];
-    expect(view(base, 1500).display).toBe(DISPLAY.FAULTED);
-    // At t=2001 the lidar entry is older than 1 s and drops out; the imu
-    // message at 1500 must not have refreshed it.
-    const at = 2001;
+    // imu reports WARN at t=1000 and goes stale; lidar reports OK at 2500.
     const v = view(
       [
-        ...base,
-        [{ type: "lock", msg: lock(false) }, at],
-        [{ type: "navigationStatus", msg: navStatus() }, at],
-        [{ type: "battery", msg: battery(80) }, at],
+        ...healthyWithDiagnostics(diagnostics(1, "imu", "rate low")),
+        ...refreshAt(2500),
+        [{ type: "diagnostics", msg: diagnostics(0, "lidar") }, 2500],
       ],
-      at,
+      2500,
     );
     expect(v.display).toBe(DISPLAY.READY);
-    expect(diagRow(v).value).toBe("OK");
+    expect(v.warnings).not.toContain("Diagnostics warning: imu: rate low");
   });
 
   it("every entry stale: WAITING, Diagnostics row Unknown and stale", () => {
@@ -458,13 +459,119 @@ describe("diagnostics validation and per-entry freshness", () => {
     expect(diagRow(v)).toEqual(expect.objectContaining({ value: "Unknown", freshness: "Stale" }));
   });
 
-  it("a fresh ERROR shows FAULTED and the row Error; a fresh STALE level blocks READY", () => {
+  it("a fresh ERROR or STALE level shows FAULTED and the row Error", () => {
     const err = view(healthyWithDiagnostics(diagnostics(2, "lidar", "no data")));
     expect(err.display).toBe(DISPLAY.FAULTED);
     expect(diagRow(err).value).toBe("Error");
     const staleLevel = view(healthyWithDiagnostics(diagnostics(3, "camera")));
-    expect(staleLevel.display).toBe(DISPLAY.WAITING);
-    expect(staleLevel.reason).toBe("Diagnostics report stale data: camera");
+    expect(staleLevel.display).toBe(DISPLAY.FAULTED);
+    expect(staleLevel.reason).toBe("Diagnostics stale: camera (last error at 09:00:01)");
     expect(diagRow(staleLevel).value).toBe("Error");
+  });
+});
+
+// Owner decision (30 Oct 2026, second P2 on #54): a diagnostics fault is
+// latched per source name. Only a fresh OK or WARN from the same name, or a
+// new connection, clears it; ageing out and other names never do.
+describe("diagnostics fault latch", () => {
+  const refreshAt = (at) => [
+    [{ type: "lock", msg: lock(false) }, at],
+    [{ type: "navigationStatus", msg: navStatus() }, at],
+    [{ type: "battery", msg: battery(80) }, at],
+  ];
+  const diagRow = (v) => v.rows.find((r) => r.label === "Diagnostics");
+  // Source A (lidar) reports ERROR at t=1000; source B (imu) reports OK at
+  // t=1000 and again at t=2500, when everything else is also fresh.
+  const aErrorThenStale = [
+    ...healthy(),
+    [{ type: "diagnostics", msg: diagnostics(2, "lidar", "no data") }, 1000],
+    [{ type: "diagnostics", msg: diagnostics(0, "imu") }, 1000],
+    ...refreshAt(2500),
+    [{ type: "diagnostics", msg: diagnostics(0, "imu") }, 2500],
+  ];
+
+  it("ERROR from A, then A goes stale while B keeps sending OK: stays FAULTED", () => {
+    // At t=2500 the lidar entry is 1.5 s old, past the 1 s freshness limit.
+    const v = view(aErrorThenStale, 2500);
+    expect(v.display).toBe(DISPLAY.FAULTED);
+    expect(v.reason).toBe("Diagnostics error: lidar: no data (last error at 09:00:01)");
+    expect(diagRow(v).value).toBe("Error");
+    // Still latched much later, while B stays fresh.
+    const later = view([...aErrorThenStale, ...refreshAt(60000), [{ type: "diagnostics", msg: diagnostics(0, "imu") }, 60000]], 60000);
+    expect(later.display).toBe(DISPLAY.FAULTED);
+  });
+
+  it("A then reports OK: the latch clears and the page can become READY", () => {
+    expect(view(aErrorThenStale, 2500).display).toBe(DISPLAY.FAULTED);
+    const v = view([...aErrorThenStale, [{ type: "diagnostics", msg: diagnostics(0, "lidar") }, 2600]], 2600);
+    expect(v.display).toBe(DISPLAY.READY);
+    expect(diagRow(v).value).toBe("OK");
+  });
+
+  it("A reporting WARN also clears the latch; an invalid entry for A does not", () => {
+    const invalid = [...aErrorThenStale, [{ type: "diagnostics", msg: { status: [{ name: "lidar", level: 7 }] } }, 2600]];
+    expect(view(invalid, 2600).display).toBe(DISPLAY.FAULTED);
+    const warn = view([...invalid, [{ type: "diagnostics", msg: diagnostics(1, "lidar", "rate low") }, 2700]], 2700);
+    expect(warn.display).toBe(DISPLAY.READY);
+    expect(warn.warnings).toContain("Diagnostics warning: lidar: rate low");
+  });
+
+  it("a STALE level latches the same way", () => {
+    const v = view(
+      [
+        ...healthy(),
+        [{ type: "diagnostics", msg: diagnostics(3, "camera") }, 1000],
+        ...refreshAt(2500),
+        [{ type: "diagnostics", msg: diagnostics(0) }, 2500],
+      ],
+      2500,
+    );
+    expect(v.display).toBe(DISPLAY.FAULTED);
+    expect(v.reason).toBe("Diagnostics stale: camera (last error at 09:00:01)");
+  });
+
+  it("the reason carries the time of the last error, and other faults are warnings", () => {
+    const v = view(
+      [
+        ...healthy(),
+        [{ type: "diagnostics", msg: diagnostics(2, "lidar", "no data") }, 1000],
+        [{ type: "diagnostics", msg: diagnostics(2, "imu", "") }, 1500],
+        [{ type: "diagnostics", msg: diagnostics(2, "lidar", "still no data") }, 2000],
+      ],
+      2000,
+    );
+    expect(v.reason).toBe("Diagnostics error: lidar: still no data (last error at 09:00:02)");
+    expect(v.warnings).toContain("Also in fault: Diagnostics error: imu (last error at 09:00:01)");
+  });
+
+  it("a latched fault shows FAULTED even when navigation data is stale", () => {
+    const v = view(
+      [
+        ...healthy(),
+        [{ type: "diagnostics", msg: diagnostics(2, "lidar", "no data") }, 1000],
+        [{ type: "lock", msg: lock(false) }, 2500],
+      ],
+      2500,
+    );
+    expect(v.display).toBe(DISPLAY.FAULTED);
+  });
+
+  it("a reconnect clears the latch; WAITING until valid diagnostics arrive", () => {
+    expect(view(aErrorThenStale, 2500).display).toBe(DISPLAY.FAULTED);
+    const reconnected = [
+      ...aErrorThenStale,
+      [{ type: "connection", status: "disconnected" }, 3000],
+      [{ type: "connection", status: "connected" }, 3100],
+      ...refreshAt(3200),
+    ];
+    const v = view(reconnected, 3200);
+    expect(v.display).toBe(DISPLAY.WAITING);
+    expect(v.reason).toBe("No valid diagnostics received");
+    expect(diagRow(v).value).toBe("Unknown");
+    // Invalid data does not end the wait.
+    const invalid = [...reconnected, [{ type: "diagnostics", msg: { status: [{ name: "lidar", level: 9 }] } }, 3300]];
+    expect(view(invalid, 3300).display).toBe(DISPLAY.WAITING);
+    const ok = view([...invalid, [{ type: "diagnostics", msg: diagnostics(0, "imu") }, 3400]], 3400);
+    expect(ok.display).toBe(DISPLAY.READY);
   });
 });

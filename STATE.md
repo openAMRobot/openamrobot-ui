@@ -199,7 +199,12 @@ Branched from A1 (`ui/gate-a-command-path`); merges after A1.
 - `/diagnostics` validation (owner decision, 30 Oct 2026, from the #54
   review): status array required; each entry needs a name and a level 0 to
   3, invalid entries are ignored and logged; freshness is per entry name;
-  READY needs a valid fresh entry and no fresh ERROR or STALE entry.
+  READY needs a valid fresh entry and no source latched in fault.
+- Diagnostics fault latch (owner decision, 30 Oct 2026, second #54 review
+  point): an ERROR or STALE report latches that name in fault until the same
+  name reports OK or WARN, or a new rosbridge connection starts (then
+  WAITING until valid diagnostics arrive). The page shows FAULTED with the
+  source name and the time of its last error.
 - Evidence: unit, component and browser (Playwright at 1920 x 1200 against
   a scripted rosbridge stand-in). Not run against simulation, on the panel
   or on a robot.
