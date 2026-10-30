@@ -25,10 +25,16 @@ build commands, run commands, ports, topics, and troubleshooting.
 - `flask_app.py`: serves the compiled React app.
 - `map_relay.py`: republishes `/map` to `/ui/map` with browser-friendly QoS.
 - `nav_relays.py`: republishes AMCL and navigation/docking action status under
-  `/ui/*`.
+  `/ui/*`. The AMCL pose is repeated every second only while AMCL's map to
+  odom transform is younger than `pose_stale_after_s` (default 2.0 s), timed
+  with a monotonic clock; then the relay goes quiet and the UI shows
+  localization as stale. When the ROS clock jumps back (a simulation
+  reset), the relay drops the cached pose and waits for a new one.
 - `folders_handler.py`: handles map, group, route, and waypoint file commands.
 - `waypoint_nav.py`: optional route-following helper using Nav2 Simple
-  Commander.
+  Commander. It reports each waypoint's Nav2 result (SUCCEEDED, ABORTED,
+  CANCELED or TIMEOUT after `waypoint_timeout_s`, default 300 s) on
+  `/ui_message`; a route succeeds only if every waypoint succeeded.
 - `battery.py` (executable `battery`): optional battery-percentage
   publisher. Starts from `new_ui_launch.py` only with
   `start_battery_monitor:=true`. It reads a serial port only when
