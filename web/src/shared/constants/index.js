@@ -51,6 +51,10 @@ export const AppConfig = {
   WP_REQ: "/WP_req",
   SENSORS_TOPIC: "/sensors",
   BATTERY_TOPIC: "/battery_status",
+  // Navigation health (openamr_nav_msgs/NavigationStatus, contract version 1),
+  // published by openamr-platform-sw navigation_status_node.
+  NAVIGATION_STATUS_TOPIC: "/navigation/status",
+  DIAGNOSTICS_TOPIC: "/diagnostics",
   CHARGE_STATION_CONNECTED: "/charge_station_connected",
 
   // Robot Description page — Live Mode joint telemetry (sensor_msgs/JointState)

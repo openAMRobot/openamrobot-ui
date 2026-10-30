@@ -7,8 +7,8 @@ Last updated: 30 Oct 2026, base `main` at
 `0ca798b424cadbb77d6791f5298bb4f7e0f37a89`.
 
 This file covers the backend and process items for v2.0.0-rc.1 listed
-below (B1 to B10) and the Gate A UI command path (A1, at the end). Reporting
-Mode is tracked by its own pull request.
+below (B1 to B10), the Gate A UI command path (A1) and Reporting Mode (A2),
+both at the end.
 
 ## Ownership
 
@@ -169,5 +169,50 @@ openamr-platform-sw#90, the source of the interfaces below (head
   test. Not run in a browser, in simulation, on the Getac ZX80 or on a
   robot.
 
+## A2 `ui/reporting-mode` (part of #19)
+
+Branched from A1 (`ui/gate-a-command-path`); merges after A1.
+
+- Read-only, full-screen route `/report` for the detachable panel, outside
+  the app layout. Header "Base and navigation". Rows for Arms, Lift and
+  Physical E-stop show "Not reported".
+- One consumer-neutral adapter, `web/src/shared/reporting/reportingAdapter.js`,
+  fed by `reportingSource.js` (subscriptions only). States: DISCONNECTED,
+  UNKNOWN, STOPPED (SOFTWARE), FAULTED, NEEDS_ASSISTANCE, RECOVERING,
+  BLOCKED, EXECUTING, WAITING, READY. SAFETY_STOPPED is reserved and never
+  derived. Thresholds, mapping rows and priority: `docs/reporting-mode.md`.
+- Mission, program and route runs are browser-side (this tab only). The
+  proposed robot-side envelope is `docs/proposals/i5-run-state.md`
+  (Proposed, no shared message added).
+- READY cannot appear on today's simulation: NavigationStatus stays
+  NOT_READY with reason 9001 until a base status adapter exists.
+- State priority (owner decision): a known, engaged software lock ranks
+  above UNKNOWN navigation data; only DISCONNECTED ranks higher.
+- Screen Wake Lock needs HTTPS and the panel uses HTTP on the robot network,
+  so the ZX80 screen timeout is set to Never in Android display settings
+  (docs/reporting-mode.md, Panel setup).
+- `.github/decisions.yaml` entry for the Reporting Mode display vocabulary:
+  handled separately in openAMRobot/.github.
+- Thresholds (stale multipliers, 25% low battery) are accepted defaults
+  (owner decision, 30 Oct 2026). Type sizes and the 2 s exit long press stay
+  proposed until checked on the ZX80.
+- `/diagnostics` validation (owner decision, 30 Oct 2026, from the #54
+  review): status array required; each entry needs a name and a level 0 to
+  3, invalid entries are ignored and logged; freshness is per entry name;
+  READY needs a valid fresh entry and no source latched in fault.
+- Diagnostics fault latch (owner decision, 30 Oct 2026, second #54 review
+  point): an ERROR or STALE report latches that name in fault until the same
+  name reports OK or WARN, or a new rosbridge connection starts (then
+  WAITING until valid diagnostics arrive). The page shows FAULTED with the
+  source name and the time of its last error.
+- READY reads "No blocking faults in current reported data" (or "Ready,
+  with reported warnings shown below"), not a claim that every check passes
+  (review of #54). Fault times use the panel clock, so the ZX80 keeps
+  "Automatic date and time" on (docs/reporting-mode.md, Panel setup).
+- Evidence: unit, component and browser (Playwright at 1920 x 1200 against
+  a scripted rosbridge stand-in). Not run against simulation, on the panel
+  or on a robot.
+
 Open issues on 30 Oct: #19, #28, #29, #31, #32, #33, #34, #35, #36, #37,
-#39. Open pull requests on 30 Oct: drafts #21 and #40 to #46, plus A1.
+#39. Open pull requests on 30 Oct: drafts #21 and #40 to #46, #50 (A1) and
+#54 (A2).
