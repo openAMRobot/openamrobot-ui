@@ -119,8 +119,13 @@ ZX80 or on a robot.
   file stay unchanged. If it is the selected map, the selection stays on the
   old folder and is logged. Skipped maps are not retried after
   `.maps_migrated` is written; the old folder keeps them (review of #53).
-- Still open from the review of #53: a colliding selected map is only logged,
-  not reported as a migration blocker.
+- A selected map whose name already exists in the new folder blocks the
+  migration for that selection (review of #53): the selection stays on the
+  old folder, an error names the collision and how to resolve it, and
+  `.maps_migrated` is not written, so the migration runs again on the next
+  start. Maps an earlier pass already copied (identical files) count as
+  migrated, so a retry is quiet; once the collision is resolved, the map is
+  copied, the selection repointed and the marker written.
 - Open, outside this repository: the platform compose must mount the same
   `openamrobot_maps` volume at `/data/maps` (a pending platform-sw change).
 - Evidence: unit tests (pure and rclpy) and a compose file check.

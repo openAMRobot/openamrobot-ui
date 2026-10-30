@@ -158,7 +158,15 @@ def migrate_maps(old_dir, new_dir, current_file):
     copied, so the old folder and new_dir both stay as they were. An
     absolute image path inside old_dir is rewritten to new_dir in the copy
     only. The selection is repointed when it names a map this call copied.
-    Returns the map paths (relative to old_dir, without .yaml) that were copied.
+
+    A selected map whose name collides in new_dir blocks the migration for
+    that selection: the selection stays on old_dir, the reason is logged as
+    an error, and the marker is not written, so the migration runs again on
+    the next start. Maps an earlier pass already copied (identical files in
+    new_dir) count as migrated, not as collisions, so a retry is quiet and
+    completes once the collision is resolved.
+    Returns the map paths (relative to old_dir, without .yaml) that are
+    migrated, including ones an earlier pass copied.
     """
     marker = os.path.join(new_dir, MIGRATED_MARKER)
     if os.path.abspath(old_dir) == os.path.abspath(new_dir) or os.path.exists(marker):
@@ -169,6 +177,7 @@ def migrate_maps(old_dir, new_dir, current_file):
     os.makedirs(new_dir, exist_ok=True)
 
     copied = []
+    collided = []
     for base in maps:
         rel = os.path.relpath(base, old_dir)
         target = os.path.join(new_dir, rel)
@@ -184,25 +193,65 @@ def migrate_maps(old_dir, new_dir, current_file):
         files = [(image_path, os.path.join(new_dir, os.path.relpath(image_path, old_dir)))]
         if os.path.exists(f'{base}_ros.yaml'):
             files.append((f'{base}_ros.yaml', f'{target}_ros.yaml'))
+        if os.path.isabs(image) and _inside(image, old_dir):
+            info['image'] = os.path.join(new_dir, os.path.relpath(image, old_dir))
+            text = yaml.safe_dump(info, sort_keys=False)
         clash = [t for t in [f'{target}.yaml'] + [t for _s, t in files] if os.path.lexists(t)]
         if clash:
+            if _already_copied(files, f'{target}.yaml', text):
+                copied.append(rel)  # copied by an earlier, blocked pass
+                continue
             LOG.warning('Map %s not migrated: %s already exists in %s; both copies kept.',
                         rel, os.path.relpath(clash[0], new_dir), new_dir)
+            collided.append(rel)
             continue
         for source, dest in files:
             if os.path.exists(source):
                 _create_copy(source, dest)
-        if os.path.isabs(image) and _inside(image, old_dir):
-            info['image'] = os.path.join(new_dir, os.path.relpath(image, old_dir))
-            text = yaml.safe_dump(info, sort_keys=False)
         # The yaml goes last, so a map yaml in new_dir always has its image.
         if _create_text(f'{target}.yaml', text):
             copied.append(rel)
 
+    selected = _selected_map(current_file, old_dir)
+    if selected in collided:
+        LOG.error('Map migration blocked: the selected map %s is not migrated because the '
+                  'name %s.yaml already exists in %s. The selection stays on %s and %s is '
+                  'not written; rename or remove one of the two maps and restart to finish '
+                  'the migration.', os.path.join(old_dir, f'{selected}.yaml'), selected,
+                  new_dir, old_dir, MIGRATED_MARKER)
+        return copied
     _repoint_selection(current_file, old_dir, new_dir, copied)
     _create_exclusive(marker, f'Maps from {old_dir} were copied here once; that folder '
                               'was left unchanged as a backup.\n')
     return copied
+
+
+def _already_copied(files, target_yaml, text):
+    """True when new_dir holds exactly this map's files, from an earlier pass."""
+    try:
+        with open(target_yaml, encoding='utf-8') as f:
+            if f.read() != text:
+                return False
+        for source, dest in files:
+            if os.path.exists(source):
+                with open(source, 'rb') as a, open(dest, 'rb') as b:
+                    if a.read() != b.read():
+                        return False
+    except OSError:
+        return False
+    return True
+
+
+def _selected_map(current_file, old_dir):
+    """The selected map relative to old_dir (no .yaml), or None."""
+    if not os.path.exists(current_file):
+        return None
+    with open(current_file, encoding='utf-8') as f:
+        map_file = (yaml.safe_load(f) or {}).get('map_file') or ''
+    if not _inside(map_file, old_dir):
+        return None
+    rel = os.path.relpath(map_file, old_dir)
+    return rel[:-len('.yaml')] if rel.endswith('.yaml') else None
 
 
 def _repoint_selection(current_file, old_dir, new_dir, copied):

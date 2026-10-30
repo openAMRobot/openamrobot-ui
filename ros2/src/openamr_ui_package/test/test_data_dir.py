@@ -330,20 +330,70 @@ def test_colliding_map_is_skipped_logged_and_both_copies_kept(tmp_path, monkeypa
     assert os.path.isfile(os.path.join(new, 'Lab', 'Floor.yaml'))
 
 
-def test_selection_of_a_skipped_map_is_left_unchanged_and_logged(tmp_path, monkeypatch):
-    share, data, new, old, before = _upgrade_fixture(tmp_path)
-    warnings = _record_warnings(monkeypatch)
-    selected = os.path.join(old, 'Lab', 'Clash.yaml')
+def _record_errors(monkeypatch):
+    messages = []
+    monkeypatch.setattr(data_dir.LOG, 'error', lambda msg, *a: messages.append(msg % a))
+    return messages
+
+
+def _select(data, path):
     with open(os.path.join(data, 'current_map_route.yaml'), 'w') as f:
-        yaml.safe_dump({'map_file': selected, 'route_file': ''}, f)
-    _start(share, data, new)
+        yaml.safe_dump({'map_file': path, 'route_file': ''}, f)
+
+
+def _selection(data):
     with open(os.path.join(data, 'current_map_route.yaml')) as f:
-        assert yaml.safe_load(f)['map_file'] == selected
-    assert any('Selected map' in m and 'left as is' in m for m in warnings), warnings
+        return yaml.safe_load(f)['map_file']
 
 
-# Review of #53: a map whose image is outside the old maps folder is
-# skipped, both sides stay unchanged and the reason is logged.
+# Review of #53: a selected map whose name collides in the new folder blocks
+# the migration for that selection instead of being only a log warning.
+
+def test_selected_colliding_map_blocks_the_migration(tmp_path, monkeypatch):
+    share, data, new, old, before = _upgrade_fixture(tmp_path)
+    selected = os.path.join(old, 'Lab', 'Clash.yaml')
+    _select(data, selected)
+    errors = _record_errors(monkeypatch)
+
+    _start(share, data, new)
+
+    assert _selection(data) == selected  # the old selection is kept
+    assert not os.path.exists(os.path.join(new, data_dir.MIGRATED_MARKER))
+    assert any('blocked' in m and 'Lab/Clash.yaml' in m and data_dir.MIGRATED_MARKER in m
+               for m in errors), errors
+    with open(os.path.join(new, 'Lab', 'Clash.yaml')) as f:
+        assert f.read() == 'image: Clash.png\nresolution: 0.1\n'  # both copies kept
+    assert _tree(old) == before
+    assert os.path.isfile(os.path.join(new, 'Lab', 'Floor.yaml'))  # other maps still copied
+
+
+def test_blocked_migration_retries_quietly_and_finishes_once_resolved(tmp_path, monkeypatch):
+    share, data, new, old, before = _upgrade_fixture(tmp_path)
+    selected = os.path.join(old, 'Lab', 'Clash.yaml')
+    _select(data, selected)
+    _start(share, data, new)
+    floor_copy = _tree(os.path.join(new, 'Lab'))['Floor.yaml']
+
+    # Second start, nothing resolved: still blocked; earlier copies are not
+    # reported again as collisions and are not rewritten.
+    warnings = _record_warnings(monkeypatch)
+    errors = _record_errors(monkeypatch)
+    _start(share, data, new)
+    assert _selection(data) == selected
+    assert not os.path.exists(os.path.join(new, data_dir.MIGRATED_MARKER))
+    assert any('blocked' in m for m in errors), errors
+    assert not any('Lab/Floor' in m for m in warnings), warnings
+    assert _tree(os.path.join(new, 'Lab'))['Floor.yaml'] == floor_copy
+
+    # The user resolves the collision by removing the other Clash map.
+    os.remove(os.path.join(new, 'Lab', 'Clash.yaml'))
+    errors.clear()
+    _start(share, data, new)
+    assert _selection(data) == os.path.join(new, 'Lab', 'Clash.yaml')
+    assert os.path.isfile(os.path.join(new, 'Lab', 'Clash.png'))
+    assert os.path.isfile(os.path.join(new, data_dir.MIGRATED_MARKER))
+    assert errors == []
+    assert _tree(old) == before
 
 def _outside_image_map(tmp_path, old, case):
     """Add Lab/Ext to the old folder with an image outside it; return the outside file."""
