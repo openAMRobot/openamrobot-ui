@@ -17,7 +17,10 @@ When `OPENAMROBOT_MAPS_DIR` is first set on an installation whose
 `~/.openamr_ui/maps/` already has maps, the UI copies those maps into it once
 (marker `.maps_migrated`). Nothing is moved or deleted: the old folder stays
 as a backup. A map whose name already exists in the new folder is skipped and
-logged, and both copies are kept.
+logged, and both copies are kept. A map whose image is outside the old maps
+folder (an absolute path elsewhere, a `..` path or a symlink out) is skipped
+and logged too; it stays only in the old folder. Skipped maps are not retried
+on later starts.
 
 The main Nav2 map server belongs to the robot or simulation workspace. This UI
 workspace can store and manage map files, but it should not start a second map

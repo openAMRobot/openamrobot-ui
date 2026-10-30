@@ -342,6 +342,79 @@ def test_selection_of_a_skipped_map_is_left_unchanged_and_logged(tmp_path, monke
     assert any('Selected map' in m and 'left as is' in m for m in warnings), warnings
 
 
+# Review of #53: a map whose image is outside the old maps folder is
+# skipped, both sides stay unchanged and the reason is logged.
+
+def _outside_image_map(tmp_path, old, case):
+    """Add Lab/Ext to the old folder with an image outside it; return the outside file."""
+    outside = tmp_path / 'elsewhere'
+    outside.mkdir()
+    image = outside / 'ext.png'
+    image.write_bytes(b'outside image')
+    lab = os.path.join(old, 'Lab')
+    field = {
+        'absolute': str(image),
+        'dotdot': os.path.relpath(str(image), lab),
+        'symlink': 'Ext.png',
+    }[case]
+    if case == 'symlink':
+        os.symlink(str(image), os.path.join(lab, 'Ext.png'))
+    with open(os.path.join(lab, 'Ext.yaml'), 'w') as f:
+        f.write(f'image: {field}\nresolution: 0.05\n')
+    return str(outside)
+
+
+@pytest.mark.parametrize('case', ['absolute', 'dotdot', 'symlink'])
+def test_map_with_an_image_outside_the_old_folder_is_skipped(tmp_path, monkeypatch, case):
+    share, data, new, old, _before = _upgrade_fixture(tmp_path)
+    outside = _outside_image_map(tmp_path, old, case)
+    if case == 'dotdot':
+        with open(os.path.join(old, 'Lab', 'Ext.yaml')) as f:
+            assert yaml.safe_load(f)['image'].startswith('..')
+    before_old, before_outside = _tree(old), _tree(outside)
+    warnings = _record_warnings(monkeypatch)
+
+    _start(share, data, new)
+
+    assert not os.path.lexists(os.path.join(new, 'Lab', 'Ext.yaml'))
+    assert not os.path.lexists(os.path.join(new, 'Lab', 'Ext.png'))
+    assert not any('ext.png' in name for name in _tree(new))
+    assert _tree(old) == before_old
+    assert _tree(outside) == before_outside
+    assert any('Lab/Ext not migrated' in m and 'outside' in m for m in warnings), warnings
+    assert os.path.isfile(os.path.join(new, 'Lab', 'Floor.yaml'))  # others still migrate
+
+
+def test_selected_map_with_an_outside_image_keeps_its_selection(tmp_path, monkeypatch):
+    share, data, new, old, _before = _upgrade_fixture(tmp_path)
+    _outside_image_map(tmp_path, old, 'absolute')
+    selected = os.path.join(old, 'Lab', 'Ext.yaml')
+    with open(os.path.join(data, 'current_map_route.yaml'), 'w') as f:
+        yaml.safe_dump({'map_file': selected, 'route_file': ''}, f)
+    warnings = _record_warnings(monkeypatch)
+
+    _start(share, data, new)
+
+    with open(os.path.join(data, 'current_map_route.yaml')) as f:
+        assert yaml.safe_load(f)['map_file'] == selected
+    assert any('Selected map' in m and 'left as is' in m for m in warnings), warnings
+
+
+def test_a_skipped_map_is_not_retried_on_the_next_start(tmp_path, monkeypatch):
+    # Retry policy: migration runs once (.maps_migrated); a skipped map stays
+    # in the old folder, which is kept as a backup, and is not retried.
+    share, data, new, old, _before = _upgrade_fixture(tmp_path)
+    _outside_image_map(tmp_path, old, 'absolute')
+    _start(share, data, new)
+    assert os.path.isfile(os.path.join(new, data_dir.MIGRATED_MARKER))
+    warnings = _record_warnings(monkeypatch)
+
+    _start(share, data, new)
+
+    assert not os.path.lexists(os.path.join(new, 'Lab', 'Ext.yaml'))
+    assert not any('not migrated' in m for m in warnings), warnings
+
+
 def test_second_start_does_not_migrate_again(tmp_path):
     share, data, new, old, before = _upgrade_fixture(tmp_path)
     _start(share, data, new)

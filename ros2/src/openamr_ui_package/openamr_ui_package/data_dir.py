@@ -134,6 +134,12 @@ def _inside(path, folder):
     return os.path.abspath(path).startswith(os.path.abspath(folder) + os.sep)
 
 
+def _resolves_inside(path, folder):
+    """True when path, with every symlink resolved, lies inside folder."""
+    real_path, real_folder = os.path.realpath(path), os.path.realpath(folder)
+    return real_path != real_folder and os.path.commonpath([real_path, real_folder]) == real_folder
+
+
 def _maps_in(folder):
     """Yield the base path (no .yaml) of every map yaml under folder."""
     for dirpath, _dirs, files in os.walk(folder):
@@ -146,7 +152,10 @@ def migrate_maps(old_dir, new_dir, current_file):
     """Copy every map from old_dir into new_dir once; never move, delete or overwrite.
 
     A map is its yaml, the image it names and, if present, <name>_ros.yaml.
-    A map whose name already exists in new_dir is skipped and logged. An
+    A map whose name already exists in new_dir is skipped and logged. A map
+    whose image resolves outside old_dir (an absolute path elsewhere, a ..
+    path or a symlink out) is skipped and logged too: nothing of it is
+    copied, so the old folder and new_dir both stay as they were. An
     absolute image path inside old_dir is rewritten to new_dir in the copy
     only. The selection is repointed when it names a map this call copied.
     Returns the map paths (relative to old_dir, without .yaml) that were copied.
@@ -168,9 +177,11 @@ def migrate_maps(old_dir, new_dir, current_file):
         info = yaml.safe_load(text) or {}
         image = info.get('image') or f'{os.path.basename(base)}.png'
         image_path = image if os.path.isabs(image) else os.path.join(os.path.dirname(base), image)
-        files = []
-        if _inside(image_path, old_dir):
-            files.append((image_path, os.path.join(new_dir, os.path.relpath(image_path, old_dir))))
+        if not _resolves_inside(image_path, old_dir):
+            LOG.warning('Map %s not migrated: its image %s is outside %s, so it was not '
+                        'copied and the map stays only in %s.', rel, image, old_dir, old_dir)
+            continue
+        files = [(image_path, os.path.join(new_dir, os.path.relpath(image_path, old_dir)))]
         if os.path.exists(f'{base}_ros.yaml'):
             files.append((f'{base}_ros.yaml', f'{target}_ros.yaml'))
         clash = [t for t in [f'{target}.yaml'] + [t for _s, t in files] if os.path.lexists(t)]

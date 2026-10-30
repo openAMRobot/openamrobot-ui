@@ -113,6 +113,14 @@ ZX80 or on a robot.
   copied (never moved or deleted; collisions skipped and logged), the
   selection is repointed when its map was copied, and `.maps_migrated` is
   written.
+- A map whose image resolves outside the old maps folder (absolute path
+  elsewhere, `..`, or a symlink out) is skipped and logged with the reason;
+  nothing of it is copied, and the old folder, the new folder and the outside
+  file stay unchanged. If it is the selected map, the selection stays on the
+  old folder and is logged. Skipped maps are not retried after
+  `.maps_migrated` is written; the old folder keeps them (review of #53).
+- Still open from the review of #53: a colliding selected map is only logged,
+  not reported as a migration blocker.
 - Open, outside this repository: the platform compose must mount the same
   `openamrobot_maps` volume at `/data/maps` (a pending platform-sw change).
 - Evidence: unit tests (pure and rclpy) and a compose file check.
