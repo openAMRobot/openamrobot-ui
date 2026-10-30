@@ -1,5 +1,6 @@
 import {
   DISPLAY,
+  READY_WITH_WARNINGS_REASON,
   RESULT_UNKNOWN_TEXT,
   STALE_AFTER_MS,
   deriveReport,
@@ -465,7 +466,7 @@ describe("diagnostics validation and per-entry freshness", () => {
     expect(diagRow(err).value).toBe("Error");
     const staleLevel = view(healthyWithDiagnostics(diagnostics(3, "camera")));
     expect(staleLevel.display).toBe(DISPLAY.FAULTED);
-    expect(staleLevel.reason).toBe("Diagnostics stale: camera (last error at 09:00:01)");
+    expect(staleLevel.reason).toBe("Diagnostics stale: camera (last fault at 09:00:01)");
     expect(diagRow(staleLevel).value).toBe("Error");
   });
 });
@@ -505,6 +506,7 @@ describe("diagnostics fault latch", () => {
     expect(view(aErrorThenStale, 2500).display).toBe(DISPLAY.FAULTED);
     const v = view([...aErrorThenStale, [{ type: "diagnostics", msg: diagnostics(0, "lidar") }, 2600]], 2600);
     expect(v.display).toBe(DISPLAY.READY);
+    expect(v.reason).toBe("No blocking faults in current reported data");
     expect(diagRow(v).value).toBe("OK");
   });
 
@@ -514,6 +516,9 @@ describe("diagnostics fault latch", () => {
     const warn = view([...invalid, [{ type: "diagnostics", msg: diagnostics(1, "lidar", "rate low") }, 2700]], 2700);
     expect(warn.display).toBe(DISPLAY.READY);
     expect(warn.warnings).toContain("Diagnostics warning: lidar: rate low");
+    // Review of #54: READY with a WARN must not claim that every check passes.
+    expect(warn.reason).toBe(READY_WITH_WARNINGS_REASON);
+    expect(warn.reason).toBe("Ready, with reported warnings shown below");
   });
 
   it("a STALE level latches the same way", () => {
@@ -527,7 +532,7 @@ describe("diagnostics fault latch", () => {
       2500,
     );
     expect(v.display).toBe(DISPLAY.FAULTED);
-    expect(v.reason).toBe("Diagnostics stale: camera (last error at 09:00:01)");
+    expect(v.reason).toBe("Diagnostics stale: camera (last fault at 09:00:01)");
   });
 
   it("the reason carries the time of the last error, and other faults are warnings", () => {

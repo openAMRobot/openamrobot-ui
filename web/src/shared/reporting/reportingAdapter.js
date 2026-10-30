@@ -478,9 +478,19 @@ export const formatClockTime = (wallMs) => {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 };
 
-const diagFaultText = (name, e) =>
-  `Diagnostics ${e.level === DIAG_LEVEL.STALE ? "stale" : "error"}: ${name}${e.message ? `: ${e.message}` : ""}` +
-  ` (last error at ${formatClockTime(e.receivedWallMs)})`;
+const diagFaultText = (name, e) => {
+  const stale = e.level === DIAG_LEVEL.STALE;
+  return (
+    `Diagnostics ${stale ? "stale" : "error"}: ${name}${e.message ? `: ${e.message}` : ""}` +
+    ` (last ${stale ? "fault" : "error"} at ${formatClockTime(e.receivedWallMs)})`
+  );
+};
+
+// READY says only what the adapter knows: no blocking fault in the data it
+// has now. Warnings (for example a diagnostics WARN) stay listed, and a
+// source that has not reported since the last connection is not known.
+export const READY_REASON = "No blocking faults in current reported data";
+export const READY_WITH_WARNINGS_REASON = "Ready, with reported warnings shown below";
 
 /** Everything a consumer renders, for the time nowMs. */
 export const deriveReport = (state, nowMs) => {
@@ -647,5 +657,5 @@ export const deriveReport = (state, nowMs) => {
   if (!batteryFresh) blocking.push(state.battery.receivedAt === null ? "No battery data" : "Battery data is stale or invalid");
   else if (batteryLow) blocking.push(`Battery low (${Math.round(state.battery.percent)}%)`);
   if (blocking.length) return make(DISPLAY.WAITING, blocking[0]);
-  return make(DISPLAY.READY, "All reported checks pass");
+  return make(DISPLAY.READY, warnings.length ? READY_WITH_WARNINGS_REASON : READY_REASON);
 };

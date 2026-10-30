@@ -40,6 +40,11 @@ the UI over plain HTTP on the robot network, so the page cannot keep the
 screen on by itself there. The Wake Lock request stays in the page for
 browsers and deployments where it is allowed.
 
+Also on the ZX80, keep "Automatic date and time" on in the Android date and
+time settings. The time shown with a diagnostics fault ("last error at" or
+"last fault at") comes from the panel's own clock, so it is correct only
+while the panel clock is set automatically.
+
 ## Screenshots
 
 Taken at 1920 x 1200 with a scripted rosbridge stand-in (development
@@ -116,6 +121,12 @@ The first rule that matches wins.
 | 12 | READY | all of: health OK, `navigation_readiness` READY, at least one valid, fresh `/diagnostics` entry and no source latched in fault, battery fresh and above 25% |
 | 13 | WAITING | otherwise, with the first blocking reason shown |
 
+READY says only what the page knows. Its reason is "No blocking faults in
+current reported data", or "Ready, with reported warnings shown below" when
+there are warnings (for example a diagnostics WARN). It does not mean every
+check on the robot passes: after a reconnect, a source that has not reported
+again is not known.
+
 A known, engaged software lock ranks above UNKNOWN navigation data (missing,
 stale or invalid); only DISCONNECTED ranks higher. This is the owner's
 decision: the lock is the fact the operator acts on (Resume). Stale or
@@ -160,8 +171,9 @@ Owner decision, 30 Oct 2026 (second review point on #54):
   entry for that name does not clear it either.
 - While any name is in fault the page shows FAULTED, and READY is
   impossible. The reason names the source and the panel's local time of its
-  last error report, for example "Diagnostics error: lidar: no data (last
-  error at 09:41:05)". With several sources in fault, the one that reported
+  last fault report, for example "Diagnostics error: lidar: no data (last
+  error at 09:41:05)" or "Diagnostics stale: camera (last fault at
+  09:41:05)". With several sources in fault, the one that reported
   last is the reason and the others are listed as warnings.
 - A latched fault ranks below DISCONNECTED and the software stop lock rules
   (priorities 1 to 3) and above missing or stale navigation data.

@@ -142,7 +142,7 @@ describe("Reporting Mode page", () => {
     emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 4));
     expect(spoken).toEqual([
       "executing. Driving to the goal",
-      "ready. All reported checks pass",
+      "ready. No blocking faults in current reported data",
       "Navigation goal: succeeded.",
       "Completed: Navigation goal",
     ]);
