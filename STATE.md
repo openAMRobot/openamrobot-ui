@@ -112,6 +112,16 @@ ZX80 or on a robot.
 - Evidence: job steps reproduced locally; the jobs themselves run on the
   pull request.
 
+### B11 `ui/blockly-offline-media` (branched from `ui/ci`)
+
+- The Programs page loads Blockly's sounds, sprites and cursors from the app
+  (`/blockly-media/`, copied from the installed blockly package at build
+  time) instead of `blockly-demo.appspot.com`.
+- The route smoke test now blocks every external host and fails on any
+  attempt to reach one.
+- Builds on B9; merge after it.
+- Evidence: Playwright smoke test with external hosts blocked.
+
 ### B10 `ui/docs-ownership`
 
 - README and docs: Stop (software), Getac ZX80, data directory, replay
@@ -124,8 +134,6 @@ ZX80 or on a robot.
 
 - The Stop (software) lock is not on `main` yet and is not documented here;
   it belongs to the UI command path work.
-- The Blocks page loads Blockly sounds and sprites from
-  `blockly-demo.appspot.com`, which an offline robot cannot reach.
 - `test_flake8.py`, `test_pep257.py` and `test_copyright.py` are skipped
   without a tracking issue, and most existing Python files are not flake8
   clean.
