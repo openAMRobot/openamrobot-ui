@@ -16,6 +16,7 @@ from ament_index_python.packages import (
     PackageNotFoundError,
 )
 from openamr_ui_package import bag_processes
+from openamr_ui_package import replay_policy
 from werkzeug.exceptions import HTTPException
 
 import xacro
@@ -110,6 +111,8 @@ BLOCK_RUN_HISTORY_FILE = os.path.join(
 RECORDING_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$")
 RECORDINGS_DIR = os.path.join(os.path.expanduser("~"), ".openamr_ui", "recordings")
 RECORDINGS_INDEX_FILE = os.path.join(RECORDINGS_DIR, "index.json")
+# Telemetry topics a replay may publish; see replay_policy.py.
+REPLAY_ALLOWLIST_FILE = os.path.join(SHARE_DIR, 'param', 'replay_topics.yaml')
 # pid, start time and command line of every ros2 bag process the UI starts,
 # so the next Flask start can stop leftovers safely; see bag_processes.py.
 BAG_PROCESSES_FILE = os.path.join(RECORDINGS_DIR, 'bag_processes.json')
@@ -1156,7 +1159,22 @@ def start_replay(recording_id):
     if rate <= 0 or rate > 10:
         abort(400, "rate must be between 0 and 10.")
 
+    # Every check happens before any process starts. Only a request that
+    # names a denied topic is a 400; otherwise only allowlisted telemetry in
+    # the recording is passed to --topics and the rest is reported skipped.
+    try:
+        allowlist = replay_policy.load_allowlist(REPLAY_ALLOWLIST_FILE)
+    except (OSError, ValueError) as error:
+        abort(500, f'Replay is disabled: the telemetry allowlist is invalid ({error}).')
+    try:
+        topics, skipped = replay_policy.select_topics(
+            payload.get('topics'), replay_policy.read_bag_topics(bag_path), allowlist
+        )
+    except replay_policy.ReplayPolicyError as error:
+        abort(error.status, str(error))
+
     cmd = ["ros2", "bag", "play", bag_path, "--disable-keyboard-controls", "-r", str(rate)]
+    cmd += ['--topics', *topics]
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except FileNotFoundError:
@@ -1167,7 +1185,10 @@ def start_replay(recording_id):
     _replay.update(
         {"proc": proc, "id": recording_id, "started_at": started_at, "paused": False, "rate": rate}
     )
-    return jsonify({"id": recording_id, "startedAt": started_at, "rate": rate}), 201
+    return jsonify(
+        {'id': recording_id, 'startedAt': started_at, 'rate': rate, 'topics': topics,
+         'skipped': skipped}
+    ), 201
 
 
 @app.route("/api/recordings/replay/stop", methods=["POST", "OPTIONS"])
