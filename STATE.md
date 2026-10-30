@@ -71,8 +71,8 @@ ZX80 or on a robot.
 - `param/voice_limits.yaml`, `GET /api/limits`, and `/api/voice-plan`
   rejecting (HTTP 422) non-finite or over-limit plans. The Blocks page reads
   the limits from the backend.
-- To confirm: distance per action 5 m and duration per action 30 s are
-  proposed defaults (ND and Parth).
+- Distance per action 5 m and duration per action 30 s: accepted default
+  (30 Oct 2026).
 - Evidence: unit tests (pure, Flask test client, Jest).
 
 ### B7 `ui/route-outcomes` (part of #36)

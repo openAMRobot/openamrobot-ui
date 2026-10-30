@@ -5,8 +5,8 @@
 # max_linear_speed_mps, max_angular_speed_radps: the UI's existing limits
 #   (web/src/shared/constants/index.js MAX_LINEAR_SPEED 0.2,
 #   MAX_ANGULAR_SPEED 2).
-# max_distance_per_action_m, max_duration_per_action_s: proposed defaults,
-#   owners (ND, Parth Keshari) to confirm.
+# max_distance_per_action_m, max_duration_per_action_s: accepted default
+#   (30 Oct 2026).
 plan_limits:
   max_linear_speed_mps: 0.2
   max_angular_speed_radps: 2.0
