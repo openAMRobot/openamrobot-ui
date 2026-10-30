@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import StatusBar from "./StatusBar";
 import { useRos, useRosStatus } from "../app/App";
 import { addEvent } from "../shared/events/eventLog";
+import { ACTION_CANCEL_SERVICES, AppConfig } from "../shared/constants";
 
 jest.mock("../app/App", () => ({
   useRos: jest.fn(),
@@ -74,27 +75,29 @@ describe("StatusBar software stop button", () => {
     expect(button.getAttribute("title")).toMatch(/not the hardwired E-stop/i);
   });
 
-  it("publishes a zero Twist, cancels the Nav2 goal and logs a software stop event", () => {
+  it("engages the stop lock, cancels every Nav2 and docking goal once and logs the event", () => {
     render(<StatusBar />);
-
-    const cmdVel = topics.find((topic) => topic.opts.messageType === "geometry_msgs/Twist");
-    expect(cmdVel).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /stop \(software\)/i }));
 
-    expect(cmdVel.publish).toHaveBeenCalledTimes(1);
-    const message = cmdVel.publish.mock.calls[0][0];
-    expect(message.linear).toEqual({ x: 0, y: 0, z: 0 });
-    expect(message.angular).toEqual({ x: 0, y: 0, z: 0 });
-
-    expect(services).toHaveLength(1);
-    expect(services[0].callService).toHaveBeenCalledTimes(1);
+    const callsTo = (name) =>
+      services.filter((s) => s.opts.name === name).flatMap((s) => s.callService.mock.calls);
+    expect(callsTo(AppConfig.STOP_LOCK_ENGAGE_SERVICE)).toHaveLength(1);
+    ACTION_CANCEL_SERVICES.forEach((name) => expect(callsTo(name)).toHaveLength(1));
+    expect(callsTo(AppConfig.STOP_LOCK_RELEASE_SERVICE)).toHaveLength(0);
 
     expect(addEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "safety",
-        message: expect.stringContaining("Software stop"),
+        message: expect.stringContaining("Stop (software)"),
       }),
     );
+  });
+
+  it("publishes no velocity: Stop (software) never touches cmd_vel", () => {
+    render(<StatusBar />);
+    fireEvent.click(screen.getByRole("button", { name: /stop \(software\)/i }));
+    const velocity = topics.filter((topic) => /Twist/.test(topic.opts.messageType));
+    expect(velocity).toEqual([]);
   });
 });

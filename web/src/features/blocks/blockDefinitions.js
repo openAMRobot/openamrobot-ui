@@ -75,7 +75,7 @@ export const registerOpenAmrBlocks = () => {
         previousStatement: null,
         nextStatement: null,
         colour: "#3f7c9b",
-        tooltip: "Publish a Twist message to cmd_vel.",
+        tooltip: "Hold this velocity on the UI manual drive input (/ui/cmd_vel) until a stop block, another drive block or the end of the program.",
       },
       {
         type: "openamr_drive_for",

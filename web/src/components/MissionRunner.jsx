@@ -7,6 +7,9 @@ import { addEvent } from "../shared/events/eventLog";
 import { loadWaypoints } from "../shared/hooks/useSavedWaypoints";
 import { getMission } from "../shared/missions/missions";
 import { getRun, setRun, subscribeCommands } from "../shared/missions/missionRunner";
+import { subscribeAbort } from "../shared/motion/abortBus";
+import { getMotionGate } from "../shared/motion/motionGate";
+import { LOCK_RELEASED } from "../shared/motion/stopLock";
 
 // Generous timeouts so a silent Nav2/dock stack can't hang a mission forever —
 // these are "something is clearly wrong" backstops, not tuned durations.
@@ -205,6 +208,16 @@ const MissionRunner = () => {
       toast.warn("A mission is already running — stop it first.");
       return;
     }
+    const gate = getMotionGate();
+    if (gate.lock !== LOCK_RELEASED) {
+      toast.warn(`Mission not started: ${gate.reason}`);
+      addEvent({
+        type: "navigation",
+        severity: "warning",
+        message: `Mission not started: ${gate.reason}`,
+      });
+      return;
+    }
     const mission = getMission(missionId);
     if (!mission || !mission.steps.length) {
       toast.error("That mission has no steps to run.");
@@ -277,7 +290,15 @@ const MissionRunner = () => {
       if (cmd.type === "start") startMission(cmd.missionId);
       else if (cmd.type === "stop") stopMission();
     });
-    return unsubscribe;
+    // Stop (software), a locked or unknown stop lock, or a disconnect aborts
+    // a running mission the same way its Stop button does.
+    const unsubscribeAbort = subscribeAbort(() => {
+      if (getRun()?.status === "running") stopMission();
+    });
+    return () => {
+      unsubscribe();
+      unsubscribeAbort();
+    };
   }, []);
 
   return null;

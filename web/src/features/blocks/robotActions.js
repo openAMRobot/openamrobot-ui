@@ -1,4 +1,5 @@
 import { AppConfig } from "../../shared/constants";
+import { holdVelocity, releaseVelocity } from "../../shared/motion/uiCommand";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -16,11 +17,15 @@ const poseMessage = ({ x, y, yaw }) =>
     },
   });
 
-const twistMessage = ({ linear = 0, angular = 0 }) =>
-  new window.ROSLIB.Message({
-    linear: { x: linear, y: 0, z: 0 },
-    angular: { x: 0, y: 0, z: angular },
-  });
+// Blockly drive/rotate/stop blocks and voice-planned drive actions (which
+// arrive here as Blockly plans) are manual velocity sources: they go through
+// shared/motion/uiCommand.js like the joystick, never a topic of their own.
+const PROGRAM_SOURCE = "program";
+
+const holdOrThrow = (command) => {
+  const { ok, reason } = holdVelocity(PROGRAM_SOURCE, command);
+  if (!ok) throw new Error(`Manual drive is disabled: ${reason}`);
+};
 
 const assertSafeSpeed = ({ linear = 0, angular = 0 }) => {
   if (Math.abs(linear) > AppConfig.MAX_LINEAR_SPEED) {
@@ -41,12 +46,6 @@ export const createRobotActionClient = (ros) => {
     ros,
     name: AppConfig.GOAL_POSE_TOPIC,
     messageType: "geometry_msgs/PoseStamped",
-  });
-
-  const cmdVelTopic = new window.ROSLIB.Topic({
-    ros,
-    name: AppConfig.CMD_VEL_TOPIC,
-    messageType: "geometry_msgs/Twist",
   });
 
   const dockTopic = new window.ROSLIB.Topic({
@@ -101,13 +100,16 @@ export const createRobotActionClient = (ros) => {
       }),
     );
 
-  const emergencyStop = () => {
-    cmdVelTopic.publish(twistMessage({ linear: 0, angular: 0 }));
+  // Program "stop" block and the Blocks page Stop button: end the program's
+  // manual command (one zero on /ui/cmd_vel) and cancel navigation. This is
+  // not Stop (software): it does not engage the stop lock.
+  const stopProgramMotion = () => {
+    releaseVelocity(PROGRAM_SOURCE);
     cancelNavigation();
   };
 
   const stopMovement = () => {
-    cmdVelTopic.publish(twistMessage({ linear: 0, angular: 0 }));
+    releaseVelocity(PROGRAM_SOURCE);
   };
 
   const waitForNavigationComplete = (timeoutSeconds) =>
@@ -171,24 +173,20 @@ export const createRobotActionClient = (ros) => {
           await sleep(action.seconds * 1000);
           return;
         case "set_speed":
+          // Held at 20 Hz until a stop block, another drive block, the end
+          // of the program or an abort.
           assertSafeSpeed(action);
-          cmdVelTopic.publish(
-            twistMessage({ linear: action.linear, angular: action.angular }),
-          );
+          holdOrThrow({ linear: action.linear, angular: action.angular });
           return;
         case "drive_for":
           assertSafeSpeed({ linear: action.linear });
-          cmdVelTopic.publish(
-            twistMessage({ linear: action.linear, angular: 0 }),
-          );
+          holdOrThrow({ linear: action.linear, angular: 0 });
           await sleep(action.seconds * 1000);
           stopMovement();
           return;
         case "rotate_for":
           assertSafeSpeed({ angular: action.angular });
-          cmdVelTopic.publish(
-            twistMessage({ linear: 0, angular: action.angular }),
-          );
+          holdOrThrow({ linear: 0, angular: action.angular });
           await sleep(action.seconds * 1000);
           stopMovement();
           return;
@@ -229,18 +227,19 @@ export const createRobotActionClient = (ros) => {
           undockTopic.publish(new window.ROSLIB.Message({ data: true }));
           return;
         case "stop":
-          emergencyStop();
+          stopProgramMotion();
           return;
         default:
           throw new Error(`Unknown action: ${action.type}`);
       }
     },
-    stop: emergencyStop,
+    stop: stopProgramMotion,
   };
 
   return {
     runAction: actionClient.runAction,
-    stop: emergencyStop,
+    stop: stopProgramMotion,
+    stopMovement,
   };
 };
 
@@ -255,18 +254,23 @@ export const executeRobotPlan = async (
 
   const client = createRobotActionClient(ros);
 
-  for (let index = 0; index < plan.length; index += 1) {
-    if (shouldStop?.()) break;
-    const action = plan[index];
-    onStep?.(index, action);
-    onStepStart?.(index, action);
-    try {
-      await client.runAction(action, { shouldStop });
-      onStepSuccess?.(index, action);
-    } catch (error) {
-      onStepError?.(index, action, error);
-      throw error;
+  try {
+    for (let index = 0; index < plan.length; index += 1) {
+      if (shouldStop?.()) break;
+      const action = plan[index];
+      onStep?.(index, action);
+      onStepStart?.(index, action);
+      try {
+        await client.runAction(action, { shouldStop });
+        onStepSuccess?.(index, action);
+      } catch (error) {
+        onStepError?.(index, action, error);
+        throw error;
+      }
     }
+  } finally {
+    // A program never leaves a manual command held after it ends.
+    client.stopMovement();
   }
 
   return client;

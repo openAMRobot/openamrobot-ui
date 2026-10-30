@@ -23,6 +23,9 @@ import {
   createRobotActionClient,
 } from "../features/blocks/robotActions";
 import { generatePlanFromVoice } from "../features/blocks/voicePlan";
+import { subscribeAbort } from "../shared/motion/abortBus";
+import { useMotionGate } from "../shared/motion/motionGate";
+import { LOCK_RELEASED } from "../shared/motion/stopLock";
 import {
   createSpeechRecognizer,
   extractWakeWordCommand,
@@ -239,13 +242,19 @@ const BlocksPage = () => {
     [validationMessages],
   );
 
+  // Programs run only while the platform stop lock is known and released.
+  // Drive blocks additionally need a synced robot clock; that is checked
+  // when the block runs (uiCommand refuses and the program fails there).
+  const motionGate = useMotionGate();
+  const lockReleased = motionGate.lock === LOCK_RELEASED;
   const canRun = useMemo(
     () =>
       rosStatus === "connected" &&
+      lockReleased &&
       plan.length > 0 &&
       !validationHasErrors &&
       !running,
-    [plan.length, rosStatus, running, validationHasErrors],
+    [lockReleased, plan.length, rosStatus, running, validationHasErrors],
   );
 
   const speechSupported = useMemo(() => isSpeechRecognitionSupported(), []);
@@ -670,6 +679,20 @@ const BlocksPage = () => {
     }
   };
 
+  // Stop (software), a locked or unknown stop lock, or a disconnect aborts a
+  // running program (shared/motion/abortBus.js). The run loop sees the stop
+  // flag and records the run as stopped.
+  useEffect(
+    () =>
+      subscribeAbort(() => {
+        stopRequestedRef.current = true;
+        setStepStatuses((current) =>
+          current.map((status) => (status === "running" ? "stopped" : status)),
+        );
+      }),
+    [],
+  );
+
   const stopPlan = () => {
     stopRequestedRef.current = true;
     if (ros && window.ROSLIB) {
@@ -828,6 +851,11 @@ const BlocksPage = () => {
             Stop
           </button>
         </div>
+        {!lockReleased && (
+          <p className="mb-3 font-[RobotoMono] text-[11px] text-statusYellow">
+            Run is disabled: {motionGate.reason}.
+          </p>
+        )}
 
         <details
           open

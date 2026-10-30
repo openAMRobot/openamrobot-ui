@@ -18,7 +18,8 @@ import WaypointLibrary from "../components/WaypointLibrary";
 import SpeedPresets from "../components/SpeedPresets";
 import useSavedWaypoints from "../shared/hooks/useSavedWaypoints";
 import useKeepoutZones from "../shared/hooks/useKeepoutZones";
-import { addEvent } from "../shared/events/eventLog";
+import { softwareStop } from "../shared/motion/softwareStop";
+import { subscribeAbort } from "../shared/motion/abortBus";
 
 const INITIAL_POSE_COV = [
   0.25, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -72,7 +73,6 @@ const MapPage = () => {
   const goalPoseTopic = useRef(null);
   const initialPoseTopic = useRef(null);
   const cancelClient = useRef(null);
-  const cmdVelTopic = useRef(null);
   const pendingInitialPoseRef = useRef(false);
 
   useEffect(() => {
@@ -94,12 +94,6 @@ const MapPage = () => {
       ros,
       name: AppConfig.NAV_CANCEL_GOAL_SERVICE,
       serviceType: "action_msgs/CancelGoal",
-    });
-
-    cmdVelTopic.current = new window.ROSLIB.Topic({
-      ros,
-      name: AppConfig.CMD_VEL_TOPIC,
-      messageType: "geometry_msgs/Twist",
     });
 
     const amclTopic = new window.ROSLIB.Topic({
@@ -331,18 +325,25 @@ const MapPage = () => {
     );
   }, []);
 
+  // Same Stop (software) as the status bar: engage the platform stop lock,
+  // cancel every active Nav2 and docking goal, abort programs and missions.
   const emergencyStop = useCallback(() => {
-    if (!cmdVelTopic.current) return;
-    cmdVelTopic.current.publish(
-      new window.ROSLIB.Message({
-        linear: { x: 0, y: 0, z: 0 },
-        angular: { x: 0, y: 0, z: 0 },
+    softwareStop(ros, "map page");
+    toast.warn("Stop (software) sent");
+  }, [ros]);
+
+  // The waypoint queue is a UI-side run: Stop (software), a locked or
+  // unknown stop lock, or a disconnect ends it (goals are cancelled by the
+  // stop itself; the queue must not send the next one).
+  useEffect(
+    () =>
+      subscribeAbort(() => {
+        if (!queueExecutingRef.current) return;
+        queueExecutingRef.current = false;
+        setQueueExecuting(false);
       }),
-    );
-    cancelGoal();
-    addEvent({ type: "safety", severity: "error", message: "Software stop (map page)" });
-    toast.warn("Software stop sent");
-  }, [cancelGoal]);
+    [],
+  );
 
   const sendHome = useCallback(() => {
     if (!goalPoseTopic.current) return;
@@ -436,7 +437,7 @@ const MapPage = () => {
 
         {/* Controls row */}
         <section className="flex w-full shrink-0 flex-col gap-3">
-          {/* Manual drive: joystick + e-stop, max speed, live telemetry, docking, saved waypoints */}
+          {/* Manual drive: joystick + Stop (software), max speed, live telemetry, docking, saved waypoints */}
           <div
             className="flex w-full flex-wrap gap-3"
             data-tour="manual-drive"
@@ -448,7 +449,7 @@ const MapPage = () => {
               <Joystick maxSpeed={maxSpeed} compact />
               <button
                 onClick={emergencyStop}
-                title="Stop (software): halts motion from this UI. This is not the hardwired E-stop."
+                title="Stop (software): engages the platform stop lock and cancels active goals. This is not the hardwired E-stop."
                 className="mt-1 shrink-0 rounded-lg border-2 border-statusRed bg-statusRed/10 px-2 py-1 font-[RobotoMono] text-[10px] font-bold leading-none text-statusRed transition-colors hover:bg-statusRed hover:text-white"
               >
                 Stop (software)
