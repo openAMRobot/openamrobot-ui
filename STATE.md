@@ -108,6 +108,35 @@ ZX80 or on a robot.
   that directory on the `openamr_ui_data` volume.
 - Evidence: unit tests (pure and rclpy).
 
+### B13 `ui/shared-maps-volume` (branched from `ui/persistent-maps-routes`)
+
+- Maps go to `OPENAMROBOT_MAPS_DIR` (default: `maps` in the data
+  directory); routes stay in the data directory.
+- `docker-compose.yml` sets it to `/data/maps` on the named volume
+  `openamrobot_maps`.
+- Non-destructive migration: when `OPENAMROBOT_MAPS_DIR` differs from the
+  data directory's `maps` folder and that folder has maps, they are copied
+  (never moved, deleted or overwritten; the old folder stays as a backup)
+  and the selection is repointed when its map was copied.
+- A map counts as migrated only when its image is inside the old folder,
+  exists, is readable, and was copied or found byte-identical in the new
+  folder, and its name is free there (reviews of #53). Otherwise it is
+  skipped and logged with its reason: an image outside the old folder
+  (absolute path elsewhere, `..`, or a symlink out), a missing or unreadable
+  image, or a name that already exists in the new folder. Nothing of a
+  skipped map is copied or selected, and the outside file is not touched.
+- Owner decision of 30 Oct 2026: while any map is skipped, selected or not,
+  `.maps_migrated` is not written; the migration runs again on every start
+  and logs each skipped map with its reason until it is fixed or removed.
+  Once nothing is skipped, the marker is written. A skipped selected map
+  keeps the old selection, with an error that says why and how to fix it.
+  Maps an earlier pass already copied count as migrated, so a retry does
+  not report or rewrite them; the check (`_already_copied`) needs every file
+  present and identical on both sides.
+- Open, outside this repository: the platform compose must mount the same
+  `openamrobot_maps` volume at `/data/maps` (a pending platform-sw change).
+- Evidence: unit tests (pure and rclpy) and a compose file check.
+
 ### B9 `ui/ci`
 
 - CI gains a `ros` job (ros:jazzy container, colcon build and test, fails on

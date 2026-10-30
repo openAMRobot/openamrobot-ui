@@ -34,6 +34,10 @@ class FoldersHandlerDataDirTest(unittest.TestCase):
         self.share = os.path.join(self.tmp, 'share')
         self.data = os.path.join(self.tmp, 'data')
         self._install()
+        patcher = mock.patch.dict(os.environ)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        os.environ.pop('OPENAMROBOT_MAPS_DIR', None)
         for target, value in (
             ('webbrowser.open', mock.MagicMock()),
             ('openamr_ui_package.folders_handler.get_package_share_directory',
@@ -86,6 +90,19 @@ class FoldersHandlerDataDirTest(unittest.TestCase):
         structure = json.loads(node.get_paths())
         self.assertIn({'Lab': [{'Floor1': ['R1.csv']}]}, structure['structure'])
         self.assertEqual(structure['active_files']['route'], 'R1')
+
+    def test_maps_go_to_openamrobot_maps_dir_and_routes_stay_in_the_data_dir(self):
+        maps = os.path.join(self.tmp, 'shared_maps')
+        os.environ['OPENAMROBOT_MAPS_DIR'] = maps
+        node, command = self._node()
+        self.assertEqual(node.maps_folder, maps)
+        self.assertEqual(node.routs_folder, os.path.join(self.data, 'paths'))
+        self.assertTrue(os.path.isfile(os.path.join(maps, 'Welcome', 'Start.yaml')))
+
+        command('create_group/' + json.dumps({'group': 'Lab'}))
+        self.assertTrue(os.path.isdir(os.path.join(maps, 'Lab')))
+        self.assertTrue(os.path.isdir(os.path.join(self.data, 'paths', 'Lab')))
+        self.assertFalse(os.path.exists(os.path.join(self.data, 'maps')))
 
     def test_recordings_share_the_data_dir(self):
         import openamr_ui_package.flask_app as flask_app
