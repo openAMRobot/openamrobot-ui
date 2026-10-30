@@ -529,7 +529,12 @@ inside `web/public/ros/roslib.js` —
 file.
 
 Dependencies installed through `web/package.json` carry their own licenses,
-tracked by npm and not reproduced here.
+tracked by npm and not reproduced here. One of them, **Blockly**
+([google/blockly](https://github.com/google/blockly), Apache-2.0), also has
+its `media/` folder (sounds, sprites and cursors) copied unmodified into the
+production build as `blockly-media/` by `web/scripts/copy-blockly-media.js`,
+so the Programs page does not load it from the internet. The copied folder
+includes a `SOURCE.txt` naming the package version and licence.
 
 ## Ownership, licensing, and contributions
 

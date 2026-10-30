@@ -29,7 +29,9 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "predev": "node scripts/copy-blockly-media.js",
     "dev": "GENERATE_SOURCEMAP=false react-scripts start",
+    "prebuild": "node scripts/copy-blockly-media.js",
     "build": "GENERATE_SOURCEMAP=false react-scripts build",
     "test": "react-scripts test",
     "test:e2e": "playwright test",
