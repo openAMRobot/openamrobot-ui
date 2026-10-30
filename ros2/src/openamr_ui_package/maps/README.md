@@ -24,6 +24,10 @@ on later starts. If the currently selected map is one whose name already
 exists in the new folder, the migration is blocked for it: the selection stays
 on the old folder, an error says which map collides, and the migration runs
 again on every start until one of the two maps is renamed or removed.
+A map whose image is missing or unreadable is not migrated either, and the
+migration is not marked done: restore the image and restart, and the map is
+copied then. If that map is the selected one, the selection stays on the old
+folder until then.
 
 The main Nav2 map server belongs to the robot or simulation workspace. This UI
 workspace can store and manage map files, but it should not start a second map

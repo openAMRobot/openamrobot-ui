@@ -126,6 +126,14 @@ ZX80 or on a robot.
   start. Maps an earlier pass already copied (identical files) count as
   migrated, so a retry is quiet; once the collision is resolved, the map is
   copied, the selection repointed and the marker written.
+- A map counts as migrated only when its image exists, is readable, and was
+  copied or found byte-identical in the new folder (second review of #53).
+  A map with a missing or unreadable image, or a copy that does not match, is
+  skipped and logged; it is not published or selected in the new folder, and
+  `.maps_migrated` is not written, so the migration runs again once the
+  image is restored. If it is the selected map, the selection stays on the
+  old folder and the error says to restore the image. The check for an
+  earlier copy (`_already_copied`) needs every file present on both sides.
 - Open, outside this repository: the platform compose must mount the same
   `openamrobot_maps` volume at `/data/maps` (a pending platform-sw change).
 - Evidence: unit tests (pure and rclpy) and a compose file check.

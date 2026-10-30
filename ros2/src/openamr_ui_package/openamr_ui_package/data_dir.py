@@ -165,6 +165,13 @@ def migrate_maps(old_dir, new_dir, current_file):
     the next start. Maps an earlier pass already copied (identical files in
     new_dir) count as migrated, not as collisions, so a retry is quiet and
     completes once the collision is resolved.
+    A map counts as migrated only when its image exists, is readable, and
+    was copied or found byte-identical in new_dir. A map whose image is
+    missing or unreadable, or whose copy does not match, is skipped and
+    logged; it is never published or selected in new_dir, and the marker is
+    not written, so the migration runs again once the image is restored. If
+    that map is the selected one, the selection stays on old_dir and the
+    reason is logged as an error, as for a selected-name collision.
     Returns the map paths (relative to old_dir, without .yaml) that are
     migrated, including ones an earlier pass copied.
     """
@@ -178,6 +185,7 @@ def migrate_maps(old_dir, new_dir, current_file):
 
     copied = []
     collided = []
+    incomplete = []
     for base in maps:
         rel = os.path.relpath(base, old_dir)
         target = os.path.join(new_dir, rel)
@@ -189,6 +197,11 @@ def migrate_maps(old_dir, new_dir, current_file):
         if not _resolves_inside(image_path, old_dir):
             LOG.warning('Map %s not migrated: its image %s is outside %s, so it was not '
                         'copied and the map stays only in %s.', rel, image, old_dir, old_dir)
+            continue
+        if not _readable_file(image_path):
+            LOG.warning('Map %s not migrated: its image %s is missing or unreadable in %s. '
+                        'Restore it and restart to migrate this map.', rel, image, old_dir)
+            incomplete.append(rel)
             continue
         files = [(image_path, os.path.join(new_dir, os.path.relpath(image_path, old_dir)))]
         if os.path.exists(f'{base}_ros.yaml'):
@@ -206,8 +219,12 @@ def migrate_maps(old_dir, new_dir, current_file):
             collided.append(rel)
             continue
         for source, dest in files:
-            if os.path.exists(source):
-                _create_copy(source, dest)
+            _create_copy(source, dest)
+        if not all(_same_bytes(source, dest) for source, dest in files):
+            LOG.warning('Map %s not migrated: its files could not be copied to %s intact. '
+                        'Restart to try again.', rel, new_dir)
+            incomplete.append(rel)
+            continue
         # The yaml goes last, so a map yaml in new_dir always has its image.
         if _create_text(f'{target}.yaml', text):
             copied.append(rel)
@@ -220,26 +237,56 @@ def migrate_maps(old_dir, new_dir, current_file):
                   'the migration.', os.path.join(old_dir, f'{selected}.yaml'), selected,
                   new_dir, old_dir, MIGRATED_MARKER)
         return copied
+    if selected in incomplete:
+        LOG.error('Map migration blocked: the selected map %s is not migrated because its '
+                  'image is missing, unreadable or could not be copied. The selection stays '
+                  'on %s and %s is not written; restore the image and restart to finish the '
+                  'migration.', os.path.join(old_dir, f'{selected}.yaml'), old_dir,
+                  MIGRATED_MARKER)
+        return copied
     _repoint_selection(current_file, old_dir, new_dir, copied)
+    if incomplete:
+        LOG.error('Map migration not finished: %s not migrated because an image is missing, '
+                  'unreadable or could not be copied; %s is not written, so the migration '
+                  'runs again on the next start.', ', '.join(incomplete), MIGRATED_MARKER)
+        return copied
     _create_exclusive(marker, f'Maps from {old_dir} were copied here once; that folder '
                               'was left unchanged as a backup.\n')
     return copied
 
 
+def _readable_file(path):
+    """True when path is a regular file this process can open and read."""
+    try:
+        with open(path, 'rb') as f:
+            f.read(1)
+    except OSError:
+        return False
+    return os.path.isfile(path)
+
+
+def _same_bytes(source, dest):
+    """True when both files exist and hold the same bytes."""
+    try:
+        with open(source, 'rb') as a, open(dest, 'rb') as b:
+            return a.read() == b.read()
+    except OSError:
+        return False
+
+
 def _already_copied(files, target_yaml, text):
-    """True when new_dir holds exactly this map's files, from an earlier pass."""
+    """True when new_dir holds exactly this map's files, from an earlier pass.
+
+    Every file, the image included, must exist on both sides and match; a
+    missing or unreadable image never counts as an intact earlier copy.
+    """
     try:
         with open(target_yaml, encoding='utf-8') as f:
             if f.read() != text:
                 return False
-        for source, dest in files:
-            if os.path.exists(source):
-                with open(source, 'rb') as a, open(dest, 'rb') as b:
-                    if a.read() != b.read():
-                        return False
     except OSError:
         return False
-    return True
+    return all(_same_bytes(source, dest) for source, dest in files)
 
 
 def _selected_map(current_file, old_dir):

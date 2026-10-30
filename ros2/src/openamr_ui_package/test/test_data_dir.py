@@ -528,3 +528,109 @@ def test_concurrent_first_starts_migrate_safely(tmp_path, monkeypatch):
     with open(os.path.join(data, 'current_map_route.yaml')) as f:
         assert yaml.safe_load(f)['map_file'] == os.path.join(new, 'Lab', 'Floor.yaml')
     assert _tree(old) == before
+
+
+# Second review of #53 (eb359fde): a map counts as migrated only when its
+# image exists, is readable and was copied or verified identical. Mohamed's
+# reproduction, step for step, calls migrate_maps() directly.
+
+def _mohamed_fixture(tmp_path):
+    old, new = str(tmp_path / 'old'), str(tmp_path / 'new')
+    os.makedirs(old)
+    with open(os.path.join(old, 'selected.yaml'), 'w') as f:
+        f.write('image: selected.png\nresolution: 0.05\n')
+    current = str(tmp_path / 'current_map_route.yaml')
+    with open(current, 'w') as f:
+        yaml.safe_dump({'map_file': os.path.join(old, 'selected.yaml'), 'route_file': ''}, f)
+    return old, new, current
+
+
+def _current(current):
+    with open(current) as f:
+        return yaml.safe_load(f)['map_file']
+
+
+def test_missing_image_does_not_complete_the_migration(tmp_path, monkeypatch):
+    old, new, current = _mohamed_fixture(tmp_path)  # selected.png is not created
+    errors = _record_errors(monkeypatch)
+
+    assert data_dir.migrate_maps(old, new, current) == []
+
+    assert not os.path.exists(os.path.join(new, 'selected.yaml'))
+    assert not os.path.exists(os.path.join(new, 'selected.png'))
+    assert _current(current) == os.path.join(old, 'selected.yaml')
+    assert not os.path.exists(os.path.join(new, data_dir.MIGRATED_MARKER))
+    assert any('blocked' in m and 'selected.yaml' in m and 'restore the image' in m
+               for m in errors), errors
+
+
+def test_restoring_the_image_and_retrying_completes_the_migration(tmp_path):
+    old, new, current = _mohamed_fixture(tmp_path)
+    data_dir.migrate_maps(old, new, current)
+    with open(os.path.join(old, 'selected.png'), 'wb') as f:
+        f.write(b'restored image')
+
+    assert data_dir.migrate_maps(old, new, current) == ['selected']
+
+    with open(os.path.join(new, 'selected.png'), 'rb') as f:
+        assert f.read() == b'restored image'
+    assert os.path.isfile(os.path.join(new, 'selected.yaml'))
+    assert _current(current) == os.path.join(new, 'selected.yaml')
+    assert os.path.isfile(os.path.join(new, data_dir.MIGRATED_MARKER))
+    assert os.path.isfile(os.path.join(old, 'selected.png'))  # the old data stays
+
+
+def test_unselected_map_with_a_missing_image_withholds_the_marker(tmp_path, monkeypatch):
+    old, new, current = _mohamed_fixture(tmp_path)
+    with open(os.path.join(old, 'selected.png'), 'wb') as f:
+        f.write(b'image')
+    with open(os.path.join(old, 'other.yaml'), 'w') as f:
+        f.write('image: other.png\nresolution: 0.05\n')  # other.png is missing
+    errors = _record_errors(monkeypatch)
+
+    assert data_dir.migrate_maps(old, new, current) == ['selected']
+
+    assert _current(current) == os.path.join(new, 'selected.yaml')  # the good map moves
+    assert not os.path.exists(os.path.join(new, 'other.yaml'))
+    assert not os.path.exists(os.path.join(new, data_dir.MIGRATED_MARKER))
+    assert any('not finished' in m and 'other' in m for m in errors), errors
+
+    with open(os.path.join(old, 'other.png'), 'wb') as f:
+        f.write(b'other image')
+    assert sorted(data_dir.migrate_maps(old, new, current)) == ['other', 'selected']
+    assert os.path.isfile(os.path.join(new, 'other.png'))
+    assert os.path.isfile(os.path.join(new, data_dir.MIGRATED_MARKER))
+
+
+def test_earlier_copy_without_its_image_is_not_counted_as_migrated(tmp_path):
+    old, new, current = _mohamed_fixture(tmp_path)
+    with open(os.path.join(old, 'selected.png'), 'wb') as f:
+        f.write(b'image')
+    os.makedirs(new)
+    # A yaml copied by an earlier pass whose image never arrived.
+    with open(os.path.join(old, 'selected.yaml')) as src, \
+            open(os.path.join(new, 'selected.yaml'), 'w') as dst:
+        dst.write(src.read())
+
+    assert data_dir.migrate_maps(old, new, current) == []
+
+    assert _current(current) == os.path.join(old, 'selected.yaml')
+    assert not os.path.exists(os.path.join(new, data_dir.MIGRATED_MARKER))
+
+
+def test_already_copied_needs_every_file_present_on_both_sides(tmp_path):
+    source_image, dest_image = str(tmp_path / 'old.png'), str(tmp_path / 'new.png')
+    target_yaml = str(tmp_path / 'map.yaml')
+    with open(target_yaml, 'w') as f:
+        f.write('image: map.png\n')
+    with open(dest_image, 'wb') as f:
+        f.write(b'image')
+    files = [(source_image, dest_image)]
+
+    # The source image is missing: never an intact earlier copy.
+    assert not data_dir._already_copied(files, target_yaml, 'image: map.png\n')
+    with open(source_image, 'wb') as f:
+        f.write(b'image')
+    assert data_dir._already_copied(files, target_yaml, 'image: map.png\n')
+    os.remove(dest_image)
+    assert not data_dir._already_copied(files, target_yaml, 'image: map.png\n')
