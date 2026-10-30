@@ -59,6 +59,9 @@ export const AppConfig = {
 
   // Robot Description page — Live Mode joint telemetry (sensor_msgs/JointState)
   JOINT_STATES_TOPIC: "/joint_states",
+  // robot_state_publisher's robot_description (std_msgs/String), subscribed
+  // read-only so the page can show the model the robot itself publishes.
+  ROBOT_DESCRIPTION_TOPIC: "/robot_description",
 
   // Route editor: file/waypoint exchange with openamr_ui_package's folders_handler node
   NAV_DATA_REQ_TOPIC: "/nav_data_req",
@@ -95,6 +98,11 @@ export const CAMERA_TOPIC_OPTIONS = [
   { value: "/camera/image_raw", label: "Raw" },
 ];
 export const DEFAULT_CAMERA_TOPIC = "/rgb_image";
+
+// Head camera of the OpenAMRobot 2.0 upper body. No contract or producer
+// defines its image topic yet, so it is null and the Camera panel shows it as
+// "not reported". Set it only when a contracted topic exists.
+export const HEAD_CAMERA_TOPIC = null;
 
 // Nav2 lifecycle-managed nodes polled/controlled from the Health page.
 // `base` is the ROS node namespace exposing get_state/change_state services.
