@@ -3,10 +3,13 @@ import { Routes, Route } from "react-router";
 
 import AppLayout from "../layouts/appLayout";
 import NotFoundPage from "./NotFoundPage";
+import ReportingPage from "./ReportingPage";
 import { PAGE_REGISTRY } from "./registry";
 
 const Routing = () => (
   <Routes>
+    {/* Reporting Mode: full screen, outside AppLayout (no app chrome). */}
+    <Route path="/report" element={<ReportingPage />} />
     <Route path="/" element={<AppLayout />}>
       {PAGE_REGISTRY.map(({ path, component: Component }) =>
         path === "/" ? (

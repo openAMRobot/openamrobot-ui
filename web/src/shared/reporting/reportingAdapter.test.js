@@ -1,0 +1,367 @@
+import {
+  DISPLAY,
+  RESULT_UNKNOWN_TEXT,
+  STALE_AFTER_MS,
+  deriveReport,
+  initialReportingState,
+  reduceReporting,
+} from "./reportingAdapter";
+import { battery, diagnostics, goalStatus, lock, navFeedback, navStatus } from "./testing/fixtures";
+
+// Build a state by applying events at the given local times.
+const apply = (events, start = initialReportingState()) => {
+  let state = start;
+  const logs = [];
+  events.forEach(([event, at]) => {
+    const r = reduceReporting(state, event, at);
+    state = r.state;
+    logs.push(...r.logs);
+  });
+  return { state, logs };
+};
+
+// Connected, lock released, healthy navigation, fresh diagnostics and battery at t=1000.
+const healthy = (nav = navStatus(), at = 1000) => [
+  [{ type: "connection", status: "connected" }, 0],
+  [{ type: "lock", msg: lock(false) }, at],
+  [{ type: "navigationStatus", msg: nav }, at],
+  [{ type: "diagnostics", msg: diagnostics(0) }, at],
+  [{ type: "battery", msg: battery(80) }, at],
+];
+
+const view = (events, now = 1000) => deriveReport(apply(events).state, now);
+
+describe("display states", () => {
+  it("DISCONNECTED before any connection", () => {
+    expect(deriveReport(initialReportingState(), 0).display).toBe(DISPLAY.DISCONNECTED);
+  });
+
+  it("UNKNOWN while connected but the lock has no sample", () => {
+    const v = view([[{ type: "connection", status: "connected" }, 0]]);
+    expect(v.display).toBe(DISPLAY.UNKNOWN);
+    expect(v.reason).toMatch(/lock state is unknown/);
+  });
+
+  it("UNKNOWN when navigation status is missing", () => {
+    const v = view([
+      [{ type: "connection", status: "connected" }, 0],
+      [{ type: "lock", msg: lock(false) }, 1000],
+    ]);
+    expect(v.display).toBe(DISPLAY.UNKNOWN);
+    expect(v.reason).toBe("No navigation status received yet");
+  });
+
+  it("STOPPED (SOFTWARE) from the stop lock, never SAFETY_STOPPED", () => {
+    const v = view([...healthy(), [{ type: "lock", msg: lock(true) }, 1000]]);
+    expect(v.display).toBe(DISPLAY.STOPPED_SOFTWARE);
+    expect(v.display).not.toBe(DISPLAY.SAFETY_STOPPED);
+  });
+
+  it("FAULTED on navigation health FAULT", () => {
+    const v = view(healthy(navStatus({ health: 3, active_reasons: [1005] })));
+    expect(v.display).toBe(DISPLAY.FAULTED);
+    expect(v.reason).toBe("Navigation configuration fault");
+  });
+
+  it("FAULTED on a /diagnostics ERROR", () => {
+    const v = view([...healthy(), [{ type: "diagnostics", msg: diagnostics(2, "lidar", "no data") }, 1000]]);
+    expect(v.display).toBe(DISPLAY.FAULTED);
+    expect(v.reason).toBe("Diagnostics error: lidar: no data");
+  });
+
+  it("FAULTED when a node is inactive and the stack state is unknown", () => {
+    const v = view(healthy(navStatus({ stack: { state: 0, reason: 1004, inactive_nodes: ["amcl"] } })));
+    expect(v.display).toBe(DISPLAY.FAULTED);
+  });
+
+  it("NEEDS_ASSISTANCE when recovery attempts are used up", () => {
+    const v = view(healthy(navStatus({ active_reasons: [5002] })));
+    expect(v.display).toBe(DISPLAY.NEEDS_ASSISTANCE);
+    expect(v.reason).toBe("Recovery attempts used up");
+  });
+
+  it("NEEDS_ASSISTANCE when localization is lost", () => {
+    const v = view(healthy(navStatus({ localization: { state: 1, health: 3, reason: 3002 } })));
+    expect(v.display).toBe(DISPLAY.NEEDS_ASSISTANCE);
+  });
+
+  it("RECOVERING while a recovery runs", () => {
+    const v = view(healthy(navStatus({ task: { state: 3, reason: 5001 }, recovery: { action: 2, attempt: 2, attempt_limit: 6, reason: 5001 } })));
+    expect(v.display).toBe(DISPLAY.RECOVERING);
+    expect(v.reason).toBe("Recovery in progress (attempt 2 of 6)");
+  });
+
+  it("BLOCKED when the path is blocked", () => {
+    const v = view(healthy(navStatus({ task: { state: 2 }, active_reasons: [4008] })));
+    expect(v.display).toBe(DISPLAY.BLOCKED);
+    expect(v.reason).toBe("Path is blocked near the robot");
+  });
+
+  it("EXECUTING while a goal is active, with progress from Nav2 feedback", () => {
+    const v = view([
+      ...healthy(),
+      [{ type: "goalStatus", msg: goalStatus(1, 2) }, 1000],
+      [{ type: "navFeedback", msg: navFeedback(1, 10) }, 1000],
+      [{ type: "navFeedback", msg: navFeedback(1, 4, 6, 1) }, 1000],
+    ]);
+    expect(v.display).toBe(DISPLAY.EXECUTING);
+    expect(v.progress).toEqual({ percent: 60, distanceRemaining: 4, etaSeconds: 6, recoveries: 1 });
+    expect(v.task.label).toBe("Navigation goal");
+  });
+
+  it("WAITING during a mission wait step", () => {
+    const v = view([
+      ...healthy(),
+      [{ type: "mission", name: "Patrol", run: { runId: "m1", step: 2, total: 3, status: "running", waitingOn: "Mission step 2: waiting 30 s" } }, 1000],
+    ]);
+    expect(v.display).toBe(DISPLAY.WAITING);
+    expect(v.task).toEqual({ kind: "mission", label: "Mission: Patrol", step: "Step 2 of 3", running: true });
+  });
+
+  it("READY only when every condition holds", () => {
+    expect(view(healthy()).display).toBe(DISPLAY.READY);
+  });
+
+  it.each([
+    ["navigation not ready", healthy(navStatus({ navigation_readiness: 0, not_ready_reasons: [9001] })), "No link to the base controller"],
+    ["navigation degraded", healthy(navStatus({ health: 2 })), "Navigation health is not OK"],
+    ["battery low", [...healthy(), [{ type: "battery", msg: battery(25) }, 1000]], "Battery low (25%)"],
+    ["no battery data", healthy().filter(([e]) => e.type !== "battery"), "No battery data"],
+    ["no diagnostics", healthy().filter(([e]) => e.type !== "diagnostics"), "No diagnostics received"],
+  ])("not READY when %s: WAITING with the blocking reason", (_label, events, reason) => {
+    const v = view(events);
+    expect(v.display).toBe(DISPLAY.WAITING);
+    expect(v.reason).toBe(reason);
+  });
+
+  it("never derives SAFETY_STOPPED, even with an E-stop reason in navigation status", () => {
+    const v = view(healthy(navStatus({ navigation_readiness: 0, not_ready_reasons: [9003] })));
+    expect(v.display).not.toBe(DISPLAY.SAFETY_STOPPED);
+    expect(v.rows.find((r) => r.label === "Physical E-stop").value).toBe("Not reported");
+  });
+
+  it("shows Arms, Lift and Physical E-stop as Not reported", () => {
+    const rows = view(healthy()).rows;
+    ["Arms", "Lift", "Physical E-stop"].forEach((label) =>
+      expect(rows.find((r) => r.label === label).value).toBe("Not reported"),
+    );
+  });
+});
+
+describe("priority conflicts", () => {
+  it("DISCONNECTED wins over everything", () => {
+    const { state } = apply([...healthy(), [{ type: "lock", msg: lock(true) }, 1000]]);
+    const v = deriveReport(reduceReporting(state, { type: "connection", status: "disconnected" }, 1000).state, 1000);
+    expect(v.display).toBe(DISPLAY.DISCONNECTED);
+  });
+
+  it("a known engaged lock wins over a navigation fault", () => {
+    const v = view([...healthy(navStatus({ health: 3 })), [{ type: "lock", msg: lock(true) }, 1000]]);
+    expect(v.display).toBe(DISPLAY.STOPPED_SOFTWARE);
+  });
+
+  it("an engaged lock wins over stale navigation status, which shows as a warning", () => {
+    const v = view([...healthy(), [{ type: "lock", msg: lock(true) }, 3000]], 3000);
+    expect(v.display).toBe(DISPLAY.STOPPED_SOFTWARE);
+    expect(v.warnings).toContain("Navigation data is stale");
+  });
+
+  it("FAULTED wins over an active goal", () => {
+    const v = view([...healthy(navStatus({ health: 3 })), [{ type: "goalStatus", msg: goalStatus(1, 2) }, 1000]]);
+    expect(v.display).toBe(DISPLAY.FAULTED);
+  });
+
+  it("RECOVERING wins over BLOCKED", () => {
+    const v = view(healthy(navStatus({ task: { state: 3 }, recovery: { action: 1, attempt: 1, attempt_limit: 6 }, active_reasons: [4008] })));
+    expect(v.display).toBe(DISPLAY.RECOVERING);
+  });
+});
+
+describe("staleness", () => {
+  it("navigation status goes stale after 1.5 s: UNKNOWN", () => {
+    // Keep every other source fresh at the check time.
+    const others = (at) => [
+      [{ type: "lock", msg: lock(false) }, at],
+      [{ type: "diagnostics", msg: diagnostics(0) }, at],
+      [{ type: "battery", msg: battery(80) }, at],
+    ];
+    const edge = 1000 + STALE_AFTER_MS.navigationStatus;
+    expect(view([...healthy(), ...others(edge)], edge).display).toBe(DISPLAY.READY);
+    const v = view([...healthy(), ...others(edge + 1)], edge + 1);
+    expect(v.display).toBe(DISPLAY.UNKNOWN);
+    expect(v.reason).toBe("Navigation status is stale");
+  });
+
+  it("the stop lock goes stale after 1 s: UNKNOWN, never released", () => {
+    const v = view(healthy(), 1000 + STALE_AFTER_MS.stopLock + 1);
+    expect(v.display).toBe(DISPLAY.UNKNOWN);
+    expect(v.rows.find((r) => r.label === "Software stop lock").value).toBe("Unknown");
+  });
+
+  it("stale battery blocks READY and is marked stale", () => {
+    const at = 1000 + STALE_AFTER_MS.battery + 1;
+    const v = view(
+      [
+        ...healthy(),
+        [{ type: "lock", msg: lock(false) }, at],
+        [{ type: "navigationStatus", msg: navStatus() }, at],
+        [{ type: "diagnostics", msg: diagnostics(0) }, at],
+      ],
+      at,
+    );
+    expect(v.display).toBe(DISPLAY.WAITING);
+    expect(v.reason).toBe("Battery data is stale or invalid");
+    expect(v.rows.find((r) => r.label === "Battery").freshness).toBe("Stale");
+  });
+
+  it("stale diagnostics block READY", () => {
+    const at = 1000 + STALE_AFTER_MS.diagnostics + 1;
+    const v = view(
+      [
+        ...healthy(),
+        [{ type: "lock", msg: lock(false) }, at],
+        [{ type: "navigationStatus", msg: navStatus() }, at],
+        [{ type: "battery", msg: battery(80) }, at],
+      ],
+      at,
+    );
+    expect(v.display).toBe(DISPLAY.WAITING);
+    expect(v.reason).toBe("Diagnostics are stale");
+  });
+
+  it("invalid navigation status is UNKNOWN, not healthy", () => {
+    const v = view(healthy(navStatus({ contract_version: 2 })));
+    expect(v.display).toBe(DISPLAY.UNKNOWN);
+    expect(v.reason).toBe("Navigation status is invalid");
+  });
+
+  it("an out-of-range battery value is invalid, not low or healthy", () => {
+    const v = view([...healthy(), [{ type: "battery", msg: battery(140) }, 1000]]);
+    expect(v.rows.find((r) => r.label === "Battery").freshness).toBe("Invalid");
+    expect(v.display).toBe(DISPLAY.WAITING);
+  });
+});
+
+describe("disconnect", () => {
+  it("a reconnect starts with no data, keeping the run and result on screen", () => {
+    const { state } = apply([
+      ...healthy(),
+      [{ type: "goalStatus", msg: goalStatus(1, 2) }, 1000],
+      [{ type: "goalStatus", msg: goalStatus(1, 4) }, 1000],
+      [{ type: "connection", status: "disconnected" }, 1100],
+      [{ type: "connection", status: "connected" }, 1200],
+    ]);
+    const v = deriveReport(state, 1200);
+    expect(v.display).toBe(DISPLAY.UNKNOWN);
+    expect(v.rows.find((r) => r.label === "Battery").value).toBe("Unknown");
+    expect(v.result.outcome).toBe("SUCCEEDED");
+  });
+});
+
+describe("runs and results", () => {
+  it("a new goal id opens a new run and clears the result panel", () => {
+    const v1 = view([...healthy(), [{ type: "goalStatus", msg: goalStatus(1, 4) }, 1000]]);
+    expect(v1.result.outcome).toBe("SUCCEEDED");
+    expect(v1.completion).toBe("Completed: Navigation goal");
+    const v2 = view([
+      ...healthy(),
+      [{ type: "goalStatus", msg: goalStatus(1, 4) }, 1000],
+      [{ type: "goalStatus", msg: goalStatus(2, 2) }, 1000],
+    ]);
+    expect(v2.result).toBeNull();
+    expect(v2.display).toBe(DISPLAY.EXECUTING);
+  });
+
+  it("a mission start opens a new run and clears the result panel", () => {
+    const v = view([
+      ...healthy(),
+      [{ type: "goalStatus", msg: goalStatus(1, 6) }, 1000],
+      [{ type: "mission", name: "Patrol", run: { runId: "m1", step: 1, total: 2, status: "running" } }, 1000],
+    ]);
+    expect(v.result).toBeNull();
+    expect(v.task.label).toBe("Mission: Patrol");
+  });
+
+  it("a mission waypoint goal keeps the mission as the current task", () => {
+    const v = view([
+      ...healthy(),
+      [{ type: "mission", name: "Patrol", run: { runId: "m1", step: 1, total: 2, status: "running" } }, 1000],
+      [{ type: "goalStatus", msg: goalStatus(5, 2) }, 1000],
+    ]);
+    expect(v.task.label).toBe("Mission: Patrol");
+  });
+
+  it("ignores duplicates and out-of-order events by goal id and stamp", () => {
+    const { state } = apply([
+      ...healthy(),
+      [{ type: "goalStatus", msg: goalStatus(2, 2, 200) }, 1000],
+      // An older goal (earlier stamp) arriving late is ignored.
+      [{ type: "goalStatus", msg: goalStatus(1, 4, 150) }, 1000],
+      // A duplicate status for the current goal changes nothing.
+      [{ type: "goalStatus", msg: goalStatus(2, 2, 200) }, 1000],
+      [{ type: "goalStatus", msg: goalStatus(2, 6, 200) }, 1000],
+      // Once terminal, a late EXECUTING for the same goal is ignored.
+      [{ type: "goalStatus", msg: goalStatus(2, 2, 200) }, 1000],
+    ]);
+    expect(state.goal.id.endsWith("02")).toBe(true);
+    expect(state.result.outcome).toBe("ABORTED");
+    // A goal id seen before does not reopen.
+    const again = reduceReporting(state, { type: "goalStatus", msg: goalStatus(1, 2, 300) }, 1000).state;
+    expect(again.goal.id.endsWith("02")).toBe(true);
+  });
+
+  it("aborted results carry the navigation reason in plain words", () => {
+    const v = view([
+      ...healthy(navStatus({ task: { state: 5, reason: 4004 } })),
+      [{ type: "goalStatus", msg: goalStatus(1, 6) }, 1000],
+    ]);
+    expect(v.result).toEqual(expect.objectContaining({ outcome: "ABORTED", reason: "No valid path to the goal" }));
+  });
+
+  it("a malformed outcome keeps the run open, warns, logs once, and a later valid outcome replaces it", () => {
+    const { state, logs } = apply([
+      ...healthy(),
+      [{ type: "goalStatus", msg: goalStatus(1, 2) }, 1000],
+      [{ type: "goalStatus", msg: goalStatus(1, 42) }, 1000],
+      [{ type: "goalStatus", msg: goalStatus(1, "done") }, 1000],
+    ]);
+    const v = deriveReport(state, 1000);
+    expect(v.display).toBe(DISPLAY.EXECUTING); // the run stays open
+    expect(v.result.invalid).toBe(true);
+    expect(v.warnings).toContain(RESULT_UNKNOWN_TEXT);
+    expect(logs).toHaveLength(1);
+    expect(logs[0].message).toContain(RESULT_UNKNOWN_TEXT);
+
+    const after = reduceReporting(state, { type: "goalStatus", msg: goalStatus(1, 4) }, 1000).state;
+    const v2 = deriveReport(after, 1000);
+    expect(v2.result).toEqual(expect.objectContaining({ outcome: "SUCCEEDED", invalid: false }));
+    expect(v2.warnings).not.toContain(RESULT_UNKNOWN_TEXT);
+  });
+
+  it("an unknown mission or program status is a malformed outcome, not a result", () => {
+    const { state, logs } = apply([
+      ...healthy(),
+      [{ type: "uiRun", kind: "program", run: { runId: "p1", name: "Demo", step: 1, total: 2, status: "running" } }, 1000],
+      [{ type: "uiRun", kind: "program", run: { runId: "p1", name: "Demo", step: 2, total: 2, status: "exploded" } }, 1000],
+    ]);
+    expect(deriveReport(state, 1000).result.invalid).toBe(true);
+    expect(logs).toHaveLength(1);
+    const after = reduceReporting(state, { type: "uiRun", kind: "program", run: { runId: "p1", name: "Demo", step: 2, total: 2, status: "succeeded" } }, 1000).state;
+    expect(deriveReport(after, 1000).result).toEqual(expect.objectContaining({ outcome: "SUCCEEDED", invalid: false }));
+  });
+
+  it("program and route runs report step n of m and their outcome", () => {
+    const v = view([
+      ...healthy(),
+      [{ type: "uiRun", kind: "route", run: { runId: "r1", name: "Waypoint queue", step: 2, total: 4, status: "running" } }, 1000],
+    ]);
+    expect(v.display).toBe(DISPLAY.EXECUTING);
+    expect(v.task.step).toBe("Step 2 of 4");
+    const done = view([
+      ...healthy(),
+      [{ type: "uiRun", kind: "route", run: { runId: "r1", name: "Waypoint queue", step: 2, total: 4, status: "running" } }, 1000],
+      [{ type: "uiRun", kind: "route", run: { runId: "r1", name: "Waypoint queue", step: 2, total: 4, status: "failed", reason: "Goal failed" } }, 1000],
+    ]);
+    expect(done.result).toEqual(expect.objectContaining({ outcome: "FAILED", reason: "Goal failed" }));
+  });
+});
