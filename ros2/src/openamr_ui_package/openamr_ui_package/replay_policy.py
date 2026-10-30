@@ -1,10 +1,14 @@
 """Which recorded topics a replay may publish (openamrobot-ui#33).
 
 Replay only plays topics on an explicit telemetry allowlist, passed to
-``ros2 bag play --topics``. A request or a recording that contains a command,
+``ros2 bag play --topics``. Only a request that explicitly names a command,
 transform, goal, pose-reset, safety, action or service topic is rejected
-before any process starts. This module imports nothing from ROS or Flask so
-it can be tested with plain ``python3 -m pytest``.
+(HTTP 400). A recording that contains such topics is not rejected: they are
+skipped, like any topic off the allowlist, and reported with the reason,
+and the allowlisted topics play. A replay with nothing left to play is
+refused (HTTP 409). Every check runs before any process starts. This module
+imports nothing from ROS or Flask so it can be tested with plain
+``python3 -m pytest``.
 """
 
 import os
