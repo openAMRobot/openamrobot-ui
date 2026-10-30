@@ -6,11 +6,14 @@ identity-matching test is test_bag_processes.py.
 
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
 
 RECORD_CMD = ['/usr/bin/python3', '/opt/ros/jazzy/bin/ros2', 'bag', 'record']
+# Taken before any test patches subprocess.Popen.
+REAL_POPEN = subprocess.Popen
 
 
 class FakeTable:
@@ -92,6 +95,98 @@ class BagRecoveryApiTest(unittest.TestCase):
         self.app.recover_bag_processes()
         self.assertEqual(self.table.terminated, [])
         self.assertIn(4242, self.table.processes)
+
+    def _replayable(self, rec_id='rec_old'):
+        os.makedirs(os.path.join(self.app.RECORDINGS_DIR, rec_id))
+        entries = self.app.read_recordings_index()
+        entries.append({'id': rec_id, 'name': rec_id, 'status': 'complete'})
+        self.app.write_recordings_index(entries)
+
+    def _procs(self, *pids):
+        procs = []
+        for pid in pids:
+            proc = mock.MagicMock(pid=pid)
+            proc.poll.return_value = None
+            self.table.processes[pid] = (pid, RECORD_CMD)
+            procs.append(proc)
+        self.app.subprocess.Popen.side_effect = procs
+        return procs
+
+    def _concurrently(self, *requests):
+        import threading
+
+        from openamr_ui_package import bag_processes
+
+        barrier = threading.Barrier(len(requests), timeout=0.5)
+
+        def meet():
+            try:
+                barrier.wait()
+            except threading.BrokenBarrierError:
+                pass
+        patcher = mock.patch.object(bag_processes, '_between_read_and_write', meet)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        statuses = [None] * len(requests)
+
+        def run(index, method, path, body):
+            client = self.app.app.test_client()
+            statuses[index] = getattr(client, method)(path, json=body).status_code
+        threads = [threading.Thread(target=run, args=(i, *r)) for i, r in enumerate(requests)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        patcher.stop()
+        return statuses
+
+    def test_two_concurrent_starts_both_end_up_in_the_registry(self):
+        self._replayable()
+        self._procs(5001, 5002)
+        self.app._replay.update({'proc': None, 'id': None})
+        self.addCleanup(self.app._replay.update, {'proc': None, 'id': None})
+        statuses = self._concurrently(
+            ('post', '/api/recordings/start', {'name': 'run'}),
+            ('post', '/api/recordings/rec_old/replay/start', {}))
+        self.assertEqual(statuses, [201, 201])
+        self.assertEqual(sorted(e['pid'] for e in self._state()), [5001, 5002])
+
+    def test_concurrent_start_and_stop_keep_only_the_started_entry(self):
+        self._replayable()
+        replay, record = self._procs(5001, 5002)
+        self.addCleanup(self.app._replay.update, {'proc': None, 'id': None})
+        self.assertEqual(
+            self.client.post('/api/recordings/rec_old/replay/start', json={}).status_code, 201)
+        replay.poll.return_value = 0
+        statuses = self._concurrently(
+            ('post', '/api/recordings/replay/stop', {}),
+            ('post', '/api/recordings/start', {'name': 'run'}))
+        self.assertEqual(statuses, [200, 201])
+        self.assertEqual([e['pid'] for e in self._state()], [5002])
+
+    def test_persistence_failure_after_popen_leaves_no_child_running(self):
+        from openamr_ui_package import bag_processes
+
+        children = []
+
+        def spawn(_cmd, **kwargs):
+            child = REAL_POPEN(['sleep', '30'], **kwargs)
+            children.append(child)
+            return child
+        self.app.subprocess.Popen.side_effect = spawn
+        self.addCleanup(lambda: [c.kill() for c in children if c.poll() is None])
+
+        def disk_full(*_args):
+            raise OSError('disk full')
+        with mock.patch.object(self.app, 'PROCESS_TABLE', bag_processes.ProcTable()), \
+                mock.patch.object(bag_processes, 'write_state', disk_full):
+            response = self.client.post('/api/recordings/start', json={'name': 'run'})
+        self.assertEqual(response.status_code, 500)
+        self.assertIn('disk full', response.get_json()['message'])
+        (child,) = children
+        self.assertIsNotNone(child.poll(), 'the bag child is still running')
+        self.assertIsNone(self.app._recording['proc'])
+        self.assertFalse(os.path.exists(self.app.BAG_PROCESSES_FILE))
 
     def test_recovery_runs_from_main_only(self):
         # Importing flask_app (as tests do) must never signal a process.

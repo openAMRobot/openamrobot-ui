@@ -64,7 +64,13 @@ ZX80 or on a robot.
 - Bag processes are recorded in `~/.openamr_ui/recordings/bag_processes.json`
   (pid, start time, command line). On server start a leftover is stopped only
   when all three match, and its recording is marked interrupted.
-- Evidence: unit tests (fake process table and one real process).
+- Every read-modify-write of that registry runs under one lock (a
+  threading lock plus an fcntl lock on a sibling .lock file); each write
+  goes through a unique temporary file, fsync and os.replace. If the
+  registry write fails after a bag process starts, that process is stopped
+  and reaped and the request returns 500.
+- Evidence: unit tests (fake process table, real child processes, threads
+  meeting at barriers).
 
 ### B6 `ui/voice-bounds` (part of #35)
 

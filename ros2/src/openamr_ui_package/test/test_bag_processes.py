@@ -134,3 +134,95 @@ def test_real_process_is_matched_by_proc_and_stopped(tmp_path):
         if proc.poll() is None:
             proc.kill()
             proc.wait()
+
+
+# Concurrency. A hook between the registry read and write makes two threads
+# meet at a barrier: without the registry lock both read the same old state
+# and one write is lost; with the lock the second thread cannot reach its
+# read, the first one's barrier wait times out and it finishes alone.
+def _interleave(monkeypatch, *calls):
+    import threading
+
+    barrier = threading.Barrier(len(calls), timeout=0.5)
+
+    def meet():
+        try:
+            barrier.wait()
+        except threading.BrokenBarrierError:
+            pass
+    monkeypatch.setattr(bag_processes, '_between_read_and_write', meet)
+    errors = []
+
+    def run(call):
+        try:
+            call()
+        except Exception as error:  # surfaced below
+            errors.append(error)
+    threads = [threading.Thread(target=run, args=(call,)) for call in calls]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert errors == []
+
+
+def test_two_concurrent_remembers_both_end_up_in_the_registry(tmp_path, monkeypatch):
+    table = FakeTable({10: (1, RECORD_CMD), 11: (2, RECORD_CMD)})
+    state_file = str(tmp_path / 'recordings' / 'bag_processes.json')
+    _interleave(
+        monkeypatch,
+        lambda: bag_processes.remember(state_file, table, 'record', 'a', 10),
+        lambda: bag_processes.remember(state_file, table, 'replay', 'b', 11))
+    assert sorted(e['pid'] for e in bag_processes.read_state(state_file)) == [10, 11]
+
+
+def test_concurrent_remember_and_forget_keep_only_the_started_entry(tmp_path, monkeypatch):
+    table = FakeTable({10: (1, RECORD_CMD), 11: (2, RECORD_CMD)})
+    state_file = _state(tmp_path, table, ('replay', 'old', 10))
+    _interleave(
+        monkeypatch,
+        lambda: bag_processes.forget(state_file, 10),
+        lambda: bag_processes.remember(state_file, table, 'record', 'new', 11))
+    assert [e['pid'] for e in bag_processes.read_state(state_file)] == [11]
+
+
+def test_registry_lock_excludes_another_process(tmp_path):
+    state_file = str(tmp_path / 'recordings' / 'bag_processes.json')
+    probe = ('import fcntl, sys\n'
+             'f = open(sys.argv[1], "a")\n'
+             'try:\n'
+             '    fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)\n'
+             'except BlockingIOError:\n'
+             '    sys.exit(3)\n')
+    with bag_processes.registry_lock(state_file):
+        held = subprocess.run([sys.executable, '-c', probe, state_file + '.lock'])
+    free = subprocess.run([sys.executable, '-c', probe, state_file + '.lock'])
+    assert (held.returncode, free.returncode) == (3, 0)
+
+
+def test_each_write_uses_a_unique_temporary_file_and_fsync(tmp_path, monkeypatch):
+    state_file = str(tmp_path / 'recordings' / 'bag_processes.json')
+    replaced, synced = [], []
+    real_replace, real_fsync = os.replace, os.fsync
+    monkeypatch.setattr(os, 'replace', lambda a, b: (replaced.append(a), real_replace(a, b)))
+    monkeypatch.setattr(os, 'fsync', lambda fd: (synced.append(fd), real_fsync(fd)))
+    bag_processes.write_state(state_file, [])
+    bag_processes.write_state(state_file, [])
+    assert len(set(replaced)) == 2 and len(synced) == 2
+    for tmp in replaced:
+        assert os.path.dirname(tmp) == os.path.dirname(state_file)
+        assert tmp != state_file + '.tmp'
+    assert os.listdir(os.path.dirname(state_file)) == ['bag_processes.json']
+
+
+def test_failed_write_leaves_no_temporary_file(tmp_path, monkeypatch):
+    state_file = str(tmp_path / 'recordings' / 'bag_processes.json')
+
+    def broken_replace(a, b):
+        raise OSError('disk full')
+    monkeypatch.setattr(os, 'replace', broken_replace)
+    try:
+        bag_processes.write_state(state_file, [])
+    except OSError:
+        pass
+    assert os.listdir(os.path.dirname(state_file)) == []

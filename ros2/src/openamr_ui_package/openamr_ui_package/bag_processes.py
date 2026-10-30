@@ -11,10 +11,24 @@ never signalled.
 Imports nothing from ROS or Flask, so it is tested with ``python3 -m pytest``.
 """
 
+import contextlib
+import fcntl
 import json
 import os
 import signal
+import tempfile
+import threading
 import time
+
+# One lock for every read-modify-write of the registry. flask_app.py runs
+# with threaded=True, so requests in this process share _THREAD_LOCK; the
+# fcntl lock on a sibling .lock file keeps two server processes apart.
+_THREAD_LOCK = threading.Lock()
+
+
+def _between_read_and_write():
+    """Run between reading and writing the registry; tests replace it."""
+
 
 # Seconds to wait for a bag process to exit after SIGINT before SIGKILL.
 # Basis: flask_app.py already waits 10 s for ros2 bag after SIGINT.
@@ -69,33 +83,59 @@ def read_state(state_file):
     return [e for e in entries if isinstance(e, dict)] if isinstance(entries, list) else []
 
 
-def write_state(state_file, entries):
-    """Replace the state file atomically."""
+@contextlib.contextmanager
+def registry_lock(state_file):
+    """Hold the in-process lock and an exclusive fcntl lock on <state_file>.lock."""
     os.makedirs(os.path.dirname(state_file), exist_ok=True)
-    tmp = f'{state_file}.tmp'
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump(entries, f, indent=2, sort_keys=True)
-    os.replace(tmp, state_file)
+    with _THREAD_LOCK:
+        with open(f'{state_file}.lock', 'a') as lock_file:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lock_file, fcntl.LOCK_UN)
+
+
+def write_state(state_file, entries):
+    """Replace the state file atomically through a unique temporary file."""
+    directory = os.path.dirname(state_file)
+    os.makedirs(directory, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=directory, prefix=os.path.basename(state_file) + '.',
+                               suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(entries, f, indent=2, sort_keys=True)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, state_file)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
 
 
 def remember(state_file, table, kind, recording_id, pid):
-    """Record a bag process the UI has just started."""
+    """Record a bag process the UI has just started; raise if it cannot be saved."""
     identity = table.identity(pid)
     if identity is None:
         return
     start_time, cmdline = identity
-    entries = [e for e in read_state(state_file) if e.get('pid') != pid]
-    entries.append({'kind': kind, 'recording_id': recording_id, 'pid': pid,
-                    'start_time': start_time, 'cmdline': cmdline})
-    write_state(state_file, entries)
+    with registry_lock(state_file):
+        entries = [e for e in read_state(state_file) if e.get('pid') != pid]
+        _between_read_and_write()
+        entries.append({'kind': kind, 'recording_id': recording_id, 'pid': pid,
+                        'start_time': start_time, 'cmdline': cmdline})
+        write_state(state_file, entries)
 
 
 def forget(state_file, pid):
     """Drop a bag process that the UI stopped or reaped itself."""
-    entries = read_state(state_file)
-    remaining = [e for e in entries if e.get('pid') != pid]
-    if len(remaining) != len(entries):
-        write_state(state_file, remaining)
+    with registry_lock(state_file):
+        entries = read_state(state_file)
+        remaining = [e for e in entries if e.get('pid') != pid]
+        _between_read_and_write()
+        if len(remaining) != len(entries):
+            write_state(state_file, remaining)
 
 
 def recover(state_file, table):
@@ -105,16 +145,17 @@ def recover(state_file, table):
     Every entry is cleared from the state file, matched or not: an entry
     that no longer matches belongs to a process that has already exited.
     """
-    reports = []
-    for entry in read_state(state_file):
-        expected = (entry.get('start_time'), entry.get('cmdline'))
-        pid = entry.get('pid')
-        # pid 0, 1 and negative values address process groups or init.
-        valid_pid = isinstance(pid, int) and not isinstance(pid, bool) and pid > 1
-        matched = valid_pid and table.identity(pid) == expected
-        if matched:
-            table.terminate(pid, expected)
-        reports.append(dict(entry, terminated=matched))
-    if reports:
-        write_state(state_file, [])
-    return reports
+    with registry_lock(state_file):
+        reports = []
+        for entry in read_state(state_file):
+            expected = (entry.get('start_time'), entry.get('cmdline'))
+            pid = entry.get('pid')
+            # pid 0, 1 and negative values address process groups or init.
+            valid_pid = isinstance(pid, int) and not isinstance(pid, bool) and pid > 1
+            matched = valid_pid and table.identity(pid) == expected
+            if matched:
+                table.terminate(pid, expected)
+            reports.append(dict(entry, terminated=matched))
+        if reports:
+            write_state(state_file, [])
+        return reports

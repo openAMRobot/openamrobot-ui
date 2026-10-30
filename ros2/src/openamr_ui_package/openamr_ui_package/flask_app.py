@@ -900,6 +900,24 @@ def _replay_alive():
     return _replay["proc"] is not None and _replay["proc"].poll() is None
 
 
+def _track_or_stop(proc, kind, recording_id):
+    """Record a just-started bag process, or stop and reap it and return a 500.
+
+    The caller sets its in-memory handle only after this returns, so a
+    process is never left running without a registry entry.
+    """
+    try:
+        bag_processes.remember(BAG_PROCESSES_FILE, PROCESS_TABLE, kind, recording_id, proc.pid)
+    except Exception as error:
+        proc.terminate()
+        try:
+            proc.wait(timeout=bag_processes.TERMINATE_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+        abort(500, f'Could not record the ros2 bag process, so it was stopped ({error}).')
+
+
 def _forget_replay_process():
     if _replay['proc'] is not None:
         bag_processes.forget(BAG_PROCESSES_FILE, _replay['proc'].pid)
@@ -1012,7 +1030,7 @@ def start_recording():
     except FileNotFoundError:
         abort(500, "ros2 command not found on this backend — is the ROS environment sourced?")
 
-    bag_processes.remember(BAG_PROCESSES_FILE, PROCESS_TABLE, 'record', recording_id, proc.pid)
+    _track_or_stop(proc, 'record', recording_id)
     started_at = datetime.now(timezone.utc).isoformat()
     _recording.update(
         {"proc": proc, "id": recording_id, "name": name, "started_at": started_at, "topics": topics}
@@ -1150,7 +1168,7 @@ def start_replay(recording_id):
     except FileNotFoundError:
         abort(500, "ros2 command not found on this backend — is the ROS environment sourced?")
 
-    bag_processes.remember(BAG_PROCESSES_FILE, PROCESS_TABLE, 'replay', recording_id, proc.pid)
+    _track_or_stop(proc, 'replay', recording_id)
     started_at = datetime.now(timezone.utc).isoformat()
     _replay.update(
         {"proc": proc, "id": recording_id, "started_at": started_at, "paused": False, "rate": rate}
