@@ -13,6 +13,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped, PoseArray, Pose, PoseSt
 from nav2_msgs.srv import LoadMap, SaveMap
 from std_msgs.msg import String, Empty
 from openamr_ui_msgs.msg import ArrayPoseStampedWithCovariance
+from openamr_ui_package import map_files
 
 # Mapping and navigation belong to the platform. This node never launches
 # them and never changes the lifecycle state of platform nodes; it only
@@ -286,76 +287,78 @@ class UIFoldersHandler(Node):
         except Exception as e:
             self.get_logger().info(f"Error in create_group_func: {e}")
 
+    # Map files (<name>.yaml, its image, an optional <name>_ros.yaml) are
+    # renamed and deleted by map_files.py, which refuses an image outside the
+    # map's folder and keeps an image another map also uses.
+
+    def _first_map_in(self, group_dir):
+        """Return the first map name in group_dir, ignoring images and _ros files."""
+        names = sorted(f[:-len('.yaml')] for f in os.listdir(group_dir)
+                       if f.endswith('.yaml') and not f.endswith('_ros.yaml'))
+        return names[0] if names else None
+
     def rename_map_func(self):
         try:
-            old_map_file = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_old']}"
-            new_map_file = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_new']}"
-            old_route_folder_file = f"{self.routs_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_old']}"
-            new_route_folder_file = f"{self.routs_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_new']}"
-            old_ros_folder_file = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_old']}_ros"
-            new_ros_folder_file = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_new']}_ros"
-
-            with open(f"{old_map_file}.yaml", 'r') as file:
-                map_cur_path = yaml.safe_load(file) or {}
-            with open(f"{old_ros_folder_file}.yaml", 'r') as file:
-                ros_cur_path = yaml.safe_load(file) or {}
-
-            map_cur_path["image"] = f"{new_map_file}.png"
-            if "map_server" in ros_cur_path and "ros__parameters" in ros_cur_path["map_server"]:
-                ros_cur_path["map_server"]["ros__parameters"]["yaml_filename"] = f"{self.dict_cmd['map_new']}.yaml"
-            else:
-                ros_cur_path["yaml_filename"] = f"{self.dict_cmd['map_new']}.yaml"
-
-            with open(f"{old_ros_folder_file}.yaml", 'w') as file:
-                yaml.dump(ros_cur_path, file)
-            with open(f"{old_map_file}.yaml", 'w') as file:
-                yaml.dump(map_cur_path, file)
-
-            os.rename(f"{old_map_file}.yaml", f"{new_map_file}.yaml")
-            os.rename(f"{old_map_file}.png", f"{new_map_file}.png")
-            os.rename(f"{old_ros_folder_file}.yaml", f"{new_ros_folder_file}.yaml")
-            os.rename(old_route_folder_file, new_route_folder_file)
+            group = self.dict_cmd['group']
+            old, new = self.dict_cmd['map_old'], self.dict_cmd['map_new']
+            old_map_file = f'{self.maps_folder}/{group}/{old}'
+            new_map_file = f'{self.maps_folder}/{group}/{new}'
+            old_route_folder_file = f'{self.routs_folder}/{group}/{old}'
+            new_route_folder_file = f'{self.routs_folder}/{group}/{new}'
+            try:
+                notes = map_files.rename_map(old_map_file, new_map_file)
+            except map_files.MapFileError as refused:
+                self._pub(f'Nothing was renamed: {refused}.')
+                return
+            for note in notes:
+                self._pub(note)
+            if os.path.isdir(old_route_folder_file):
+                os.rename(old_route_folder_file, new_route_folder_file)
 
             data = self.get_cur_files()
-            if os.path.expanduser(data["map_file"]) == f"{old_map_file}.yaml":
-                self.set_cur_map(new_map_file)
-                self.set_cur_route(f"{new_route_folder_file}/{data['route_file'].split('/')[-1].split('.')[0]}")
+            if os.path.expanduser(data.get('map_file', '')) == f'{old_map_file}.yaml':
+                self.set_cur_map(f'{new_map_file}.yaml')
+                route = data.get('route_file', '')
+                route_name = route.split('/')[-1].split('.')[0]
+                self.set_cur_route(f'{new_route_folder_file}/{route_name}' if route else '')
 
             self._pub_nav_data()
         except Exception as e:
-            self.get_logger().info(f"Error in rename_map_func: {e}")
+            self.get_logger().info(f'Error in rename_map_func: {e}')
+            self._pub(f'The map could not be renamed: {e}')
 
     def delete_map_func(self):
         try:
-            map_to_delete = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map']}"
-            route_map_folder_to_delete = f"{self.routs_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map']}"
-            os.remove(f"{map_to_delete}.yaml")
-            os.remove(f"{map_to_delete}_ros.yaml")
-            os.remove(f"{map_to_delete}.png")
-            shutil.rmtree(route_map_folder_to_delete)
+            group = self.dict_cmd['group']
+            map_to_delete = f"{self.maps_folder}/{group}/{self.dict_cmd['map']}"
+            route_map_folder_to_delete = (
+                f"{self.routs_folder}/{group}/{self.dict_cmd['map']}")
+            try:
+                notes = map_files.delete_map(map_to_delete)
+            except map_files.MapFileError as refused:
+                self._pub(f'Nothing was deleted: {refused}.')
+                return
+            for note in notes:
+                self._pub(note)
+            if os.path.isdir(route_map_folder_to_delete):
+                shutil.rmtree(route_map_folder_to_delete)
 
-            maps_in_group = os.listdir(f"{self.maps_folder}/{self.dict_cmd['group']}")
-            if maps_in_group:
-                path_to_map = f"{self.maps_folder}/{self.dict_cmd['group']}/{maps_in_group[0].split('.')[0]}"
+            first = self._first_map_in(f'{self.maps_folder}/{group}')
+            if first:
+                path_to_map = f'{self.maps_folder}/{group}/{first}'
                 self.set_cur_map(path_to_map)
-                self.change_map(path_to_map, True)
-
-                routes_on_map = os.listdir(f"{self.routs_folder}/{self.dict_cmd['group']}/{maps_in_group[0].split('.')[0]}")
-                if routes_on_map:
-                    path_to_route = f"{self.routs_folder}/{self.dict_cmd['group']}/{maps_in_group[0].split('.')[0]}/{routes_on_map[0].split('.')[0]}"
-                    self.set_cur_route(path_to_route)
-                else:
-                    self.set_cur_route("")
-                    self._pub("No routes on the map")
+                self.dict_cmd = {'group': group, 'map': first}
+                self.change_map(path_to_map)
             else:
-                self.set_cur_route("")
-                self.set_cur_map("")
-                self._pub("No maps in the group")
+                self.set_cur_route('')
+                self.set_cur_map('')
+                self._pub('No maps in the group')
 
             self.WP_req_callback(Empty())
             self._pub_nav_data()
         except Exception as e:
-            self.get_logger().info(f"Error in delete_map_func: {e}")
+            self.get_logger().info(f'Error in delete_map_func: {e}')
+            self._pub(f'The map could not be deleted: {e}')
 
     def delete_group_func(self):
         try:
@@ -547,11 +550,25 @@ class UIFoldersHandler(Node):
         req = LoadMap.Request()
         req.map_url = map_yaml_file
         if self.change_map_cli.service_is_ready() or self.change_map_cli.wait_for_service(timeout_sec=1.0):
-            self.change_map_cli.call_async(req)
+            future = self.change_map_cli.call_async(req)
+            future.add_done_callback(lambda done: self._on_map_loaded(done, map_yaml_file))
         else:
             self.get_logger().warn("Cannot load map because /map_server/load_map is unavailable.")
             self._pub("Map server is unavailable; map selection was saved but not loaded.")
         self._pub_nav_data()
+
+    def _on_map_loaded(self, future, map_yaml_file):
+        try:
+            response = future.result()
+        except Exception as e:
+            self._pub(f'The platform map server could not load {map_yaml_file}: {e}')
+            return
+        if response is None or response.result != LoadMap.Response.RESULT_SUCCESS:
+            code = getattr(response, 'result', None)
+            self._pub(f'The platform map server could not load {map_yaml_file} '
+                      f'(load_map result {code}).')
+        else:
+            self._pub('Map loaded')
 
     def set_cur_map(self, map_name: str):
         data = self.get_cur_files()
