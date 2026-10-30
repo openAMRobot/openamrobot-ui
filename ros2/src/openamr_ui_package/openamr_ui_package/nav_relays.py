@@ -11,17 +11,20 @@ arrived and AMCL's map to odom transform arrived within pose_stale_after_s
 (see pose_freshness.py). After that the relay goes quiet, and the UI's own
 /ui/amcl_pose timeouts show localization as stale.
 """
+import time
+
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from action_msgs.msg import GoalStatusArray
-from openamr_ui_package.pose_freshness import DEFAULT_STALE_AFTER_S, is_map_to_odom, PoseFreshness
+from openamr_ui_package.pose_freshness import (
+    DEFAULT_STALE_AFTER_S, is_map_to_odom, PoseFreshness, require_finite_positive)
 from tf2_msgs.msg import TFMessage
 
 
 class NavRelays(Node):
-    def __init__(self):
+    def __init__(self, monotonic=time.monotonic):
         super().__init__('nav_relays')
 
         tl_qos = QoSProfile(
@@ -41,8 +44,14 @@ class NavRelays(Node):
         self.declare_parameter('pose_stale_after_s', DEFAULT_STALE_AFTER_S)
         self.declare_parameter('map_frame', 'map')
         self.declare_parameter('odom_frame', 'odom')
-        self._freshness = PoseFreshness(
-            self.get_parameter('pose_stale_after_s').get_parameter_value().double_value)
+        stale_after_s = self.get_parameter('pose_stale_after_s').get_parameter_value().double_value
+        try:
+            require_finite_positive('pose_stale_after_s', stale_after_s)
+        except ValueError as error:
+            self.get_logger().error(f'Refusing to start: {error}')
+            raise
+        self._freshness = PoseFreshness(stale_after_s, clock=monotonic)
+        self._last_ros_time = None
         self._map_frame = self.get_parameter('map_frame').get_parameter_value().string_value
         self._odom_frame = self.get_parameter('odom_frame').get_parameter_value().string_value
         self._was_fresh = False
@@ -80,18 +89,37 @@ class NavRelays(Node):
         self._timer = self.create_timer(1.0, self._republish_pose)
         self.get_logger().info('nav_relays started: native topics -> /ui/* volatile topics')
 
-    def _now(self) -> float:
+    def _ros_now(self) -> float:
         return self.get_clock().now().nanoseconds / 1e9
+
+    def _check_clock_reset(self) -> None:
+        """Drop the cached pose when the ROS clock jumps backwards.
+
+        A backward jump is a simulation or bag reset: the old pose belongs to
+        a world that no longer exists. After it, a new map to odom transform
+        alone does not revive the pose; a new pose message is required.
+        """
+        now = self._ros_now()
+        if self._last_ros_time is not None and now < self._last_ros_time:
+            self.get_logger().warn(
+                'ROS clock jumped back from %.3f s to %.3f s; dropping the cached pose.'
+                % (self._last_ros_time, now))
+            self._pose = None
+            self._freshness.reset()
+            self._was_fresh = False
+        self._last_ros_time = now
 
     def _pose_cb(self, msg: PoseWithCovarianceStamped) -> None:
         # A new AMCL pose is current by definition; forward it at once.
+        self._check_clock_reset()
         self._pose = msg
-        self._freshness.on_pose(self._now())
+        self._freshness.on_pose()
         self._pose_pub.publish(msg)
 
     def _tf_cb(self, msg: TFMessage) -> None:
+        self._check_clock_reset()
         if any(is_map_to_odom(t, self._map_frame, self._odom_frame) for t in msg.transforms):
-            self._freshness.on_map_odom(self._now())
+            self._freshness.on_map_odom()
 
     def _status_cb(self, server: str):
         def cb(msg: GoalStatusArray) -> None:
@@ -99,7 +127,8 @@ class NavRelays(Node):
         return cb
 
     def _republish_pose(self) -> None:
-        fresh = self._pose is not None and self._freshness.is_fresh(self._now())
+        self._check_clock_reset()
+        fresh = self._pose is not None and self._freshness.is_fresh()
         if fresh:
             self._pose_pub.publish(self._pose)
         elif self._was_fresh:

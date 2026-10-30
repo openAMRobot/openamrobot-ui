@@ -13,7 +13,7 @@ import pytest
 PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PACKAGE_DIR)
 
-from openamr_ui_package import pose_freshness, route_outcomes  # noqa: E402
+from openamr_ui_package import pose_freshness, route_outcomes  # noqa: E402, I100
 from openamr_ui_package.route_outcomes import (  # noqa: E402
     ABORTED, CANCELED, SUCCEEDED, TIMEOUT, UNKNOWN)
 
@@ -56,38 +56,93 @@ def test_nav2_result_maps_to_outcome(result, expected):
     assert route_outcomes.outcome_from_task_result(result) == expected
 
 
-def _tf_every(freshness, start, stop, period=0.1):
-    t = start
-    while t <= stop:
-        freshness.on_map_odom(t)
-        t += period
+class FakeClock:
+    """A monotonic clock the test sets by hand; it may even go backwards."""
+
+    def __init__(self, now=0.0):
+        self.now = now
+
+    def __call__(self):
+        return self.now
+
+
+def _freshness(now=0.0, stale_after_s=pose_freshness.DEFAULT_STALE_AFTER_S):
+    clock = FakeClock(now)
+    return pose_freshness.PoseFreshness(stale_after_s, clock=clock), clock
 
 
 def test_stationary_robot_stays_fresh_while_amcl_transform_arrives():
-    freshness = pose_freshness.PoseFreshness()
-    freshness.on_pose(0.0)
+    freshness, clock = _freshness()
+    freshness.on_pose()
     # No new pose for 10 minutes: AMCL does not publish while the robot
     # stands still, but its map to odom transform keeps arriving.
-    _tf_every(freshness, 0.0, 600.0)
-    assert freshness.is_fresh(600.0)
+    for tick in range(6001):
+        clock.now = tick * 0.1
+        freshness.on_map_odom()
+    assert freshness.is_fresh()
 
 
 def test_pose_goes_stale_when_the_transform_stops():
-    freshness = pose_freshness.PoseFreshness()
-    freshness.on_pose(0.0)
-    _tf_every(freshness, 0.0, 10.0)
-    last = freshness.last_map_odom_at
-    assert freshness.is_fresh(last + pose_freshness.DEFAULT_STALE_AFTER_S)
-    assert not freshness.is_fresh(last + pose_freshness.DEFAULT_STALE_AFTER_S + 0.01)
+    freshness, clock = _freshness(10.0)
+    freshness.on_pose()
+    freshness.on_map_odom()
+    clock.now = 10.0 + pose_freshness.DEFAULT_STALE_AFTER_S
+    assert freshness.is_fresh()
+    clock.now += 0.01
+    assert not freshness.is_fresh()
+
+
+def test_reviewer_sequence_stays_stale_when_the_clock_goes_back():
+    freshness, clock = _freshness(100.0)
+    freshness.on_pose()
+    freshness.on_map_odom()
+    for now, fresh in ((100.0, True), (103.0, False), (0.0, False), (50.0, False)):
+        clock.now = now
+        assert freshness.is_fresh() is fresh, now
+
+
+@pytest.mark.parametrize('now', [4.999, float('nan'), float('inf'), float('-inf')])
+def test_negative_or_non_finite_age_is_never_fresh(now):
+    freshness, clock = _freshness(5.0)
+    freshness.on_pose()
+    freshness.on_map_odom()
+    clock.now = now  # 4.999 gives an age of -0.001 s
+    assert not freshness.is_fresh()
+
+
+def test_after_reset_a_new_transform_alone_does_not_revive_the_pose():
+    freshness, clock = _freshness(100.0)
+    freshness.on_pose()
+    freshness.on_map_odom()
+    freshness.reset()
+    clock.now = 100.5
+    freshness.on_map_odom()
+    assert not freshness.is_fresh()
+
+
+def test_after_reset_a_new_pose_and_transform_are_fresh():
+    freshness, clock = _freshness(100.0)
+    freshness.on_pose()
+    freshness.on_map_odom()
+    freshness.reset()
+    clock.now = 100.5
+    freshness.on_pose()
+    freshness.on_map_odom()
+    assert freshness.is_fresh()
 
 
 def test_no_pose_or_no_transform_is_not_fresh():
-    only_tf = pose_freshness.PoseFreshness()
-    only_tf.on_map_odom(1.0)
-    assert not only_tf.is_fresh(1.0)
-    only_pose = pose_freshness.PoseFreshness()
-    only_pose.on_pose(1.0)
-    assert not only_pose.is_fresh(1.0)
+    only_tf, _ = _freshness(1.0)
+    only_tf.on_map_odom()
+    assert not only_tf.is_fresh()
+    only_pose, _ = _freshness(1.0)
+    only_pose.on_pose()
+    assert not only_pose.is_fresh()
+
+
+def test_default_clock_is_monotonic():
+    import time
+    assert pose_freshness.PoseFreshness()._clock is time.monotonic
 
 
 def test_default_threshold_is_twice_the_nav2_transform_tolerance():
@@ -95,6 +150,9 @@ def test_default_threshold_is_twice_the_nav2_transform_tolerance():
     assert pose_freshness.DEFAULT_STALE_AFTER_S == 2 * nav2_amcl_default_transform_tolerance_s
 
 
-def test_threshold_must_be_positive():
+@pytest.mark.parametrize('bad', [0, -1, float('nan'), float('inf'), '2', True, None])
+def test_invalid_threshold_is_refused(bad):
     with pytest.raises(ValueError):
-        pose_freshness.PoseFreshness(0)
+        pose_freshness.PoseFreshness(bad)
+    with pytest.raises(ValueError):
+        pose_freshness.require_finite_positive('waypoint_timeout_s', bad)
