@@ -31,9 +31,16 @@ ZX80 or on a robot.
   (`nav2_msgs/SaveMap`, parameter `map_save_service`, default
   `/map_saver/save_map`) and then `/map_server/load_map`. Build map only
   explains that mapping runs on the platform.
-- To confirm: the platform's map saver service name; whether the platform
-  map_server can read the UI data directory (see B8).
-- Evidence: unit tests (pure and rclpy).
+- Rename and delete work for maps saved by SaveMap (`<name>.yaml` and the
+  image only); a legacy `<name>_ros.yaml` is handled when it exists. A
+  failed save or load reaches the UI as a clear message.
+- Owner decision (30 Oct): save service `/map_saver/save_map`; maps on the
+  shared `openamrobot_maps` volume at `/data/maps` in the UI and platform
+  containers (#53). The platform-side mount and launch are a platform-sw
+  change owned by Kunal; the full Maps workflow needs that and a simulation
+  check (Nikolai).
+- Evidence: unit tests (pure and rclpy); one local run against real
+  nav2_map_server and map_saver_server with a temporary map folder.
 
 ### B2 `ui/remove-legacy-launch` (part of #32)
 
