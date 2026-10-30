@@ -80,7 +80,9 @@ ZX80 or on a robot.
 - Route following reports SUCCEEDED, ABORTED, CANCELED or TIMEOUT per
   waypoint; a route succeeds only if every waypoint did. `nav_relays.py`
   repeats the AMCL pose only while the map to odom transform is younger
-  than `pose_stale_after_s` (2.0 s).
+  than `pose_stale_after_s` (2.0 s), measured with a monotonic clock. A
+  backward ROS clock jump (simulation reset) drops the cached pose until a
+  new pose arrives. Non-finite or non-positive thresholds stop the node.
 - `waypoint_timeout_s` 300 s and the 2.0 s pose threshold: accepted default
   (30 Oct 2026).
 - Not done here: mission outcomes in the browser mission runner (left to the

@@ -90,10 +90,13 @@ class NavRelayFreshnessTest(unittest.TestCase):
 
         rclpy.init()
         self.addCleanup(rclpy.shutdown)
-        self.node = nav_relays.NavRelays()
-        self.addCleanup(self.node.destroy_node)
+        # Two clocks: the monotonic clock that receive ages use, and the ROS
+        # clock that is watched for backward jumps.
         self.now = 100.0
-        self.node._now = lambda: self.now
+        self.ros = 1000.0
+        self.node = nav_relays.NavRelays(monotonic=lambda: self.now)
+        self.addCleanup(self.node.destroy_node)
+        self.node._ros_now = lambda: self.ros
         self.published = []
         self.node._pose_pub = mock.Mock(publish=self.published.append)
 
@@ -135,6 +138,83 @@ class NavRelayFreshnessTest(unittest.TestCase):
 
     def test_threshold_is_a_parameter(self):
         self.assertEqual(self.node.get_parameter('pose_stale_after_s').value, 2.0)
+
+    def test_ros_clock_reset_drops_the_pose_and_new_tf_alone_does_not_revive_it(self):
+        self._pose()
+        self._tf()
+        self.node._republish_pose()
+        self.assertEqual(len(self.published), 2)
+        self.ros = 0.0  # Simulation reset: the ROS clock jumps back.
+        self.now += 0.5
+        self._tf()
+        self.node._republish_pose()
+        self.assertEqual(len(self.published), 2)
+        self.assertIsNone(self.node._pose)
+
+    def test_after_a_reset_a_new_pose_and_tf_are_relayed_again(self):
+        self._pose()
+        self._tf()
+        self.ros = 0.0
+        self.now += 0.5
+        self._pose()
+        self._tf()
+        self.node._republish_pose()
+        self.assertEqual(len(self.published), 3)  # Two forwards plus one republish.
+
+    def test_ros_time_moving_forward_keeps_the_pose(self):
+        self._pose()
+        self._tf()
+        self.ros += 1.0
+        self.now += 1.0
+        self.node._republish_pose()
+        self.assertEqual(len(self.published), 2)
+
+
+class InvalidConfigurationTest(unittest.TestCase):
+    """Non-finite or non-positive thresholds stop the node from starting."""
+
+    def setUp(self):
+        import rclpy
+
+        rclpy.init()
+        self.addCleanup(rclpy.shutdown)
+
+    def test_nav_relays_refuses_an_invalid_stale_threshold(self):
+        import openamr_ui_package.nav_relays as nav_relays
+
+        for value in (0.0, -2.0, float('nan'), float('inf')):
+            with self.subTest(value=value), mock.patch.object(
+                    nav_relays.NavRelays, 'get_logger') as logger:
+                with mock.patch('rclpy.node.Node.__init__', _with_overrides(
+                        'pose_stale_after_s', value)):
+                    with self.assertRaises(ValueError):
+                        nav_relays.NavRelays()
+                logger.return_value.error.assert_called_once()
+
+    def test_waypoint_nav_refuses_an_invalid_timeout(self):
+        import openamr_ui_package.waypoint_nav as waypoint_nav
+
+        for value in (0.0, -1.0, float('nan'), float('inf')):
+            with self.subTest(value=value), mock.patch.object(
+                    waypoint_nav.WayPointMover, 'get_logger') as logger:
+                with mock.patch('rclpy.node.Node.__init__', _with_overrides(
+                        'waypoint_timeout_s', value)):
+                    with self.assertRaises(ValueError):
+                        waypoint_nav.WayPointMover(mock.Mock())
+                logger.return_value.error.assert_called_once()
+
+
+def _with_overrides(name, value):
+    """Wrap Node.__init__ so the node starts with one parameter override."""
+    from rclpy.node import Node
+    from rclpy.parameter import Parameter
+
+    real_init = Node.__init__
+
+    def init(self, node_name, **kwargs):
+        kwargs['parameter_overrides'] = [Parameter(name, value=value)]
+        real_init(self, node_name, **kwargs)
+    return init
 
 
 if __name__ == '__main__':

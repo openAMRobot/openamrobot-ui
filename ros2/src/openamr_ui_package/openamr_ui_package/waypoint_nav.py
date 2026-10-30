@@ -11,6 +11,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 from nav_msgs.msg import Odometry
 from openamr_ui_msgs.msg import ArrayPoseStampedWithCovariance
 from openamr_ui_package import route_outcomes
+from openamr_ui_package.pose_freshness import require_finite_positive
 import rclpy
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
@@ -29,8 +30,12 @@ class WayPointMover(Node):
         self.break_mission = False
         self.last_route_outcome = None
         self.declare_parameter('waypoint_timeout_s', route_outcomes.DEFAULT_WAYPOINT_TIMEOUT_S)
-        self.waypoint_timeout_s = (
-            self.get_parameter('waypoint_timeout_s').get_parameter_value().double_value)
+        timeout = self.get_parameter('waypoint_timeout_s').get_parameter_value().double_value
+        try:
+            self.waypoint_timeout_s = require_finite_positive('waypoint_timeout_s', timeout)
+        except ValueError as error:
+            self.get_logger().error(f'Refusing to start: {error}')
+            raise
 
         package_share_dir = get_package_share_directory('openamr_ui_package')
         self.current_files = os.path.join(
