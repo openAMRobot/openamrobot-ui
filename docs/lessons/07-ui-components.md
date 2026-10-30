@@ -98,10 +98,13 @@ it's a client-side stream setting, not anything published to ROS.
 
 ## Joystick — `Joystick.jsx`
 
-Publishes to `AppConfig.CMD_VEL_TOPIC` (`/cmd_vel`) only — no subscriptions.
-While being dragged, it re-publishes the current stick position on a
-100&nbsp;ms interval (not just on movement events), and publishes one final
-zero-velocity message on release. The `maxSpeed` prop (passed in by the Map
+Sends manual velocity through `shared/motion/uiCommand.js`, the UI's only
+velocity publisher, which publishes `geometry_msgs/TwistStamped` on
+`AppConfig.UI_CMD_VEL_TOPIC` (`/ui/cmd_vel`). While being dragged, the current
+stick position is re-published at 20&nbsp;Hz, and one final zero-velocity
+message goes out on release. The stick is disabled, with the reason shown,
+while rosbridge is disconnected, the software stop lock is engaged or
+unknown, or the robot clock is not synced. The `maxSpeed` prop (passed in by the Map
 page's speed slider) scales `linear.x`; `angular.z` is always scaled by the
 fixed
 `AppConfig.MAX_ANGULAR_SPEED`, which isn't adjustable per instance.
@@ -121,10 +124,9 @@ Map page owns the actual `ROSLIB.Service` call to
 client is created once per page, not once per panel — the same service is
 also what the top-bar **Stop (software)** button
 ([`StatusBar.jsx`](06-the-pages.md#the-chrome-thats-on-every-page)) calls
-from outside this component entirely. Today this is a one-shot software stop
-that does not latch, not a safety-rated physical emergency stop;
-openamrobot-ui#50 replaces it with a latched Stop (software) with an explicit
-Resume and updates this text.
+from outside this component entirely. Stop (software) also engages the
+platform's software stop lock, which stays engaged until **Resume**; it is a
+latched functional stop, not a safety-rated physical emergency stop.
 
 ## RobotState — `RobotState.jsx`
 

@@ -7,6 +7,8 @@ import EventRecorder from "../components/EventRecorder";
 import SchedulerRunner from "../components/SchedulerRunner";
 import MissionRunner from "../components/MissionRunner";
 import StatusBar from "../components/StatusBar";
+import MotionStopBanner from "../components/MotionStopBanner";
+import MotionBridge from "../shared/motion/MotionBridge";
 import AuthModeBanner from "../components/AuthModeBanner";
 import DemoModeBanner from "../components/DemoModeBanner";
 import ReplayModeBanner from "../components/ReplayModeBanner";
@@ -36,6 +38,7 @@ const AppLayout = () => {
         Skip to main content
       </a>
       <Header showLogs={showLogs} onToggleLogs={() => setShowLogs(!showLogs)} />
+      <MotionBridge />
       <StatusBar />
       <NotificationsWatcher />
       <EventRecorder />
@@ -45,6 +48,7 @@ const AppLayout = () => {
         id="main-content"
         className="mx-auto min-h-0 w-full max-w-[1600px] flex-1 px-3 pb-4 sm:px-4 lg:px-6"
       >
+        <MotionStopBanner />
         <DemoModeBanner />
         <ReplayModeBanner />
         <AuthModeBanner />

@@ -4,10 +4,11 @@ This guide contains the detailed installation and launch procedures. For the
 shortest Demo Mode path, start with the [main README](../README.md).
 
 > [!CAUTION]
-> **Stop (software)** is today a one-shot software stop that does not latch,
-> not an emergency stop. It does not replace a tested physical emergency stop
-> on real hardware. When openamrobot-ui#50 merges, it is replaced by a
-> latched Stop (software) with an explicit Resume, and #50 updates these docs.
+> **Stop (software)** latches the platform's software stop lock until an
+> explicit **Resume**; while the lock is engaged or unknown, manual drive,
+> programs, missions and new navigation goals are disabled. It is a
+> functional stop, not an emergency stop, and does not replace a tested
+> physical emergency stop on real hardware.
 
 ## Contents
 

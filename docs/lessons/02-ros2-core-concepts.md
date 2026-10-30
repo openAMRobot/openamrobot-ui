@@ -38,8 +38,9 @@ about each other — they only agree on a topic **name** and a message
 **type**. That agreement is the whole contract (this idea is developed
 further in [Lesson 10](10-topics-as-the-contract.md)).
 
-Example: `/cmd_vel` carries velocity commands the UI publishes and the robot
-driver consumes. `/odom` carries robot pose/velocity the UI subscribes to and
+Example: `/ui/cmd_vel` carries the manual velocity commands the UI publishes;
+a platform relay checks them and passes them on, and the robot's final
+`/cmd_vel` comes from the platform, never from the UI. `/odom` carries robot pose/velocity the UI subscribes to and
 the robot stack publishes. Every topic name this frontend depends on is
 collected in one place:
 [`web/src/shared/constants/index.js`](../../web/src/shared/constants/index.js).
@@ -53,11 +54,12 @@ on). When the standard types aren't enough, this workspace defines its own in
 a dedicated message package:
 [`ros2/src/openamr_ui_msgs/msg/`](../../ros2/src/openamr_ui_msgs/msg/).
 
-Example: a `geometry_msgs/Twist` message (the type carried on `/cmd_vel`) has
-exactly two fields — `linear` and `angular` — each an `{x, y, z}` triple. The
-UI only ever sets `linear.x` (forward/backward speed) and `angular.z` (turn
-rate); the other four numbers stay zero. That's the entire "shape" of a drive
-command — nothing more is sent or expected on that topic.
+Example: a `geometry_msgs/TwistStamped` message (the type carried on
+`/ui/cmd_vel`) has a `header` with a time stamp and a `twist` with two
+fields, `linear` and `angular`, each an `{x, y, z}` triple. The UI only ever
+sets `linear.x` (forward/backward speed) and `angular.z` (turn rate); the
+other four numbers stay zero. The stamp lets the platform drop commands that
+arrive too late.
 
 ## Service
 
@@ -85,10 +87,9 @@ for the feedback/status side, and the cancel-goal service call in
 [`web/src/pages/MapPage.jsx`](../../web/src/pages/MapPage.jsx) (also called
 directly by the **Stop (software)** button in
 [`web/src/components/StatusBar.jsx`](../../web/src/components/StatusBar.jsx),
-visible on every page). That dashboard button is today a one-shot software
-stop that does not latch, not a physical or safety-rated emergency stop.
-openamrobot-ui#50 replaces it with a latched Stop (software) with an explicit
-Resume and updates this text.
+visible on every page). That button also engages the platform's software stop
+lock, a service call, which stays engaged until **Resume**. It is a latched
+functional stop, not a physical or safety-rated emergency stop.
 
 Concretely, that one navigation looks like three separate messages over
 time: a goal pose sent once ("go to x=2, y=1"), a stream of feedback
@@ -125,7 +126,7 @@ terminal. This workspace has a small, deliberate layering:
 
 ## Try it
 
-For `/cmd_vel`, identify the node that publishes, the topic name, and the
+For `/ui/cmd_vel`, identify the node that publishes, the topic name, and the
 message type. Then explain why cancelling navigation is better represented by
 a service or action operation than a continuous topic stream.
 

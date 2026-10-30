@@ -98,12 +98,15 @@ as a decision with real consequences, not just a networking convenience.
 
 ## A safety note: the dashboard stop is not a physical E-stop
 
-The red dashboard control publishes one zero `Twist` and asks Nav2 to cancel
-the active goal. It is useful for normal operator intervention, but it is not
-latched, safety-rated, or independent of WiFi, the browser, rosbridge, or the
-robot controller. Another publisher may also continue sending motion
-commands. Keep a tested physical emergency stop within reach and follow the
-platform's safety procedure for real hardware.
+The red **Stop (software)** control engages the platform's software stop
+lock, cancels the active navigation and docking goals, and aborts programs
+and missions. The lock is latched: the UI keeps manual drive, programs,
+missions and new navigation goals disabled while it is engaged or its state
+is unknown, and only **Resume** (with a confirmation) releases it. It is
+useful for normal operator intervention, but it is not safety-rated or
+independent of WiFi, the browser, rosbridge, or the robot controller. Keep a
+tested physical emergency stop within reach and follow the platform's safety
+procedure for real hardware.
 
 ## Try it
 

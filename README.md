@@ -101,15 +101,21 @@ ros2 launch openamr_ui_bringup ui.launch.py
 Before enabling motion:
 
 > [!CAUTION]
-> **Stop (software)** in the status bar is today a one-shot software stop
-> that does not latch: it sends one zero-velocity command and asks Nav2 to
-> cancel the active goal, and nothing stops a later command. It is not
-> safety-rated, and not independent of the browser, network, rosbridge, or
-> robot controller. It is not an emergency stop. Keep a tested physical
-> emergency stop within reach whenever you operate real hardware. When
-> [#50](https://github.com/openAMRobot/openamrobot-ui/pull/50) merges, it is
-> replaced by a latched Stop (software) with an explicit Resume, and #50
-> updates these docs.
+> **Stop (software)** in the status bar engages the platform's software stop
+> lock, cancels every active navigation and docking goal, and aborts running
+> programs and missions. The lock is latched: while it is engaged, or while
+> its state is unknown (for example when rosbridge is disconnected), manual
+> drive, programs, missions and new navigation goals are disabled, and a
+> "Stopped (software)" banner stays on screen. Only **Resume** in that banner
+> releases the lock, after a confirmation. Manual drive also stays disabled
+> while the robot clock is not synced. Until the platform provides the stop
+> lock (openamr-platform-sw#90), its state stays unknown and these controls
+> stay disabled.
+>
+> Stop (software) is a functional stop. It is not safety-rated, not
+> independent of the browser, network, rosbridge, or robot controller, and
+> not an emergency stop. Keep a tested physical emergency stop within reach
+> whenever you operate real hardware.
 
 1. Turn Demo Mode off.
 2. Confirm the correct robot connection profile.
