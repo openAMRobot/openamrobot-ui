@@ -8,6 +8,7 @@ ros2/log/
 
 web/node_modules/
 web/build/
+web/public/blockly-media/
 web/test-results/
 web/playwright-report/
 

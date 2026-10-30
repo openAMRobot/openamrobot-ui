@@ -16,23 +16,25 @@ const ROUTES = [path.join(SRC, "pages", "registry.js"), ...pluginIndexes].flatMa
   [...fs.readFileSync(file, "utf8").matchAll(/\bpath:\s*"([^"]+)"/g)].map((m) => m[1]),
 );
 
-// Blockly loads its sounds and sprites from this host by default. Serve the
-// same files from the installed blockly package so the test does not depend
-// on the internet.
-const BLOCKLY_MEDIA_HOST = "https://blockly-demo.appspot.com/static/media/";
-const BLOCKLY_MEDIA_DIR = path.join(__dirname, "..", "node_modules", "blockly", "media");
+// The app must work on a robot without internet: every request to a host
+// other than the local test server is blocked, and any attempt fails the
+// test.
+const LOCAL_ORIGIN = "http://127.0.0.1:4173";
 
-test.beforeEach(async ({ context }) => {
+test.beforeEach(async ({ context }, testInfo) => {
   await context.addInitScript(() => {
     window.localStorage.setItem(
       "openamrRuntimeConfig",
       JSON.stringify({ demoMode: true }),
     );
   });
-  await context.route(`${BLOCKLY_MEDIA_HOST}**`, (route) =>
-    route.fulfill({
-      path: path.join(BLOCKLY_MEDIA_DIR, path.basename(new URL(route.request().url()).pathname)),
-    }),
+  testInfo.externalRequests = [];
+  await context.route(
+    (url) => url.origin !== LOCAL_ORIGIN && url.protocol.startsWith("http"),
+    (route) => {
+      testInfo.externalRequests.push(route.request().url());
+      return route.abort("blockedbyclient");
+    },
   );
 });
 
@@ -42,8 +44,14 @@ test("the registry lists the pages", () => {
 });
 
 for (const route of ROUTES) {
-  test(`${route} renders in Demo Mode without console errors`, async ({ page }) => {
+  test(`${route} renders in Demo Mode without console errors`, async ({ page }, testInfo) => {
     const errors = [];
+    const blocklyMedia = [];
+    page.on("response", (response) => {
+      if (new URL(response.url()).pathname.startsWith("/blockly-media/")) {
+        blocklyMedia.push(`${response.status()} ${response.headers()["content-type"]}`);
+      }
+    });
     page.on("console", (message) => {
       if (message.type() === "error") errors.push(`console: ${message.text()}`);
     });
@@ -57,5 +65,15 @@ for (const route of ROUTES) {
     await page.waitForTimeout(1500);
 
     expect(errors).toEqual([]);
+    expect(testInfo.externalRequests).toEqual([]);
+    if (route === "/blocks") {
+      // Blockly's media is served by the app itself.
+      expect(blocklyMedia.length).toBeGreaterThan(0);
+      // A missing file would come back as the index.html fallback.
+      blocklyMedia.forEach((entry) => {
+        expect(entry).toMatch(/^200 /);
+        expect(entry).not.toMatch(/text\/html/);
+      });
+    }
   });
 }
