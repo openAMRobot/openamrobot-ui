@@ -81,8 +81,8 @@ ZX80 or on a robot.
   waypoint; a route succeeds only if every waypoint did. `nav_relays.py`
   repeats the AMCL pose only while the map to odom transform is younger
   than `pose_stale_after_s` (2.0 s).
-- To confirm: `waypoint_timeout_s` default 300 s (proposed); the 2.0 s
-  threshold against the platform's AMCL `transform_tolerance`.
+- `waypoint_timeout_s` 300 s and the 2.0 s pose threshold: accepted default
+  (30 Oct 2026).
 - Not done here: mission outcomes in the browser mission runner (left to the
   UI command path work).
 - Evidence: unit tests (pure and rclpy with a fake navigator).

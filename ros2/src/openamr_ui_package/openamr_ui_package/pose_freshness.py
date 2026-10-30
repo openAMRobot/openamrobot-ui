@@ -13,8 +13,8 @@ Imports nothing from ROS, so it is tested with plain ``python3 -m pytest``.
 # Seconds without a map to odom transform before the pose is stale.
 # Derived: twice Nav2 AMCL's default transform_tolerance (1.0 s), the time by
 # which AMCL post-dates each map to odom transform. A laser of 1 Hz or faster
-# refreshes the transform well inside this. Owner to confirm against the
-# platform's AMCL parameters; overridden by the pose_stale_after_s parameter.
+# refreshes the transform well inside this. Accepted default (30 Oct 2026);
+# overridden by the pose_stale_after_s parameter.
 DEFAULT_STALE_AFTER_S = 2.0
 
 
