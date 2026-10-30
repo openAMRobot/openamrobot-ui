@@ -35,8 +35,8 @@ export const DISPLAY = {
 };
 
 // Staleness thresholds, each from the producer's actual publish behaviour
-// (openamr-platform-sw main 131e500f, openamrobot-ui battery.py). The
-// multipliers are proposed defaults for Parth to confirm.
+// (openamr-platform-sw main 131e500f, openamrobot-ui battery.py). Accepted
+// defaults (owner decision, 30 Oct 2026).
 export const STALE_AFTER_MS = {
   // navigation_status_node: publishes on change, at least once per 2 Hz
   // heartbeat (0.5 s, +0.05 s check tolerance). Three heartbeats.
@@ -52,7 +52,7 @@ export const STALE_AFTER_MS = {
 };
 
 // Low battery for READY. Basis: S-01 initial battery policy "return at 25%
-// SOC", subject to commissioning. Proposed default, owner to confirm.
+// SOC", subject to commissioning. Accepted default (30 Oct 2026).
 export const BATTERY_LOW_PERCENT = 25;
 
 // NavigationStatus constants (openamr_nav_msgs, contract version 1).
@@ -139,7 +139,8 @@ export const initialReportingState = () => ({
   lock: { lastValue: null, lastSampleMs: null },
   nav: { msg: null, receivedAt: null, invalid: "" },
   battery: { percent: null, receivedAt: null, invalid: "" },
-  diagnostics: { statuses: {}, receivedAt: null },
+  // Valid /diagnostics entries by name, each with its own receive time.
+  diagnostics: { entries: {} },
   goal: null, // { id, stampS, status, distance0, distance, eta, recoveries }
   seenGoals: [],
   task: null, // { runId, kind, name, step, total, status, waitingOn }
@@ -292,6 +293,52 @@ const reduceTaskRun = (state, kind, run, name, logs) => {
   );
 };
 
+// diagnostic_msgs/DiagnosticStatus levels. rosbridge_suite 2.7.1 sends the
+// byte field as an integer.
+const DIAG_LEVELS = [0, 1, 2, 3]; // OK, WARN, ERROR, STALE
+
+/**
+ * Validate one /diagnostics message (owner decision, 30 Oct 2026). The
+ * envelope needs a status array; each entry needs a non-empty name and a
+ * level of exactly 0, 1, 2 or 3. Invalid entries are ignored and logged.
+ * Each valid entry is stored with its own receive time, so a message about
+ * one name never refreshes another; a message with no valid entries changes
+ * nothing and does not count as received.
+ */
+const reduceDiagnostics = (state, msg, nowMs, logs) => {
+  if (!msg || typeof msg !== "object" || !Array.isArray(msg.status)) {
+    logs.push({
+      type: "system",
+      severity: "warning",
+      message: "Reporting: /diagnostics message ignored (no status array)",
+    });
+    return state;
+  }
+  const entries = { ...state.diagnostics.entries };
+  let invalid = 0;
+  msg.status.forEach((s) => {
+    const name = typeof s?.name === "string" ? s.name.trim() : "";
+    const level = s?.level;
+    if (!name || !Number.isInteger(level) || !DIAG_LEVELS.includes(level)) {
+      invalid += 1;
+      return;
+    }
+    entries[name] = {
+      level,
+      message: typeof s.message === "string" ? s.message : "",
+      receivedAt: nowMs,
+    };
+  });
+  if (invalid) {
+    logs.push({
+      type: "system",
+      severity: "warning",
+      message: `Reporting: ${invalid} invalid /diagnostics ${invalid === 1 ? "entry" : "entries"} ignored (needs a name and level 0 to 3)`,
+    });
+  }
+  return { ...state, diagnostics: { entries } };
+};
+
 /**
  * Apply one source event. Events:
  *   { type: "connection", status }
@@ -341,16 +388,9 @@ export const reduceReporting = (state, event, nowMs) => {
       };
       break;
     }
-    case "diagnostics": {
-      const statuses = { ...state.diagnostics.statuses };
-      (Array.isArray(event.msg?.status) ? event.msg.status : []).forEach((s) => {
-        if (s && typeof s.name === "string") {
-          statuses[s.name] = { level: Number(s.level), message: s.message || "", at: nowMs };
-        }
-      });
-      next = { ...state, diagnostics: { statuses, receivedAt: nowMs } };
+    case "diagnostics":
+      next = reduceDiagnostics(state, event.msg, nowMs, logs);
       break;
-    }
     case "goalStatus":
       next = reduceGoalStatus(state, event.msg, logs);
       break;
@@ -430,10 +470,13 @@ export const deriveReport = (state, nowMs) => {
   const navFresh = Boolean(navMsg) && fresh(state.nav.receivedAt, STALE_AFTER_MS.navigationStatus, nowMs);
   const batteryFresh = state.battery.percent !== null && fresh(state.battery.receivedAt, STALE_AFTER_MS.battery, nowMs);
   const batteryLow = batteryFresh && state.battery.percent <= BATTERY_LOW_PERCENT;
-  const diagFresh = fresh(state.diagnostics.receivedAt, STALE_AFTER_MS.diagnostics, nowMs);
-  const diagEntries = Object.entries(state.diagnostics.statuses);
-  const diagErrors = diagEntries.filter(([, s]) => s.level === DIAG_LEVEL.ERROR || s.level === DIAG_LEVEL.STALE);
-  const diagWarns = diagEntries.filter(([, s]) => s.level === DIAG_LEVEL.WARN);
+  // Per-entry freshness: an entry older than the threshold drops out.
+  const diagAll = Object.entries(state.diagnostics.entries);
+  const diagEntries = diagAll.filter(([, e]) => fresh(e.receivedAt, STALE_AFTER_MS.diagnostics, nowMs));
+  const diagFresh = diagEntries.length > 0;
+  const diagErrors = diagEntries.filter(([, e]) => e.level === DIAG_LEVEL.ERROR);
+  const diagStaleLevel = diagEntries.filter(([, e]) => e.level === DIAG_LEVEL.STALE);
+  const diagWarns = diagEntries.filter(([, e]) => e.level === DIAG_LEVEL.WARN);
 
   const rows = [
     { label: "Connection", value: state.connection === "connected" ? "Connected" : "Disconnected", freshness: "" },
@@ -459,8 +502,14 @@ export const deriveReport = (state, nowMs) => {
     },
     {
       label: "Diagnostics",
-      value: diagEntries.length === 0 ? "Unknown" : diagErrors.length ? `${diagErrors.length} error(s)` : diagWarns.length ? `${diagWarns.length} warning(s)` : "OK",
-      freshness: freshness(state.diagnostics.receivedAt, STALE_AFTER_MS.diagnostics, nowMs, ""),
+      value: !diagFresh
+        ? "Unknown"
+        : diagErrors.length || diagStaleLevel.length
+          ? "Error"
+          : diagWarns.length
+            ? "Warning"
+            : "OK",
+      freshness: diagAll.length === 0 ? "No data" : diagFresh ? "Fresh" : "Stale",
     },
     { label: "Arms", value: "Not reported", freshness: "" },
     { label: "Lift", value: "Not reported", freshness: "" },
@@ -531,9 +580,9 @@ export const deriveReport = (state, nowMs) => {
   }
   const faultCode = all.find((c) => FAULT_REASONS.has(c));
   if (faultCode) return make(DISPLAY.FAULTED, reasonText(faultCode));
-  if (diagFresh && diagErrors.length) {
-    const [name, s] = diagErrors[0];
-    return make(DISPLAY.FAULTED, `Diagnostics error: ${name}${s.message ? `: ${s.message}` : ""}`);
+  if (diagErrors.length) {
+    const [name, e] = diagErrors[0];
+    return make(DISPLAY.FAULTED, `Diagnostics error: ${name}${e.message ? `: ${e.message}` : ""}`);
   }
 
   // NEEDS_ASSISTANCE
@@ -568,7 +617,8 @@ export const deriveReport = (state, nowMs) => {
   if (navMsg.navigation_readiness !== NAV.READY) {
     blocking.push(reasonText(notReady[0]) || "Navigation is not ready");
   }
-  if (!diagFresh) blocking.push(diagEntries.length ? "Diagnostics are stale" : "No diagnostics received");
+  if (!diagFresh) blocking.push(diagAll.length ? "Diagnostics are stale" : "No valid diagnostics received");
+  else if (diagStaleLevel.length) blocking.push(`Diagnostics report stale data: ${diagStaleLevel[0][0]}`);
   if (!batteryFresh) blocking.push(state.battery.receivedAt === null ? "No battery data" : "Battery data is stale or invalid");
   else if (batteryLow) blocking.push(`Battery low (${Math.round(state.battery.percent)}%)`);
   if (blocking.length) return make(DISPLAY.WAITING, blocking[0]);
