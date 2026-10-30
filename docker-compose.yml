@@ -13,9 +13,17 @@ services:
       OPENAMR_REBUILD_ON_START: ${OPENAMR_REBUILD_ON_START:-0}
       AUTH_MODE: ${AUTH_MODE:-open}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Maps go to their own volume so the platform container can mount the
+      # same volume at the same path and its map_server can load them.
+      OPENAMROBOT_MAPS_DIR: /data/maps
     volumes:
       - openamr_ui_data:/root/.openamr_ui
+      - openamrobot_maps:/data/maps
     restart: unless-stopped
 
 volumes:
   openamr_ui_data:
+  # Fixed name (not prefixed with this compose project) so the platform's
+  # compose file can declare it as external and mount it at /data/maps.
+  openamrobot_maps:
+    name: openamrobot_maps

@@ -94,6 +94,16 @@ ZX80 or on a robot.
   that directory on the `openamr_ui_data` volume.
 - Evidence: unit tests (pure and rclpy).
 
+### B13 `ui/shared-maps-volume` (branched from `ui/persistent-maps-routes`)
+
+- Maps go to `OPENAMROBOT_MAPS_DIR` (default: `maps` in the data
+  directory); routes stay in the data directory.
+- `docker-compose.yml` sets it to `/data/maps` on the named volume
+  `openamrobot_maps`.
+- Open, outside this repository: the platform compose must mount the same
+  `openamrobot_maps` volume at `/data/maps` (a platform-sw change).
+- Evidence: unit tests (pure and rclpy) and a compose file check.
+
 ### B9 `ui/ci`
 
 - CI gains a `ros` job (ros:jazzy container, colcon build and test, fails on

@@ -8,13 +8,20 @@ import os
 import shutil
 import sys
 
+import pytest
 import yaml
 
 PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(PACKAGE_DIR)))
 sys.path.insert(0, PACKAGE_DIR)
 
-from openamr_ui_package import data_dir  # noqa: E402
+from openamr_ui_package import data_dir  # noqa: E402, I100
+
+
+@pytest.fixture(autouse=True)
+def _no_maps_dir_override(monkeypatch):
+    """Hide any OPENAMROBOT_MAPS_DIR set by the caller from tests of the default."""
+    monkeypatch.delenv('OPENAMROBOT_MAPS_DIR', raising=False)
 
 
 def _install(share):
@@ -105,3 +112,44 @@ def test_compose_keeps_the_data_dir_on_a_named_volume():
     mounts = dict(v.split(':', 1) for v in volumes)
     assert mounts.get('openamr_ui_data') == '/root/.openamr_ui'
     assert 'openamr_ui_data' in compose['volumes']
+
+
+def test_maps_dir_defaults_to_the_data_dir_maps_folder():
+    assert data_dir.maps_dir('/d', environ={}) == os.path.join('/d', 'maps')
+    empty = {'OPENAMROBOT_MAPS_DIR': ''}
+    assert data_dir.maps_dir('/d', environ=empty) == os.path.join('/d', 'maps')
+
+
+def test_maps_are_seeded_and_saved_under_openamrobot_maps_dir(tmp_path):
+    share, data, maps = str(tmp_path / 'share'), str(tmp_path / 'data'), str(tmp_path / 'maps')
+    _install(share)
+    locations = data_dir.seed(share, data, environ={'OPENAMROBOT_MAPS_DIR': maps})
+    assert locations['maps'] == maps
+    assert os.path.isfile(os.path.join(maps, 'Welcome', 'Start.yaml'))
+    # Routes and the selection stay in the UI data directory.
+    assert locations['paths'] == os.path.join(data, 'paths')
+    assert os.path.isfile(os.path.join(data, 'paths', 'Welcome', 'Start', 'Building.csv'))
+    assert locations['current'] == os.path.join(data, 'current_map_route.yaml')
+    assert not os.path.exists(os.path.join(data, 'maps'))
+
+
+def test_selection_into_the_share_moves_to_openamrobot_maps_dir(tmp_path):
+    share, data, maps = str(tmp_path / 'share'), str(tmp_path / 'data'), str(tmp_path / 'maps')
+    _install(share)
+    with open(os.path.join(share, 'param', 'current_map_route.yaml'), 'w') as f:
+        yaml.safe_dump({'map_file': os.path.join(share, 'maps', 'Welcome', 'Start.yaml'),
+                        'route_file': ''}, f)
+    current = data_dir.seed(share, data, environ={'OPENAMROBOT_MAPS_DIR': maps})['current']
+    with open(current) as f:
+        assert yaml.safe_load(f)['map_file'] == os.path.join(maps, 'Welcome', 'Start.yaml')
+
+
+def test_compose_puts_maps_on_the_shared_openamrobot_maps_volume():
+    with open(os.path.join(REPO_ROOT, 'docker-compose.yml')) as f:
+        compose = yaml.safe_load(f)
+    service = compose['services']['openamr-ui']
+    mounts = dict(v.split(':', 1) for v in service['volumes'])
+    assert mounts['openamrobot_maps'] == '/data/maps'
+    assert service['environment']['OPENAMROBOT_MAPS_DIR'] == '/data/maps'
+    # A fixed volume name, so another compose project can mount the same one.
+    assert compose['volumes']['openamrobot_maps'] == {'name': 'openamrobot_maps'}
