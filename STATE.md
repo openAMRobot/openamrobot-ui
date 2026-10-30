@@ -89,9 +89,17 @@ ZX80 or on a robot.
 
 ### B8 `ui/persistent-maps-routes` (part of #37)
 
-- Maps, routes and `current_map_route.yaml` live in `~/.openamr_ui`, seeded
-  from the package without overwriting. `docker-compose.yml` already keeps
-  that directory on the `openamr_ui_data` volume.
+- Maps, routes and `current_map_route.yaml` live in `~/.openamr_ui`.
+  `docker-compose.yml` already keeps that directory on the `openamr_ui_data`
+  volume.
+- Seeding from the package runs once per data directory (`.seeded` marker),
+  so a deleted example stays deleted. Seeded files are published with
+  `os.link`, the selection file and marker with `O_CREAT | O_EXCL`; nothing
+  existing is ever overwritten.
+- Platform readability: maps reach the platform map saver and map server
+  through the `openamrobot_maps` volume at `/data/maps` (#53). The platform
+  mount is a platform-sw change (Kunal); save, list and load across a
+  container restart is a simulation check for Nikolai.
 - Evidence: unit tests (pure and rclpy).
 
 ### B9 `ui/ci`
