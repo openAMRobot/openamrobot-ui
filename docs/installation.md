@@ -4,8 +4,11 @@ This guide contains the detailed installation and launch procedures. For the
 shortest Demo Mode path, start with the [main README](../README.md).
 
 > [!CAUTION]
-> The dashboard's red **E-STOP** is a non-latched software stop. It does not
-> replace a tested physical emergency stop on real hardware.
+> **Stop (software)** latches the platform's software stop lock until an
+> explicit **Resume**; while the lock is engaged or unknown, manual drive,
+> programs, missions and new navigation goals are disabled. It is a
+> functional stop, not an emergency stop, and does not replace a tested
+> physical emergency stop on real hardware.
 
 ## Contents
 

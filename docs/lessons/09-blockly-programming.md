@@ -158,7 +158,7 @@ elsewhere in these lessons:
 | --- | --- |
 | **Program** | Structure — the required `start` block, `repeat`, and `log` for debugging. Doesn't move the robot by itself. |
 | **Navigation** | Nav2 goals — coordinate or named-location goals, waiting on navigation status, patrol loops. The same `/goal_pose` and navigation-status mechanics as the Map page ([Lesson 06](06-the-pages.md#map--mappagejsx)). |
-| **Motion** | Direct `/cmd_vel` commands — drive, rotate, stop, emergency stop. Unlike Navigation, these don't plan around obstacles. |
+| **Motion** | Direct velocity commands on `/ui/cmd_vel` (drive, rotate, stop, emergency stop), sent through the UI's single velocity publisher. Unlike Navigation, these don't plan around obstacles. A program cannot start, and stops, while the software stop lock is engaged or unknown. |
 | **Docking** | Publishes the same dock/undock trigger topics as the Map page's `DockingControl` panel ([Lesson 07](07-ui-components.md#dockingcontrol--dockingcontroljsx)). |
 | **Robot State** | Reads battery data or publishes a UI mode string — the only category that branches on robot state rather than just commanding the robot. |
 

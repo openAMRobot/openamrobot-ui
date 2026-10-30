@@ -98,10 +98,13 @@ it's a client-side stream setting, not anything published to ROS.
 
 ## Joystick — `Joystick.jsx`
 
-Publishes to `AppConfig.CMD_VEL_TOPIC` (`/cmd_vel`) only — no subscriptions.
-While being dragged, it re-publishes the current stick position on a
-100&nbsp;ms interval (not just on movement events), and publishes one final
-zero-velocity message on release. The `maxSpeed` prop (passed in by the Map
+Sends manual velocity through `shared/motion/uiCommand.js`, the UI's only
+velocity publisher, which publishes `geometry_msgs/TwistStamped` on
+`AppConfig.UI_CMD_VEL_TOPIC` (`/ui/cmd_vel`). While being dragged, the current
+stick position is re-published at 20&nbsp;Hz, and one final zero-velocity
+message goes out on release. The stick is disabled, with the reason shown,
+while rosbridge is disconnected, the software stop lock is engaged or
+unknown, or the robot clock is not synced. The `maxSpeed` prop (passed in by the Map
 page's speed slider) scales `linear.x`; `angular.z` is always scaled by the
 fixed
 `AppConfig.MAX_ANGULAR_SPEED`, which isn't adjustable per instance.
@@ -119,10 +122,11 @@ itself — it calls an `onCancelGoal` callback passed in as a prop, and the
 Map page owns the actual `ROSLIB.Service` call to
 `AppConfig.NAV_CANCEL_GOAL_SERVICE`. That split exists so the cancel-service
 client is created once per page, not once per panel — the same service is
-also what the Map page's top-bar E-STOP button
+also what the top-bar **Stop (software)** button
 ([`StatusBar.jsx`](06-the-pages.md#the-chrome-thats-on-every-page)) calls
-from outside this component entirely. This is a one-shot software intervention,
-not a latched or safety-rated physical emergency stop.
+from outside this component entirely. Stop (software) also engages the
+platform's software stop lock, which stays engaged until **Resume**; it is a
+latched functional stop, not a safety-rated physical emergency stop.
 
 ## RobotState — `RobotState.jsx`
 
@@ -280,7 +284,7 @@ console drawer's open/closed state (passed down to `Header` as props — see
 **Always-mounted alongside the active page.** `AppLayout` also renders a
 handful of components that have nothing to do with whichever page is
 currently showing, and stay mounted across every navigation instead of
-belonging to one page: `StatusBar` (battery + E-STOP, see
+belonging to one page: `StatusBar` (battery + Stop (software), see
 [Lesson 06](06-the-pages.md#the-chrome-thats-on-every-page)),
 `NotificationsWatcher` and `EventRecorder` (feed the browser-notification
 and [Events page](06-the-pages.md#events--eventspagejsx) logs respectively,
