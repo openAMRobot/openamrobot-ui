@@ -15,6 +15,7 @@ from ament_index_python.packages import (
     get_package_share_directory,
     PackageNotFoundError,
 )
+from openamr_ui_package import bag_processes
 from werkzeug.exceptions import HTTPException
 
 import xacro
@@ -109,6 +110,10 @@ BLOCK_RUN_HISTORY_FILE = os.path.join(
 RECORDING_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$")
 RECORDINGS_DIR = os.path.join(os.path.expanduser("~"), ".openamr_ui", "recordings")
 RECORDINGS_INDEX_FILE = os.path.join(RECORDINGS_DIR, "index.json")
+# pid, start time and command line of every ros2 bag process the UI starts,
+# so the next Flask start can stop leftovers safely; see bag_processes.py.
+BAG_PROCESSES_FILE = os.path.join(RECORDINGS_DIR, 'bag_processes.json')
+PROCESS_TABLE = bag_processes.ProcTable()
 TOPIC_NAME_RE = re.compile(r"^/[A-Za-z0-9_/]{1,255}$")
 
 # In-process only — this Flask server runs as a single Werkzeug process
@@ -895,6 +900,36 @@ def _replay_alive():
     return _replay["proc"] is not None and _replay["proc"].poll() is None
 
 
+def _forget_replay_process():
+    if _replay['proc'] is not None:
+        bag_processes.forget(BAG_PROCESSES_FILE, _replay['proc'].pid)
+
+
+def recover_bag_processes():
+    """Stop ros2 bag processes left by an earlier Flask run; mark recordings interrupted.
+
+    A process is terminated only when its pid, start time and command line
+    all match the live process, so a reused pid is never signalled.
+    """
+    reports = bag_processes.recover(BAG_PROCESSES_FILE, PROCESS_TABLE)
+    interrupted = {r['recording_id'] for r in reports if r.get('kind') == 'record'}
+    entries = read_recordings_index()
+    for entry in entries:
+        if entry.get('id') in interrupted and entry.get('status') != 'interrupted':
+            entry['status'] = 'interrupted'
+            entry['endedAt'] = entry.get('endedAt') or datetime.now(timezone.utc).isoformat()
+    if interrupted:
+        write_recordings_index(entries)
+    for report in reports:
+        outcome = 'terminated' if report['terminated'] else 'not running; left alone'
+        print(
+            f"[openamr_ui_package] leftover ros2 bag {report.get('kind')} "
+            f"pid {report.get('pid')} ({report.get('recording_id')}): {outcome}",
+            flush=True,
+        )
+    return reports
+
+
 def _finalize_recording(interrupted=False):
     """Common cleanup for a recording that has stopped, one way or another
     — clean Stop request, the subprocess exiting on its own (duration/size
@@ -908,6 +943,8 @@ def _finalize_recording(interrupted=False):
             entry["sizeBytes"] = dir_size_bytes(bag_path) if os.path.isdir(bag_path) else 0
             break
     write_recordings_index(entries)
+    if _recording['proc'] is not None:
+        bag_processes.forget(BAG_PROCESSES_FILE, _recording['proc'].pid)
     _recording.update({"proc": None, "id": None, "name": None, "started_at": None, "topics": None})
 
 
@@ -925,6 +962,7 @@ def recordings_status():
     if _recording["id"] and not _recording_alive():
         _finalize_recording()
     if _replay["id"] and not _replay_alive():
+        _forget_replay_process()
         _replay.update({"proc": None, "id": None, "started_at": None, "paused": False, "rate": 1.0})
 
     recording = None
@@ -974,6 +1012,7 @@ def start_recording():
     except FileNotFoundError:
         abort(500, "ros2 command not found on this backend — is the ROS environment sourced?")
 
+    bag_processes.remember(BAG_PROCESSES_FILE, PROCESS_TABLE, 'record', recording_id, proc.pid)
     started_at = datetime.now(timezone.utc).isoformat()
     _recording.update(
         {"proc": proc, "id": recording_id, "name": name, "started_at": started_at, "topics": topics}
@@ -1111,6 +1150,7 @@ def start_replay(recording_id):
     except FileNotFoundError:
         abort(500, "ros2 command not found on this backend — is the ROS environment sourced?")
 
+    bag_processes.remember(BAG_PROCESSES_FILE, PROCESS_TABLE, 'replay', recording_id, proc.pid)
     started_at = datetime.now(timezone.utc).isoformat()
     _replay.update(
         {"proc": proc, "id": recording_id, "started_at": started_at, "paused": False, "rate": rate}
@@ -1135,6 +1175,7 @@ def stop_replay():
         except subprocess.TimeoutExpired:
             _replay["proc"].kill()
 
+    _forget_replay_process()
     _replay.update({"proc": None, "id": None, "started_at": None, "paused": False, "rate": 1.0})
     return jsonify({"stopped": True})
 
@@ -1204,6 +1245,9 @@ SSL_KEY_FILE = os.environ.get(
 
 
 def main():
+    # Only the server entry point stops leftovers; importing this module
+    # (for example in tests) never signals a process.
+    recover_bag_processes()
     rclpy.init()
     node = ParamFlask()
 
