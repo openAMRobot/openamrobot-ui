@@ -6,6 +6,7 @@ policy test is test_replay_policy.py.
 
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
@@ -13,6 +14,21 @@ from unittest import mock
 DENIED = ['/cmd_vel', '/ui/cmd_vel', '/cmd_vel_nav', '/tf', '/tf_static', '/goal_pose',
           '/initialpose', '/safety/estop_state', '/navigate_to_pose/_action/status',
           '/map_server/load_map/_service_event']
+
+FAKE_PID = 4242
+FAKE_IDENTITY = (1000, ['/usr/bin/python3', '/opt/ros/jazzy/bin/ros2', 'bag', 'play'])
+# Taken before any test patches subprocess.Popen.
+REAL_POPEN = subprocess.Popen
+
+
+class FakeProcTable:
+    """Process identity reader for the fake bag process (#44 tracks it)."""
+
+    def identity(self, pid):
+        return FAKE_IDENTITY if pid == FAKE_PID else None
+
+    def terminate(self, pid, expected):
+        raise AssertionError('no leftover is stopped in these tests')
 
 
 class ReplayApiTest(unittest.TestCase):
@@ -24,12 +40,20 @@ class ReplayApiTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         recordings = os.path.join(self.tmp.name, 'recordings')
+        # #44 records every started bag process by pid, start time and
+        # command line, and stops one whose details cannot be read. The fake
+        # process below therefore has readable details, and the registry
+        # stays inside the test's temporary folder.
         for name, value in (('RECORDINGS_DIR', recordings),
-                            ('RECORDINGS_INDEX_FILE', os.path.join(recordings, 'index.json'))):
+                            ('RECORDINGS_INDEX_FILE', os.path.join(recordings, 'index.json')),
+                            ('BAG_PROCESSES_FILE', os.path.join(recordings, 'bag_processes.json')),
+                            ('PROCESS_TABLE', FakeProcTable())):
             patcher = mock.patch.object(flask_app, name, value)
             patcher.start()
             self.addCleanup(patcher.stop)
         self.popen = mock.MagicMock()
+        self.popen.return_value.pid = FAKE_PID
+        self.popen.return_value.poll.return_value = None
         patcher = mock.patch.object(flask_app.subprocess, 'Popen', self.popen)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -111,6 +135,30 @@ class ReplayApiTest(unittest.TestCase):
             response = self._start()
         self.assertEqual(response.status_code, 500)
         self.popen.assert_not_called()
+
+    def test_real_process_with_unreadable_details_is_stopped_and_returns_500(self):
+        # #44 is not weakened for replay: a real child whose /proc details
+        # cannot be read is stopped and reaped, and the request fails.
+        from openamr_ui_package import bag_processes
+
+        self._recording(['/ui/map'])
+        children = []
+
+        def spawn(_cmd, **kwargs):
+            child = REAL_POPEN(['sleep', '30'], **kwargs)
+            children.append(child)
+            return child
+        self.popen.side_effect = spawn
+        self.addCleanup(lambda: [c.kill() for c in children if c.poll() is None])
+        unreadable = bag_processes.ProcTable(proc_root=os.path.join(self.tmp.name, 'no_proc'))
+        with mock.patch.object(self.flask_app, 'PROCESS_TABLE', unreadable):
+            response = self._start()
+        self.assertEqual(response.status_code, 500)
+        self.assertIn('could not be read', response.get_json()['message'])
+        (child,) = children
+        self.assertIsNotNone(child.poll(), 'the bag child is still running')
+        self.assertIsNone(self.flask_app._replay['proc'])
+        self.assertEqual(bag_processes.read_state(self.flask_app.BAG_PROCESSES_FILE), [])
 
 
 if __name__ == '__main__':

@@ -73,10 +73,15 @@ ZX80 or on a robot.
   be read from /proc: `remember()` raises instead of writing nothing, and
   `track_or_stop()` stops and reaps the child, so no bag process runs
   untracked (review of #44).
-- Known: right after `Popen`, /proc can still show an empty command line
-  (between fork and exec). The recorded entry then never matches on restart,
-  so that leftover is not stopped; `test_real_process_is_matched_by_proc_and_stopped`
-  fails about 2 in 120 runs for this reason. Not changed here.
+- Right after `Popen`, /proc can still show an empty command line (between
+  fork and exec). `remember()` reads it again, up to 20 times 10 ms apart
+  (`IDENTITY_READ_ATTEMPTS`, `IDENTITY_READ_INTERVAL_S`), and treats a
+  command line still empty after that as unreadable, so a wrong identity is
+  never recorded.
+- This branch contains #43 (merged, not rebased) and merges after it. #43's
+  replay API tests give their fake bag process a readable pid, start time
+  and command line; a real replay process whose details cannot be read is
+  stopped and the request returns 500.
 - Evidence: unit tests (fake process table, real child processes, threads
   meeting at barriers).
 

@@ -31,6 +31,15 @@ def _between_read_and_write():
     """Run between reading and writing the registry; tests replace it."""
 
 
+# Right after Popen the child can still be between fork and exec, and
+# /proc/<pid>/cmdline then reads empty. remember() re-reads it until it is
+# non-empty, at most IDENTITY_READ_ATTEMPTS times, IDENTITY_READ_INTERVAL_S
+# apart (0.2 s in all). Basis: exec of ros2 completes within a few
+# milliseconds; 0.2 s bounds the delay added to a record or replay request.
+# A command line still empty after that is treated as unreadable.
+IDENTITY_READ_ATTEMPTS = 20
+IDENTITY_READ_INTERVAL_S = 0.01
+
 # Seconds to wait for a bag process to exit after SIGINT before SIGKILL.
 # Basis: flask_app.py already waits 10 s for ros2 bag after SIGINT.
 TERMINATE_TIMEOUT_S = 10.0
@@ -126,8 +135,14 @@ def remember(state_file, table, kind, recording_id, pid):
     read from /proc: a process with no registry entry would survive a Flask
     restart untracked.
     """
-    identity = table.identity(pid)
-    if identity is None:
+    identity = None
+    for attempt in range(IDENTITY_READ_ATTEMPTS):
+        if attempt:
+            time.sleep(IDENTITY_READ_INTERVAL_S)
+        identity = table.identity(pid)
+        if identity is None or identity[1]:
+            break
+    if identity is None or not identity[1]:
         raise UntrackedProcess(
             f'the start time and command line of pid {pid} could not be read')
     start_time, cmdline = identity

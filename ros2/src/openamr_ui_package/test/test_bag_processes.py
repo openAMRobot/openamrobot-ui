@@ -298,3 +298,52 @@ def test_readable_child_is_tracked_and_left_running(tmp_path):
 
     assert child.calls == []
     assert [e['pid'] for e in bag_processes.read_state(state_file)] == [4242]
+
+
+# Fork/exec race: right after Popen, /proc/<pid>/cmdline can read empty.
+# remember() re-reads it, a bounded number of times, before recording.
+
+class SlowExecTable(FakeTable):
+    """identity() shows an empty command line for the first `empty_reads` calls."""
+
+    def __init__(self, processes, empty_reads):
+        super().__init__(processes)
+        self.empty_reads = empty_reads
+        self.reads = 0
+
+    def identity(self, pid):
+        self.reads += 1
+        start_time, cmdline = self.processes[pid]
+        return (start_time, []) if self.reads <= self.empty_reads else (start_time, cmdline)
+
+
+def test_command_line_read_again_until_exec_has_finished(tmp_path, monkeypatch):
+    sleeps = []
+    monkeypatch.setattr(bag_processes.time, 'sleep', sleeps.append)
+    state_file = str(tmp_path / 'recordings' / 'bag_processes.json')
+    table = SlowExecTable({4242: (1000, RECORD_CMD)}, empty_reads=2)
+
+    bag_processes.remember(state_file, table, 'record', 'rec', 4242)
+
+    assert table.reads == 3
+    assert sleeps == [bag_processes.IDENTITY_READ_INTERVAL_S] * 2
+    (entry,) = bag_processes.read_state(state_file)
+    assert entry['cmdline'] == RECORD_CMD and entry['start_time'] == 1000
+
+
+def test_command_line_still_empty_after_the_bounded_wait_is_unreadable(tmp_path, monkeypatch):
+    sleeps = []
+    monkeypatch.setattr(bag_processes.time, 'sleep', sleeps.append)
+    state_file = str(tmp_path / 'recordings' / 'bag_processes.json')
+    table = SlowExecTable({4242: (1000, RECORD_CMD)}, empty_reads=10 ** 6)
+
+    try:
+        bag_processes.remember(state_file, table, 'record', 'rec', 4242)
+    except bag_processes.UntrackedProcess:
+        pass
+    else:
+        raise AssertionError('an empty command line was recorded')
+
+    assert table.reads == bag_processes.IDENTITY_READ_ATTEMPTS
+    assert len(sleeps) == bag_processes.IDENTITY_READ_ATTEMPTS - 1
+    assert bag_processes.read_state(state_file) == []
