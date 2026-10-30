@@ -1,0 +1,21 @@
+# Telemetry topics a recording replay may publish (openamrobot-ui#33).
+#
+# flask_app.py passes only these topics to `ros2 bag play --topics`. Command,
+# transform, goal, pose-reset, safety, action and service topics are refused
+# in replay_policy.py even if they are added here.
+#
+# Proposed default, owner to confirm: topics that only the UI or logging
+# reads. Sensor and odometry topics (/scan_filtered, /odom, /joint_states)
+# are left out because the navigation stack or robot_state_publisher reads
+# them on a live robot.
+replay_allowed_topics:
+  - /ui/map
+  - /ui/amcl_pose
+  - /ui/navigate_to_pose/status
+  - /ui/dock_robot/status
+  - /ui/undock_robot/status
+  - /plan
+  - /battery_status
+  - /ui_message
+  - /diagnostics
+  - /rosout
