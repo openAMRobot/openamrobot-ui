@@ -86,12 +86,14 @@ jobs:
 
       # openamrobot_description comes from openamr-platform-sw and is not in
       # rosdistro; the tests that need it skip when it is absent.
+      # ament_python is listed as a buildtool_depend in the package.xml files
+      # but is a build type, not a rosdep key.
       - name: Install dependencies
         run: |
           apt-get update
           rosdep update --rosdistro jazzy
           rosdep install --from-paths ros2/src --ignore-src -y --rosdistro jazzy \
-            --skip-keys openamrobot_description
+            --skip-keys "openamrobot_description ament_python"
 
       - name: Build
         working-directory: ros2
