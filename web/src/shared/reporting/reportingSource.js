@@ -18,7 +18,9 @@ export const REPORT_REFRESH_MS = 250;
  * ROS topics and browser-side run stores. It never publishes, advertises
  * or calls a service or action.
  */
-export const createReportingSource = ({ ros, ROSLIB = window.ROSLIB, now = monotonicNowMs }) => {
+// `wallNow` gives the wall-clock time shown for a latched diagnostics fault;
+// freshness always uses the monotonic `now`.
+export const createReportingSource = ({ ros, ROSLIB = window.ROSLIB, now = monotonicNowMs, wallNow = Date.now }) => {
   let state = initialReportingState();
   let view = deriveReport(state, now());
   const listeners = new Set();
@@ -30,7 +32,7 @@ export const createReportingSource = ({ ros, ROSLIB = window.ROSLIB, now = monot
   };
 
   const dispatch = (event) => {
-    const { state: next, logs } = reduceReporting(state, event, now());
+    const { state: next, logs } = reduceReporting(state, event, now(), wallNow());
     state = next;
     logs.forEach((entry) => addEvent(entry));
     emit();
