@@ -53,10 +53,10 @@ ZX80 or on a robot.
 ### B4 `ui/replay-policy` (part of #33)
 
 - Replay plays only the allowlist in `param/replay_topics.yaml` via
-  `--topics`, and refuses (HTTP 400) any request or recording containing
-  command, transform, goal, pose-reset, safety, action or service topics.
-- To confirm: the allowlist contents (proposed default). A recording made
-  with "Record all topics" can no longer be replayed.
+  `--topics`. Without a topic list it plays the recording's allowlisted
+  topics and lists the skipped ones; HTTP 400 only when a request names a
+  command, transform, goal, pose-reset, safety, action or service topic.
+- The allowlist is the accepted default (owner decision, 30 Oct).
 - Evidence: unit tests (pure and Flask test client).
 
 ### B5 `ui/bag-process-recovery`

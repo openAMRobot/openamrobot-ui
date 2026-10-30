@@ -23,7 +23,27 @@ DENIED_EXACT = {
 
 
 class ReplayPolicyError(ValueError):
-    """A replay request that must be refused, with the reason for the operator."""
+    """A replay that must be refused; ``status`` is the HTTP status to return."""
+
+    status = 409
+
+
+class DeniedTopicRequested(ReplayPolicyError):
+    """The request explicitly names a topic that replay never publishes."""
+
+    status = 400
+
+
+class MalformedTopics(ReplayPolicyError):
+    """The request's topics field is not a non-empty list of topic names."""
+
+    status = 422
+
+
+class BagUnreadable(ReplayPolicyError):
+    """The recording's topic list cannot be read, so it cannot be checked."""
+
+    status = 500
 
 
 def denied_reason(topic):
@@ -65,45 +85,48 @@ def read_bag_topics(bag_path):
         return [entry['topic_metadata']['name']
                 for entry in info.get('topics_with_message_count') or []]
     except (OSError, KeyError, TypeError, yaml.YAMLError) as error:
-        raise ReplayPolicyError(
+        raise BagUnreadable(
             'The recording topic list could not be read, so it cannot be checked '
             f'for command topics ({error.__class__.__name__}).') from error
 
 
 def select_topics(requested, bag_topics, allowlist):
-    """Return the topics to pass to ``ros2 bag play --topics``.
+    """Return (topics to pass to ``ros2 bag play --topics``, skipped topics).
 
     ``requested`` is the request's topic list or None. Without a request the
-    selection is every topic in the recording. Any denied topic in the
-    selection rejects the whole replay. Requested topics must all be on the
-    allowlist; from a whole recording, topics off the allowlist are skipped.
+    selection is every topic in the recording. Only a request that names a
+    denied topic is refused outright (DeniedTopicRequested, HTTP 400). Every
+    other topic that cannot be played (denied topics found in the recording,
+    topics off the allowlist, requested topics missing from the recording) is
+    skipped and reported with its reason. Nothing left to play is a
+    ReplayPolicyError (HTTP 409).
     """
     if requested is not None:
-        if not isinstance(requested, list) or not requested:
-            raise ReplayPolicyError('topics must be a non-empty list of topic names.')
-        if not all(isinstance(topic, str) for topic in requested):
-            raise ReplayPolicyError('topics must be a non-empty list of topic names.')
+        if (not isinstance(requested, list) or not requested
+                or not all(isinstance(topic, str) for topic in requested)):
+            raise MalformedTopics('topics must be a non-empty list of topic names.')
+        reasons = [r for r in (denied_reason(topic) for topic in requested) if r]
+        if reasons:
+            raise DeniedTopicRequested(
+                'The request names topics that replay never publishes: '
+                + '; '.join(reasons) + '.')
         selection = requested
     else:
         selection = bag_topics
 
-    reasons = [r for r in (denied_reason(topic) for topic in selection) if r]
-    if reasons:
-        source = 'The request' if requested is not None else 'This recording'
-        raise ReplayPolicyError(
-            f'{source} contains topics that replay never publishes: '
-            + '; '.join(reasons) + '.')
-
-    if requested is not None:
-        missing = [topic for topic in requested if topic not in allowlist]
-        if missing:
-            raise ReplayPolicyError(
-                'Not on the replay telemetry allowlist: ' + ', '.join(missing) + '.')
-        absent = [topic for topic in requested if topic not in bag_topics]
-        if absent:
-            raise ReplayPolicyError('Not in this recording: ' + ', '.join(absent) + '.')
-
-    topics = [topic for topic in selection if topic in allowlist]
+    topics, skipped = [], []
+    for topic in dict.fromkeys(selection):
+        reason = denied_reason(topic)
+        if reason:
+            skipped.append({'topic': topic, 'reason': f'denied: {reason}'})
+        elif topic not in allowlist:
+            skipped.append({'topic': topic, 'reason': 'not on the replay telemetry allowlist'})
+        elif topic not in bag_topics:
+            skipped.append({'topic': topic, 'reason': 'not in this recording'})
+        else:
+            topics.append(topic)
     if not topics:
-        raise ReplayPolicyError('This recording has no topics on the replay telemetry allowlist.')
-    return topics
+        raise ReplayPolicyError(
+            'Nothing to replay: no requested or recorded topic is on the replay '
+            'telemetry allowlist.')
+    return topics, skipped

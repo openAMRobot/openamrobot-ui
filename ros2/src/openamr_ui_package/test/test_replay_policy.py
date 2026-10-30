@@ -12,7 +12,7 @@ import pytest
 PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PACKAGE_DIR)
 
-from openamr_ui_package import replay_policy  # noqa: E402
+from openamr_ui_package import replay_policy  # noqa: E402, I100
 
 ALLOWLIST_FILE = os.path.join(PACKAGE_DIR, 'param', 'replay_topics.yaml')
 
@@ -58,43 +58,59 @@ def test_allowlist_naming_a_denied_topic_is_refused(tmp_path):
 
 
 @pytest.mark.parametrize('topic', DENIED)
-def test_request_with_a_denied_topic_is_rejected(topic):
-    with pytest.raises(replay_policy.ReplayPolicyError, match='never publishes'):
+def test_request_naming_a_denied_topic_is_a_400(topic):
+    with pytest.raises(replay_policy.DeniedTopicRequested, match='never publishes') as caught:
         replay_policy.select_topics(['/ui/map', topic], ['/ui/map', topic], [topic, '/ui/map'])
+    assert caught.value.status == 400
 
 
 @pytest.mark.parametrize('topic', DENIED)
-def test_recording_with_a_denied_topic_is_rejected(topic):
-    with pytest.raises(replay_policy.ReplayPolicyError, match='This recording'):
-        replay_policy.select_topics(None, ['/ui/map', topic], ['/ui/map'])
+def test_recording_with_a_denied_topic_plays_the_rest_and_reports_it(topic):
+    topics, skipped = replay_policy.select_topics(None, ['/ui/map', topic], ['/ui/map'])
+    assert topics == ['/ui/map']
+    assert [s['topic'] for s in skipped] == [topic]
+    assert skipped[0]['reason'].startswith('denied: ')
 
 
-def test_requested_topic_off_the_allowlist_is_rejected():
-    with pytest.raises(replay_policy.ReplayPolicyError, match='allowlist: /scan'):
-        replay_policy.select_topics(['/scan'], ['/scan'], ['/ui/map'])
-
-
-def test_only_allowlisted_topics_are_played_from_a_recording():
-    topics = replay_policy.select_topics(
-        None, ['/ui/map', '/scan_filtered', '/battery_status'], ['/ui/map', '/battery_status'])
+def test_without_a_topic_list_only_allowlisted_bag_topics_play():
+    topics, skipped = replay_policy.select_topics(
+        None, ['/ui/map', '/scan_filtered', '/cmd_vel', '/tf', '/battery_status'],
+        ['/ui/map', '/battery_status', '/plan'])
     assert topics == ['/ui/map', '/battery_status']
+    assert {s['topic']: s['reason'].split(':')[0] for s in skipped} == {
+        '/scan_filtered': 'not on the replay telemetry allowlist',
+        '/cmd_vel': 'denied',
+        '/tf': 'denied',
+    }
+
+
+def test_requested_topics_off_the_allowlist_or_missing_are_skipped():
+    topics, skipped = replay_policy.select_topics(
+        ['/ui/map', '/scan', '/plan'], ['/ui/map', '/scan'], ['/ui/map', '/plan'])
+    assert topics == ['/ui/map']
+    assert skipped == [
+        {'topic': '/scan', 'reason': 'not on the replay telemetry allowlist'},
+        {'topic': '/plan', 'reason': 'not in this recording'},
+    ]
 
 
 def test_requested_subset_is_played():
-    topics = replay_policy.select_topics(
+    topics, skipped = replay_policy.select_topics(
         ['/battery_status'], ['/ui/map', '/battery_status'], ['/ui/map', '/battery_status'])
-    assert topics == ['/battery_status']
+    assert (topics, skipped) == (['/battery_status'], [])
 
 
-def test_recording_without_allowlisted_topics_is_rejected():
-    with pytest.raises(replay_policy.ReplayPolicyError, match='no topics'):
-        replay_policy.select_topics(None, ['/scan_filtered'], ['/ui/map'])
+def test_nothing_left_to_play_is_a_409_not_a_400():
+    with pytest.raises(replay_policy.ReplayPolicyError, match='Nothing to replay') as caught:
+        replay_policy.select_topics(None, ['/scan_filtered', '/cmd_vel'], ['/ui/map'])
+    assert caught.value.status == 409
 
 
 @pytest.mark.parametrize('requested', [[], 'cmd', [1]])
-def test_malformed_request_is_rejected(requested):
-    with pytest.raises(replay_policy.ReplayPolicyError):
+def test_malformed_request_is_a_422(requested):
+    with pytest.raises(replay_policy.MalformedTopics) as caught:
         replay_policy.select_topics(requested, ['/ui/map'], ['/ui/map'])
+    assert caught.value.status == 422
 
 
 def test_bag_topics_are_read_from_metadata(tmp_path):
@@ -106,6 +122,7 @@ def test_bag_topics_are_read_from_metadata(tmp_path):
     assert replay_policy.read_bag_topics(str(tmp_path)) == ['/ui/map', '/cmd_vel']
 
 
-def test_unreadable_metadata_is_rejected(tmp_path):
-    with pytest.raises(replay_policy.ReplayPolicyError, match='could not be read'):
+def test_unreadable_metadata_is_refused(tmp_path):
+    with pytest.raises(replay_policy.BagUnreadable, match='could not be read') as caught:
         replay_policy.read_bag_topics(str(tmp_path))
+    assert caught.value.status == 500
