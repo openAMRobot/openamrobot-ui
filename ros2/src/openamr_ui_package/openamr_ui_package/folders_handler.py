@@ -13,6 +13,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped, PoseArray, Pose, PoseSt
 from nav2_msgs.srv import LoadMap, SaveMap
 from std_msgs.msg import String, Empty
 from openamr_ui_msgs.msg import ArrayPoseStampedWithCovariance
+from openamr_ui_package import data_dir
 from openamr_ui_package import map_files
 
 # Mapping and navigation belong to the platform. This node never launches
@@ -47,10 +48,13 @@ class UIFoldersHandler(Node):
         self.poseArray_publisher = self.create_publisher(ArrayPoseStampedWithCovariance, "/WayPoints_topic", 1)
         self.nav_data_pub = self.create_publisher(String, 'nav_data_resp', 1)
 
+        # Maps and routes live in the data directory next to recordings, not
+        # in the package share or source tree; see data_dir.py.
         package_share_dir = get_package_share_directory('openamr_ui_package')
-        self.maps_folder = os.path.join(package_share_dir, 'maps')
-        self.routs_folder = os.path.join(package_share_dir, 'paths')
-        self.current_files = os.path.join(package_share_dir, 'param/current_map_route.yaml')
+        locations = data_dir.seed(package_share_dir, data_dir.default_data_dir())
+        self.maps_folder = locations['maps']
+        self.routs_folder = locations['paths']
+        self.current_files = locations['current']
 
         try:
             with open(self.current_files, 'r') as file:
