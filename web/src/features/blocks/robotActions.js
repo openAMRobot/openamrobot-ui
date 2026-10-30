@@ -1,4 +1,5 @@
 import { AppConfig } from "../../shared/constants";
+import { navGoalBlockedReason } from "../../shared/motion/navGoalGate";
 import { holdVelocity, releaseVelocity } from "../../shared/motion/uiCommand";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -166,9 +167,13 @@ export const createRobotActionClient = (ros) => {
   const actionClient = {
     async runAction(action, options) {
       switch (action.type) {
-        case "navigate":
+        case "navigate": {
+          // No goal while the stop lock is engaged or unknown.
+          const blocked = navGoalBlockedReason();
+          if (blocked) throw new Error(`Navigation goal not sent: ${blocked}`);
           goalPoseTopic.publish(poseMessage(action));
           return;
+        }
         case "wait":
           await sleep(action.seconds * 1000);
           return;
@@ -220,12 +225,18 @@ export const createRobotActionClient = (ros) => {
             new window.ROSLIB.Message({ data: action.mode }),
           );
           return;
-        case "dock":
+        case "dock": {
+          const blocked = navGoalBlockedReason();
+          if (blocked) throw new Error(`Dock not started: ${blocked}`);
           dockTopic.publish(new window.ROSLIB.Message({ data: true }));
           return;
-        case "undock":
+        }
+        case "undock": {
+          const blocked = navGoalBlockedReason();
+          if (blocked) throw new Error(`Undock not started: ${blocked}`);
           undockTopic.publish(new window.ROSLIB.Message({ data: true }));
           return;
+        }
         case "stop":
           stopProgramMotion();
           return;

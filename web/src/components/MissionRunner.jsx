@@ -9,6 +9,7 @@ import { getMission } from "../shared/missions/missions";
 import { getRun, setRun, subscribeCommands } from "../shared/missions/missionRunner";
 import { subscribeAbort } from "../shared/motion/abortBus";
 import { getMotionGate } from "../shared/motion/motionGate";
+import { navGoalBlockedReason } from "../shared/motion/navGoalGate";
 import { LOCK_RELEASED } from "../shared/motion/stopLock";
 
 // Generous timeouts so a silent Nav2/dock stack can't hang a mission forever —
@@ -76,7 +77,9 @@ const MissionRunner = () => {
   const runNavStep = (pose) =>
     new Promise((resolve) => {
       const activeRos = rosRef.current;
-      if (!activeRos || !window.ROSLIB) {
+      // No goal or dock trigger while the stop lock is engaged or unknown
+      // (shared/motion/navGoalGate.js): the step fails instead.
+      if (!activeRos || !window.ROSLIB || navGoalBlockedReason()) {
         resolve(false);
         return;
       }
@@ -147,7 +150,9 @@ const MissionRunner = () => {
   const runDockStep = (undo) =>
     new Promise((resolve) => {
       const activeRos = rosRef.current;
-      if (!activeRos || !window.ROSLIB) {
+      // No goal or dock trigger while the stop lock is engaged or unknown
+      // (shared/motion/navGoalGate.js): the step fails instead.
+      if (!activeRos || !window.ROSLIB || navGoalBlockedReason()) {
         resolve(false);
         return;
       }

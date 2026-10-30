@@ -150,10 +150,13 @@ openamr-platform-sw#90, the source of the interfaces below (head
   Nikolai's simulation reruns S4, S6 and S7a pass.
 - To confirm (proposed defaults): 10 ms `/clock` throttle, 1 s stop lock
   staleness, 2 s retry for the relay parameter read.
-- Known gaps: the `dock_trigger.py` bundle docking sequence is not an
-  action and cannot be cancelled from the UI; map page navigation goals are
-  not blocked while locked; `web/src/features/blocks/README.md` still names
-  `/cmd_vel`.
+- While the lock is engaged or unknown, no Nav2 goal is sent from the map
+  page (goal, home, waypoints, queue, docking), missions, route planning or
+  programs; the reason is shown (`shared/motion/navGoalGate.js`).
+- Platform gap (openamr-platform-sw, owner Kunal): the `dock_trigger.py`
+  docking sequence is not an action and cannot be cancelled by the UI.
+- `.github/decisions.yaml` entries for the UI command topic and the stop
+  lock interface: needed, handled separately in openAMRobot/.github.
 - Evidence: unit and component tests (Jest, mocked ROSLIB), pure launch
   test. Not run in a browser, in simulation, on the Getac ZX80 or on a
   robot.

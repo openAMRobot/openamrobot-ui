@@ -20,6 +20,8 @@ import useSavedWaypoints from "../shared/hooks/useSavedWaypoints";
 import useKeepoutZones from "../shared/hooks/useKeepoutZones";
 import { softwareStop } from "../shared/motion/softwareStop";
 import { subscribeAbort } from "../shared/motion/abortBus";
+import { useMotionGate } from "../shared/motion/motionGate";
+import { navGoalBlockedReason } from "../shared/motion/navGoalGate";
 
 const INITIAL_POSE_COV = [
   0.25, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -40,6 +42,7 @@ const MapPage = () => {
   };
 
   const [maxSpeed, setMaxSpeed] = useState(config.maxLinearSpeed);
+  const goalBlockedReason = navGoalBlockedReason(useMotionGate());
 
   const [waypointQueue, setWaypointQueueState] = useState([]);
   const waypointQueueRef = useRef([]);
@@ -129,7 +132,11 @@ const MapPage = () => {
         const next = queueIdxRef.current + 1;
         if (next < waypointQueueRef.current.length) {
           queueIdxRef.current = next;
-          publishGoal(waypointQueueRef.current[next]);
+          if (!publishGoal(waypointQueueRef.current[next])) {
+            queueExecutingRef.current = false;
+            setQueueExecuting(false);
+            return;
+          }
           toast.info(
             `Waypoint ${next + 1} / ${waypointQueueRef.current.length}`,
           );
@@ -149,8 +156,16 @@ const MapPage = () => {
     return () => statusTopic.unsubscribe();
   }, [ros]);
 
+  // Every Nav2 goal from this page goes through here. While the stop lock is
+  // engaged or unknown no goal is sent (shared/motion/navGoalGate.js), so no
+  // goal can wait and run after Resume. Returns true when the goal was sent.
   const publishGoal = (pose) => {
-    if (!goalPoseTopic.current) return;
+    const blocked = navGoalBlockedReason();
+    if (blocked) {
+      toast.warn(`Goal not sent: ${blocked}`);
+      return false;
+    }
+    if (!goalPoseTopic.current) return false;
     goalPoseTopic.current.publish(
       new window.ROSLIB.Message({
         header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
@@ -166,14 +181,15 @@ const MapPage = () => {
       }),
     );
     window.NAV2D?.setGoalPose?.(pose);
+    return true;
   };
 
   const goToWaypoint = useCallback((wp) => {
-    publishGoal({
+    const sent = publishGoal({
       position: { x: wp.x, y: wp.y, z: 0 },
       orientation: { x: 0, y: 0, z: wp.z, w: wp.w },
     });
-    toast.success(`Navigating to "${wp.name}"`);
+    if (sent) toast.success(`Navigating to "${wp.name}"`);
   }, []);
 
   // The three map right-click context-menu actions (Map.jsx's onContext*
@@ -181,7 +197,7 @@ const MapPage = () => {
   // corresponding mode-button flow above, just without requiring a mode to
   // be active first or a heading drag (orientation defaults to identity).
   const sendGoalAt = (pose) => {
-    publishGoal(pose);
+    if (!publishGoal(pose)) return;
     toast.success(
       `Goal: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(2)}) m`,
     );
@@ -245,7 +261,7 @@ const MapPage = () => {
     window.NAV2D._poseCallback = (pose) => {
       const m = modeRef.current;
       if (m === "goal") {
-        publishGoal(pose);
+        if (!publishGoal(pose)) return;
         toast.success(
           `Goal: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(
             2,
@@ -346,25 +362,20 @@ const MapPage = () => {
   );
 
   const sendHome = useCallback(() => {
-    if (!goalPoseTopic.current) return;
-    goalPoseTopic.current.publish(
-      new window.ROSLIB.Message({
-        header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
-        pose: {
-          position: { x: 0, y: 0, z: 0 },
-          orientation: { x: 0, y: 0, z: 0, w: 1 },
-        },
-      }),
-    );
-    window.NAV2D?.setGoalPose?.({
+    const sent = publishGoal({
       position: { x: 0, y: 0, z: 0 },
       orientation: { x: 0, y: 0, z: 0, w: 1 },
     });
-    toast.info("Navigating to home position (0, 0) m");
+    if (sent) toast.info("Navigating to home position (0, 0) m");
   }, []);
 
   const executeQueue = useCallback(() => {
     if (!waypointQueueRef.current.length) return;
+    const blocked = navGoalBlockedReason();
+    if (blocked) {
+      toast.warn(`Queue not started: ${blocked}`);
+      return;
+    }
     queueIdxRef.current = 0;
     queueExecutingRef.current = true;
     setQueueExecuting(true);
@@ -388,12 +399,14 @@ const MapPage = () => {
     };
   }, []);
 
-  const modeBtn = (label, shortLabel, m, activeLabel, shortActiveLabel) => {
+  const modeBtn = (label, shortLabel, m, activeLabel, shortActiveLabel, disabledReason = "") => {
     const active = mode === m;
     return (
       <button
         onClick={() => (active ? deactivateMode() : activateMode(m))}
-        className={`flex-1 rounded-xl border px-2 py-3 font-[RobotoMono] text-[10px] font-semibold transition-colors sm:px-3 sm:text-sm ${
+        disabled={Boolean(disabledReason) && !active}
+        title={disabledReason || undefined}
+        className={`flex-1 disabled:cursor-not-allowed disabled:opacity-40 rounded-xl border px-2 py-3 font-[RobotoMono] text-[10px] font-semibold transition-colors sm:px-3 sm:text-sm ${
           active
             ? "border-themeBlue bg-themeBlue text-white"
             : "border-borderSubtle bg-bgCard text-themeBlue hover:border-themeBlue"
@@ -510,6 +523,7 @@ const MapPage = () => {
                 "goal",
                 "● Click to Send Goal",
                 "● Goal",
+                goalBlockedReason,
               )}
               {modeBtn(
                 "⊕ Correct Robot's Position",
@@ -527,12 +541,24 @@ const MapPage = () => {
               )}
               <button
                 onClick={sendHome}
-                className="flex-1 rounded-xl border border-borderSubtle bg-bgCard px-2 py-3 font-[RobotoMono] text-[10px] font-semibold text-textWhiteHover transition-colors hover:border-themeBlue hover:text-themeBlue sm:px-3 sm:text-sm"
+                disabled={Boolean(goalBlockedReason)}
+                title={goalBlockedReason || "Navigate to (0, 0)"}
+                className="flex-1 disabled:cursor-not-allowed disabled:opacity-40 rounded-xl border border-borderSubtle bg-bgCard px-2 py-3 font-[RobotoMono] text-[10px] font-semibold text-textWhiteHover transition-colors hover:border-themeBlue hover:text-themeBlue sm:px-3 sm:text-sm"
               >
                 <span className="sm:hidden">Home</span>
                 <span className="hidden sm:inline">⌂ Go Home</span>
               </button>
             </div>
+
+            {goalBlockedReason && (
+              <p
+                role="status"
+                data-testid="nav-goals-disabled"
+                className="px-1 font-[RobotoMono] text-xs leading-5 text-statusYellow"
+              >
+                Navigation goals are disabled: {goalBlockedReason}.
+              </p>
+            )}
 
             <p className="px-1 font-[RobotoMono] text-xs leading-5 text-themeTextGray">
               {mode === "goal" &&
@@ -585,7 +611,9 @@ const MapPage = () => {
                 ) : (
                   <button
                     onClick={executeQueue}
-                    className="w-full rounded-lg border border-themeBlue bg-themeBlue/10 py-1.5 text-xs font-semibold text-themeBlue transition-colors hover:bg-themeBlue hover:text-white"
+                    disabled={Boolean(goalBlockedReason)}
+                    title={goalBlockedReason || "Send the queued waypoints one by one"}
+                    className="w-full disabled:cursor-not-allowed disabled:opacity-40 rounded-lg border border-themeBlue bg-themeBlue/10 py-1.5 text-xs font-semibold text-themeBlue transition-colors hover:bg-themeBlue hover:text-white"
                   >
                     Execute Queue
                   </button>
