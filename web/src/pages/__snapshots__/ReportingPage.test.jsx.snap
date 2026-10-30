@@ -926,7 +926,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         data-testid="reporting-reason"
         style="font-size: 44px;"
       >
-        All reported checks pass
+        No blocking faults in current reported data
       </p>
       <p
         class="mt-4 text-white/90"

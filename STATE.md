@@ -205,6 +205,10 @@ Branched from A1 (`ui/gate-a-command-path`); merges after A1.
   name reports OK or WARN, or a new rosbridge connection starts (then
   WAITING until valid diagnostics arrive). The page shows FAULTED with the
   source name and the time of its last error.
+- READY reads "No blocking faults in current reported data" (or "Ready,
+  with reported warnings shown below"), not a claim that every check passes
+  (review of #54). Fault times use the panel clock, so the ZX80 keeps
+  "Automatic date and time" on (docs/reporting-mode.md, Panel setup).
 - Evidence: unit, component and browser (Playwright at 1920 x 1200 against
   a scripted rosbridge stand-in). Not run against simulation, on the panel
   or on a robot.
