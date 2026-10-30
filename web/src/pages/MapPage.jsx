@@ -22,6 +22,7 @@ import { softwareStop } from "../shared/motion/softwareStop";
 import { subscribeAbort } from "../shared/motion/abortBus";
 import { useMotionGate } from "../shared/motion/motionGate";
 import { navGoalBlockedReason } from "../shared/motion/navGoalGate";
+import { newUiRunId, setUiRun, updateUiRun } from "../shared/runs/uiRunStore";
 
 const INITIAL_POSE_COV = [
   0.25, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -132,9 +133,11 @@ const MapPage = () => {
         const next = queueIdxRef.current + 1;
         if (next < waypointQueueRef.current.length) {
           queueIdxRef.current = next;
+          updateUiRun("route", { step: next + 1 });
           if (!publishGoal(waypointQueueRef.current[next])) {
             queueExecutingRef.current = false;
             setQueueExecuting(false);
+            updateUiRun("route", { status: "stopped", reason: navGoalBlockedReason() });
             return;
           }
           toast.info(
@@ -144,11 +147,16 @@ const MapPage = () => {
           queueExecutingRef.current = false;
           setQueueExecuting(false);
           setWaypointQueue([]);
+          updateUiRun("route", { status: "succeeded", reason: "" });
           toast.success("All waypoints complete!");
         }
       } else if (latest.status === 5 || latest.status === 6) {
         queueExecutingRef.current = false;
         setQueueExecuting(false);
+        updateUiRun("route", {
+          status: latest.status === 5 ? "stopped" : "failed",
+          reason: latest.status === 5 ? "Goal was cancelled" : "Goal failed",
+        });
         toast.warn("Queue stopped: goal was canceled or failed");
       }
     });
@@ -357,6 +365,7 @@ const MapPage = () => {
         if (!queueExecutingRef.current) return;
         queueExecutingRef.current = false;
         setQueueExecuting(false);
+        updateUiRun("route", { status: "stopped", reason: "Stopped (software) or connection lost" });
       }),
     [],
   );
@@ -379,6 +388,16 @@ const MapPage = () => {
     queueIdxRef.current = 0;
     queueExecutingRef.current = true;
     setQueueExecuting(true);
+    // Reported to Reporting Mode as this tab's route run (shared/runs).
+    setUiRun("route", {
+      runId: newUiRunId("route"),
+      kind: "route",
+      name: "Waypoint queue",
+      step: 1,
+      total: waypointQueueRef.current.length,
+      status: "running",
+      reason: "",
+    });
     publishGoal(waypointQueueRef.current[0]);
     toast.info(`Executing ${waypointQueueRef.current.length} waypoints`);
   }, []);
@@ -386,6 +405,7 @@ const MapPage = () => {
   const stopQueue = useCallback(() => {
     queueExecutingRef.current = false;
     setQueueExecuting(false);
+    updateUiRun("route", { status: "stopped", reason: "Stopped by the operator" });
     cancelGoal();
   }, [cancelGoal]);
 
