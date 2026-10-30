@@ -15,6 +15,7 @@ from ament_index_python.packages import (
     get_package_share_directory,
     PackageNotFoundError,
 )
+from openamr_ui_package import voice_limits
 from werkzeug.exceptions import HTTPException
 
 import xacro
@@ -125,10 +126,10 @@ DEFAULT_BLOCK_LOCATIONS = {
     "Dropoff Point": {"x": 0, "y": 2, "yaw": 3.14},
 }
 
-# Mirrors web/src/shared/constants/index.js AppConfig so the model doesn't
-# propose speeds the UI's own plan validation will just reject.
-MAX_LINEAR_SPEED = 0.2
-MAX_ANGULAR_SPEED = 2
+# Plan limits (speeds, distance and duration per action). The backend is the
+# authority: /api/voice-plan rejects plans above them and the Blocks page
+# reads them from GET /api/limits. See voice_limits.py.
+PLAN_LIMITS_FILE = os.path.join(SHARE_DIR, 'param', 'voice_limits.yaml')
 
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_MODEL = "claude-sonnet-5"
@@ -291,7 +292,14 @@ ACTION_SCHEMA = {
 }
 
 
-def build_voice_plan_system_prompt(locations):
+def load_plan_limits():
+    try:
+        return voice_limits.load_limits(PLAN_LIMITS_FILE)
+    except (OSError, ValueError) as error:
+        abort(500, f'Plan limits are not available ({error}).')
+
+
+def build_voice_plan_system_prompt(locations, limits):
     location_names = ", ".join(sorted(locations.keys())) or "(none saved yet)"
     return (
         "You translate a spoken command for a mobile robot into a structured "
@@ -299,14 +307,17 @@ def build_voice_plan_system_prompt(locations):
         "types defined in the tool schema. Prefer navigate_named over navigate "
         "when the command refers to one of the known named locations: "
         f"{location_names}. Keep set_speed/drive_for linear speeds within "
-        f"+/-{MAX_LINEAR_SPEED} m/s and set_speed/rotate_for angular speeds "
-        f"within +/-{MAX_ANGULAR_SPEED} rad/s. If the command is ambiguous or "
+        f"+/-{limits['max_linear_speed_mps']} m/s and set_speed/rotate_for angular speeds "
+        f"within +/-{limits['max_angular_speed_radps']} rad/s, each wait/drive_for/"
+        f"rotate_for within {limits['max_duration_per_action_s']} s, and each "
+        'drive_for distance (speed x seconds) within '
+        f"{limits['max_distance_per_action_m']} m. If the command is ambiguous or "
         "unsafe, produce the closest reasonable safe interpretation rather than "
         "refusing. Do not add actions the command didn't ask for."
     )
 
 
-def call_anthropic_voice_plan(transcript, locations):
+def call_anthropic_voice_plan(transcript, locations, limits):
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         abort(500, "ANTHROPIC_API_KEY is not set on the server.")
@@ -314,7 +325,7 @@ def call_anthropic_voice_plan(transcript, locations):
     payload = {
         "model": ANTHROPIC_MODEL,
         "max_tokens": 2048,
-        "system": build_voice_plan_system_prompt(locations),
+        'system': build_voice_plan_system_prompt(locations, limits),
         "messages": [{"role": "user", "content": transcript}],
         "tools": [
             {
@@ -353,8 +364,8 @@ def call_anthropic_voice_plan(transcript, locations):
     abort(502, "Claude did not return a robot plan.")
 
 
-def generate_voice_plan_actions(transcript, locations):
-    return call_anthropic_voice_plan(transcript, locations)
+def generate_voice_plan_actions(transcript, locations, limits):
+    return call_anthropic_voice_plan(transcript, locations, limits)
 
 
 def sanitize_plan_actions(actions):
@@ -758,10 +769,27 @@ def create_voice_plan():
     if not isinstance(locations, dict):
         locations = {}
 
-    raw_actions = generate_voice_plan_actions(transcript, locations)
+    limits = load_plan_limits()
+    raw_actions = generate_voice_plan_actions(transcript, locations, limits)
     plan = sanitize_plan_actions(raw_actions)
 
+    # Reject, never clamp: a plan with a non-finite value or a value above a
+    # limit is returned to nobody.
+    errors = voice_limits.plan_errors(plan, limits)
+    if errors:
+        return jsonify({
+            'code': 422,
+            'message': 'The voice plan was rejected: ' + '; '.join(
+                f"step {e['path']} ({e['type']}): {', '.join(e['reasons'])}" for e in errors),
+            'errors': errors,
+        }), 422
+
     return jsonify({"plan": plan, "transcript": transcript})
+
+
+@app.route('/api/limits', methods=['GET'])
+def get_plan_limits():
+    return jsonify({'limits': load_plan_limits()})
 
 
 def robot_description_dir():
