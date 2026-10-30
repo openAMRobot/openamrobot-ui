@@ -168,17 +168,11 @@ Polls `get_state` every 3 seconds for each node in the `LIFECYCLE_NODES`
 list (`map_server`, `amcl`, `controller_server`, `planner_server`,
 `bt_navigator` — shown in the UI as "Map data", "Position tracking",
 "Driving control", "Path planning", and "Navigation logic" respectively,
-with the raw node name available as a hover tooltip), and separately builds
-a `change_state` service client per node for the four action buttons
-(labeled "Prepare"/"Start"/"Pause"/"Reset" in the UI). The buttons call
-`change_state` on *all five* nodes at once with a fixed transition ID
-(`configure=1`, `cleanup=2`, `activate=3`, `deactivate=4` — the real
-`lifecycle_msgs` transition IDs) and don't wait for or react to the
-individual responses — the displayed state only updates on the next
-3-second poll, so there's a brief delay between clicking a button and
-seeing the result. Because Pause/Reset can stop navigation outright, those
-two ask for a `window.confirm()` before firing; Prepare/Start don't, since
-they're constructive. A "?" toggle in both the compact and full views shows
+with the raw node name available as a hover tooltip). The panel is read
+only: it creates `get_state` clients and no `change_state` client, and has
+no buttons that change a node's state. The platform's lifecycle manager
+configures and activates these nodes; calling `change_state` from the UI
+would bypass it. A "?" toggle in both the compact and full views shows
 a plain-language legend for what each state (`active`/`inactive`/
 `unconfigured`/`unknown`) means.
 
