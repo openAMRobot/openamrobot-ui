@@ -108,8 +108,13 @@ ZX80 or on a robot.
   directory); routes stay in the data directory.
 - `docker-compose.yml` sets it to `/data/maps` on the named volume
   `openamrobot_maps`.
+- One-time, non-destructive migration: when `OPENAMROBOT_MAPS_DIR` differs
+  from the data directory's `maps` folder and that folder has maps, they are
+  copied (never moved or deleted; collisions skipped and logged), the
+  selection is repointed when its map was copied, and `.maps_migrated` is
+  written.
 - Open, outside this repository: the platform compose must mount the same
-  `openamrobot_maps` volume at `/data/maps` (a platform-sw change).
+  `openamrobot_maps` volume at `/data/maps` (a pending platform-sw change).
 - Evidence: unit tests (pure and rclpy) and a compose file check.
 
 ### B9 `ui/ci`

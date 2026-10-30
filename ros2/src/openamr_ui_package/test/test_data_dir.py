@@ -250,3 +250,152 @@ def test_concurrent_first_starts_leave_every_file_intact(tmp_path, monkeypatch):
     assert leftovers == []
     assert os.path.isfile(os.path.join(data, data_dir.SEEDED_MARKER))
 
+
+# Upgrade from the default maps folder to OPENAMROBOT_MAPS_DIR (#53).
+
+def _upgrade_fixture(tmp_path):
+    """Return (share, data, new maps dir, old maps dir, snapshot of the old folder).
+
+    An installation seeded with the default paths, with a user map Lab/Floor
+    (legacy _ros.yaml too) that is selected, a map Lab/Abs whose image path is
+    absolute, and a map Lab/Clash whose name already exists in the new folder.
+    """
+    share, data = str(tmp_path / 'share'), str(tmp_path / 'data')
+    new = str(tmp_path / 'volume' / 'maps')
+    _install(share)
+    data_dir.seed(share, data, environ={})
+    old = os.path.join(data, 'maps')
+    lab = os.path.join(old, 'Lab')
+    os.makedirs(lab)
+    for name, image in (('Floor', 'Floor.png'), ('Abs', os.path.join(lab, 'Abs.png')),
+                        ('Clash', 'Clash.png')):
+        with open(os.path.join(lab, f'{name}.yaml'), 'w') as f:
+            f.write(f'image: {image}\nresolution: 0.05\n')
+        with open(os.path.join(lab, f'{name}.png'), 'wb') as f:
+            f.write(f'{name} old'.encode())
+    with open(os.path.join(lab, 'Floor_ros.yaml'), 'w') as f:
+        f.write('map_server:\n  ros__parameters:\n    yaml_filename: Floor.yaml\n')
+    os.makedirs(os.path.join(new, 'Lab'))
+    with open(os.path.join(new, 'Lab', 'Clash.yaml'), 'w') as f:
+        f.write('image: Clash.png\nresolution: 0.1\n')
+    with open(os.path.join(data, 'current_map_route.yaml'), 'w') as f:
+        yaml.safe_dump({'map_file': os.path.join(lab, 'Floor.yaml'), 'route_file': ''}, f)
+    return share, data, new, old, _tree(old)
+
+
+def _start(share, data, new):
+    return data_dir.seed(share, data, environ={'OPENAMROBOT_MAPS_DIR': new})
+
+
+def test_upgrade_copies_user_maps_and_repoints_the_selection(tmp_path):
+    share, data, new, old, before = _upgrade_fixture(tmp_path)
+    _start(share, data, new)
+    for name in ('Floor.yaml', 'Floor.png', 'Floor_ros.yaml'):
+        with open(os.path.join(old, 'Lab', name), 'rb') as a, \
+                open(os.path.join(new, 'Lab', name), 'rb') as b:
+            assert a.read() == b.read(), name
+    assert os.path.isfile(os.path.join(new, 'Welcome', 'Start.yaml'))
+    with open(os.path.join(data, 'current_map_route.yaml')) as f:
+        assert yaml.safe_load(f)['map_file'] == os.path.join(new, 'Lab', 'Floor.yaml')
+    assert _tree(old) == before  # The old folder is a backup, never changed.
+    assert os.path.isfile(os.path.join(new, data_dir.MIGRATED_MARKER))
+
+
+def test_absolute_image_path_is_rewritten_in_the_copy_only(tmp_path):
+    share, data, new, old, before = _upgrade_fixture(tmp_path)
+    _start(share, data, new)
+    with open(os.path.join(new, 'Lab', 'Abs.yaml')) as f:
+        assert yaml.safe_load(f)['image'] == os.path.join(new, 'Lab', 'Abs.png')
+    with open(os.path.join(old, 'Lab', 'Abs.yaml')) as f:
+        assert yaml.safe_load(f)['image'] == os.path.join(old, 'Lab', 'Abs.png')
+    assert os.path.isfile(os.path.join(new, 'Lab', 'Abs.png'))
+
+
+def test_colliding_map_is_skipped_logged_and_both_copies_kept(tmp_path, caplog):
+    share, data, new, old, before = _upgrade_fixture(tmp_path)
+    with caplog.at_level('WARNING'):
+        _start(share, data, new)
+    with open(os.path.join(new, 'Lab', 'Clash.yaml')) as f:
+        assert f.read() == 'image: Clash.png\nresolution: 0.1\n'
+    assert not os.path.exists(os.path.join(new, 'Lab', 'Clash.png'))
+    assert _tree(old) == before
+    assert any('Lab/Clash not migrated' in r.getMessage() for r in caplog.records)
+    assert os.path.isfile(os.path.join(new, 'Lab', 'Floor.yaml'))
+
+
+def test_selection_of_a_skipped_map_is_left_unchanged_and_logged(tmp_path, caplog):
+    share, data, new, old, before = _upgrade_fixture(tmp_path)
+    selected = os.path.join(old, 'Lab', 'Clash.yaml')
+    with open(os.path.join(data, 'current_map_route.yaml'), 'w') as f:
+        yaml.safe_dump({'map_file': selected, 'route_file': ''}, f)
+    with caplog.at_level('WARNING'):
+        _start(share, data, new)
+    with open(os.path.join(data, 'current_map_route.yaml')) as f:
+        assert yaml.safe_load(f)['map_file'] == selected
+    assert any('Selected map' in r.getMessage() and 'left as is' in r.getMessage()
+               for r in caplog.records)
+
+
+def test_second_start_does_not_migrate_again(tmp_path):
+    share, data, new, old, before = _upgrade_fixture(tmp_path)
+    _start(share, data, new)
+    floor = os.path.join(new, 'Lab', 'Floor.yaml')
+    assert os.path.isfile(floor)
+    os.remove(floor)  # The user deletes the migrated copy.
+    _start(share, data, new)
+    assert not os.path.exists(floor)
+    with open(os.path.join(data, 'current_map_route.yaml')) as f:
+        assert yaml.safe_load(f)['map_file'] == floor
+
+
+def test_concurrent_first_starts_migrate_safely(tmp_path, monkeypatch):
+    import threading
+
+    share, data, new, old, before = _upgrade_fixture(tmp_path)
+    real_copyfile = shutil.copyfile
+    a_paused, b_done = threading.Event(), threading.Event()
+
+    def copy_then_crash_in_a(src, dst):
+        # Node A writes half of the Floor image, waits until node B has run a
+        # whole first start, then dies, as a process killed mid-copy.
+        if (threading.current_thread().name == 'A' and src.endswith('Floor.png')
+                and not a_paused.is_set()):
+            with open(src, 'rb') as f:
+                content = f.read()
+            with open(dst, 'wb') as f:
+                f.write(content[:len(content) // 2])
+            a_paused.set()
+            assert b_done.wait(timeout=5)
+            raise OSError('node A was killed')
+        return real_copyfile(src, dst)
+    monkeypatch.setattr(shutil, 'copyfile', copy_then_crash_in_a)
+    errors = []
+
+    def node_a():
+        try:
+            _start(share, data, new)
+        except OSError as error:
+            errors.append(str(error))
+
+    def node_b():
+        assert a_paused.wait(timeout=5)
+        _start(share, data, new)
+        b_done.set()
+    threads = [threading.Thread(target=node_a, name='A'),
+               threading.Thread(target=node_b, name='B')]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert errors == ['node A was killed']
+    for name in ('Floor.yaml', 'Floor.png', 'Floor_ros.yaml'):
+        with open(os.path.join(old, 'Lab', name), 'rb') as a, \
+                open(os.path.join(new, 'Lab', name), 'rb') as b:
+            assert a.read() == b.read(), name
+    leftovers = [n for _d, _s, files in os.walk(str(tmp_path)) for n in files
+                 if n.endswith('.tmp')]
+    assert leftovers == []
+    with open(os.path.join(data, 'current_map_route.yaml')) as f:
+        assert yaml.safe_load(f)['map_file'] == os.path.join(new, 'Lab', 'Floor.yaml')
+    assert _tree(old) == before

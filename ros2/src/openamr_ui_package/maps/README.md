@@ -8,9 +8,16 @@ reinstalling the package keeps saved maps.
 
 The maps directory is `OPENAMROBOT_MAPS_DIR` if that environment variable is
 set, otherwise `~/.openamr_ui/maps/`. Docker Compose sets it to `/data/maps`
-on the `openamrobot_maps` volume, which the platform container mounts at the
-same path so its map_server can load the maps the UI saves. Routes stay in
+on the `openamrobot_maps` volume. For the platform map_server to load the
+maps the UI saves, the platform must mount the same `openamrobot_maps` volume
+at `/data/maps`; that is a pending platform-sw change. Routes stay in
 `~/.openamr_ui/paths/`.
+
+When `OPENAMROBOT_MAPS_DIR` is first set on an installation whose
+`~/.openamr_ui/maps/` already has maps, the UI copies those maps into it once
+(marker `.maps_migrated`). Nothing is moved or deleted: the old folder stays
+as a backup. A map whose name already exists in the new folder is skipped and
+logged, and both copies are kept.
 
 The main Nav2 map server belongs to the robot or simulation workspace. This UI
 workspace can store and manage map files, but it should not start a second map
