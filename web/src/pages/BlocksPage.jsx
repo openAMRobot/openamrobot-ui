@@ -58,7 +58,7 @@ import {
   fetchBlockRunHistory,
   saveBlockRunHistory,
 } from "../features/blocks/backendRunHistory";
-import { AppConfig } from "../shared/constants";
+import { fetchPlanLimits } from "../features/blocks/backendLimits";
 import { StatusBadge } from "../shared/ui/Dashboard";
 
 export const BLOCKLY_MEDIA_PATH = `${process.env.PUBLIC_URL || ""}/blockly-media/`;
@@ -214,6 +214,10 @@ const BlocksPage = () => {
   const activeRecognizerRef = useRef(null);
 
   const [plan, setPlan] = useState([]);
+  // Backend-owned plan limits (GET /api/limits). null until loaded; the plan
+  // cannot run without them.
+  const [planLimits, setPlanLimits] = useState(null);
+  const planLimitsRef = useRef(null);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [voiceBusy, setVoiceBusy] = useState(false);
@@ -284,7 +288,9 @@ const BlocksPage = () => {
   const updatePlanFromWorkspace = useCallback((workspace) => {
     const nextPlan = workspaceToRobotPlan(workspace);
     setPlan(nextPlan);
-    setValidationMessages(validateRobotPlan(workspace, nextPlan));
+    setValidationMessages(
+      validateRobotPlan(workspace, nextPlan, planLimitsRef.current),
+    );
     setStepStatuses(initialStepStatuses(nextPlan.length));
     return nextPlan;
   }, []);
@@ -356,12 +362,22 @@ const BlocksPage = () => {
     refreshSavedPrograms();
     refreshLocations();
     refreshRunHistory();
+    let unmounted = false;
+    fetchPlanLimits()
+      .then((limits) => {
+        if (unmounted) return;
+        planLimitsRef.current = limits;
+        setPlanLimits(limits);
+        updatePlan();
+      })
+      .catch((err) => !unmounted && toast.error(err.message));
 
     const resize = () => Blockly.svgResize(workspace);
     window.addEventListener("resize", resize);
     setTimeout(resize, 0);
 
     return () => {
+      unmounted = true;
       window.removeEventListener("resize", resize);
       workspace.dispose();
       workspaceRef.current = null;
@@ -1143,8 +1159,9 @@ const BlocksPage = () => {
             </summary>
             <div className="mb-2 mt-2 flex justify-end">
               <span className="font-[RobotoMono] text-xs text-themeTextGray">
-                max {AppConfig.MAX_LINEAR_SPEED} m/s,{" "}
-                {AppConfig.MAX_ANGULAR_SPEED} rad/s
+                {planLimits
+                  ? `max ${planLimits.max_linear_speed_mps} m/s, ${planLimits.max_angular_speed_radps} rad/s, ${planLimits.max_distance_per_action_m} m and ${planLimits.max_duration_per_action_s} s per action`
+                  : "limits not loaded"}
               </span>
             </div>
 
