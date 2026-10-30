@@ -375,10 +375,10 @@ debugging, demos, and dataset collection.
 - Replayed telemetry is always clearly labeled as a replay, never presented
   as if it were a live robot.
 - Replay publishes only the telemetry topics on the allowlist in
-  `param/replay_topics.yaml`. A recording that contains a velocity command,
-  `/tf`, `/tf_static`, goal, initial pose, safety, action or service topic is
-  refused before playback starts, so replay does not publish command or
-  transform topics. This is a UI check, not safety evidence. See
+  `param/replay_topics.yaml`; velocity command, `/tf`, `/tf_static`, goal,
+  initial pose, safety, action and service topics in a recording are
+  skipped and listed, and a request that names one is refused before
+  playback starts. This is a UI check, not safety evidence. See
   [Recording replay policy](../../README.md#recording-replay-policy).
 
 ## Events — `EventsPage.jsx`

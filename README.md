@@ -292,12 +292,16 @@ rebuilding or reinstalling the package keeps saved maps and routes.
 
 Replay publishes only the telemetry topics listed in
 `ros2/src/openamr_ui_package/param/replay_topics.yaml`; the backend passes
-exactly those to `ros2 bag play --topics`. Before any process starts, it
-refuses (HTTP 400, with the reason) a replay request or a recording that
-contains `/cmd_vel`, `/ui/cmd_vel`, any `cmd_vel*` topic, `/tf`,
-`/tf_static`, `/goal_pose`, `/initialpose`, `/safety/*`, or an action or
-service topic. A recording made with "Record all topics" therefore cannot be
-replayed; record the telemetry topics you want to replay instead.
+exactly those to `ros2 bag play --topics`. `/cmd_vel`, `/ui/cmd_vel`, any
+`cmd_vel*` topic, `/tf`, `/tf_static`, `/goal_pose`, `/initialpose`,
+`/safety/*` and action or service topics are never played.
+
+- Without a topic list, a replay plays the recording's topics that are on
+  the allowlist and lists every other topic as skipped, with the reason. A
+  recording made with "Record all topics" therefore replays its telemetry
+  only.
+- A request that names one of the never-played topics is refused (HTTP
+  400, with the reason) before any process starts.
 
 Browser-local data doesn't automatically move to another browser or computer.
 Back it up before reinstalling, clearing browser storage, or removing Docker
