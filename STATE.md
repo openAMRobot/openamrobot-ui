@@ -153,6 +153,10 @@ openamr-platform-sw#90, the source of the interfaces below (head
 - While the lock is engaged or unknown, no Nav2 goal is sent from the map
   page (goal, home, waypoints, queue, docking), missions, route planning or
   programs; the reason is shown (`shared/motion/navGoalGate.js`).
+- README and docs/ describe the latched Stop (software), the explicit
+  Resume and the disabled controls (`web/src/shared/motion/stopDocs.test.js`).
+  Draft #49 describes the earlier one-shot stop; where both change the same
+  lines, keep this PR's text.
 - Platform gap (openamr-platform-sw, owner Kunal): the `dock_trigger.py`
   docking sequence is not an action and cannot be cancelled by the UI.
 - `.github/decisions.yaml` entries for the UI command topic and the stop
