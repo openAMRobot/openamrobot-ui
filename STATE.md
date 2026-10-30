@@ -69,6 +69,14 @@ ZX80 or on a robot.
   goes through a unique temporary file, fsync and os.replace. If the
   registry write fails after a bag process starts, that process is stopped
   and reaped and the request returns 500.
+- The same happens when the new process's start time and command line cannot
+  be read from /proc: `remember()` raises instead of writing nothing, and
+  `track_or_stop()` stops and reaps the child, so no bag process runs
+  untracked (review of #44).
+- Known: right after `Popen`, /proc can still show an empty command line
+  (between fork and exec). The recorded entry then never matches on restart,
+  so that leftover is not stopped; `test_real_process_is_matched_by_proc_and_stopped`
+  fails about 2 in 120 runs for this reason. Not changed here.
 - Evidence: unit tests (fake process table, real child processes, threads
   meeting at barriers).
 

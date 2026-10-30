@@ -16,6 +16,7 @@ import fcntl
 import json
 import os
 import signal
+import subprocess
 import tempfile
 import threading
 import time
@@ -114,11 +115,21 @@ def write_state(state_file, entries):
         raise
 
 
+class UntrackedProcess(RuntimeError):
+    """A started bag process could not be recorded in the registry."""
+
+
 def remember(state_file, table, kind, recording_id, pid):
-    """Record a bag process the UI has just started; raise if it cannot be saved."""
+    """Record a bag process the UI has just started.
+
+    Raises when it cannot be recorded, including when its identity cannot be
+    read from /proc: a process with no registry entry would survive a Flask
+    restart untracked.
+    """
     identity = table.identity(pid)
     if identity is None:
-        return
+        raise UntrackedProcess(
+            f'the start time and command line of pid {pid} could not be read')
     start_time, cmdline = identity
     with registry_lock(state_file):
         entries = [e for e in read_state(state_file) if e.get('pid') != pid]
@@ -126,6 +137,25 @@ def remember(state_file, table, kind, recording_id, pid):
         entries.append({'kind': kind, 'recording_id': recording_id, 'pid': pid,
                         'start_time': start_time, 'cmdline': cmdline})
         write_state(state_file, entries)
+
+
+def track_or_stop(state_file, table, proc, kind, recording_id):
+    """Record a just-started bag process, or stop and reap it and raise.
+
+    Fails closed: whenever remember() raises, the child is terminated (then
+    killed after TERMINATE_TIMEOUT_S) and waited for before the error is
+    passed on, so no bag process is left running without a registry entry.
+    """
+    try:
+        remember(state_file, table, kind, recording_id, proc.pid)
+    except Exception:
+        proc.terminate()
+        try:
+            proc.wait(timeout=TERMINATE_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+        raise
 
 
 def forget(state_file, pid):

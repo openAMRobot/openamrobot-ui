@@ -907,14 +907,8 @@ def _track_or_stop(proc, kind, recording_id):
     process is never left running without a registry entry.
     """
     try:
-        bag_processes.remember(BAG_PROCESSES_FILE, PROCESS_TABLE, kind, recording_id, proc.pid)
+        bag_processes.track_or_stop(BAG_PROCESSES_FILE, PROCESS_TABLE, proc, kind, recording_id)
     except Exception as error:
-        proc.terminate()
-        try:
-            proc.wait(timeout=bag_processes.TERMINATE_TIMEOUT_S)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
         abort(500, f'Could not record the ros2 bag process, so it was stopped ({error}).')
 
 

@@ -226,3 +226,75 @@ def test_failed_write_leaves_no_temporary_file(tmp_path, monkeypatch):
     except OSError:
         pass
     assert os.listdir(os.path.dirname(state_file)) == []
+
+
+# Review of #44: a live child whose /proc identity cannot be read must not be
+# accepted untracked. track_or_stop() stops and reaps it and raises.
+
+class FakeChild:
+    """A started bag child that stays alive until terminated."""
+
+    def __init__(self, pid):
+        self.pid = pid
+        self.calls = []
+
+    def poll(self):
+        return None if 'terminate' not in self.calls else -2
+
+    def terminate(self):
+        self.calls.append('terminate')
+
+    def kill(self):
+        self.calls.append('kill')
+
+    def wait(self, timeout=None):
+        self.calls.append('wait')
+        return -2
+
+
+def test_live_child_with_unreadable_identity_is_stopped_reaped_and_reported(tmp_path):
+    state_file = str(tmp_path / 'recordings' / 'bag_processes.json')
+    table = FakeTable({})  # identity(pid) is None: /proc could not be read
+    child = FakeChild(4242)
+    assert child.poll() is None
+
+    try:
+        bag_processes.track_or_stop(state_file, table, child, 'record', 'rec')
+    except bag_processes.UntrackedProcess as error:
+        assert 'pid 4242' in str(error)
+    else:
+        raise AssertionError('an untracked live child was accepted')
+
+    assert child.calls == ['terminate', 'wait']
+    assert child.poll() is not None
+    assert bag_processes.read_state(state_file) == []
+
+
+def test_real_child_with_unreadable_identity_is_not_left_running(tmp_path):
+    state_file = str(tmp_path / 'recordings' / 'bag_processes.json')
+    table = bag_processes.ProcTable(proc_root=str(tmp_path / 'no_proc'))
+    child = subprocess.Popen(['sleep', '30'])
+    try:
+        try:
+            bag_processes.track_or_stop(state_file, table, child, 'replay', 'rec')
+        except bag_processes.UntrackedProcess:
+            pass
+        else:
+            raise AssertionError('an untracked live child was accepted')
+        assert child.poll() is not None, 'the bag child is still running'
+        assert bag_processes.read_state(state_file) == []
+    finally:
+        if child.poll() is None:
+            child.kill()
+            child.wait()
+
+
+def test_readable_child_is_tracked_and_left_running(tmp_path):
+    state_file = str(tmp_path / 'recordings' / 'bag_processes.json')
+    table = FakeTable({4242: (1000, RECORD_CMD)})
+    child = FakeChild(4242)
+
+    bag_processes.track_or_stop(state_file, table, child, 'record', 'rec')
+
+    assert child.calls == []
+    assert [e['pid'] for e in bag_processes.read_state(state_file)] == [4242]

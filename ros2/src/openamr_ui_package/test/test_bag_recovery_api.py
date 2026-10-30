@@ -194,6 +194,18 @@ class BagRecoveryApiTest(unittest.TestCase):
         self.assertIsNone(self.app._recording['proc'])
         self.assertFalse(os.path.exists(self.app.BAG_PROCESSES_FILE))
 
+    def test_live_child_with_unreadable_identity_fails_closed(self):
+        # Review of #44: the child is alive (poll() is None) but its /proc
+        # identity cannot be read, so no registry entry can be written.
+        self.table.processes.clear()
+        response = self.client.post('/api/recordings/start', json={'name': 'run'})
+        self.assertEqual(response.status_code, 500)
+        self.assertIn('could not be read', response.get_json()['message'])
+        self.proc.terminate.assert_called_once_with()
+        self.proc.wait.assert_called()
+        self.assertIsNone(self.app._recording['proc'])
+        self.assertFalse(os.path.exists(self.app.BAG_PROCESSES_FILE))
+
     def test_recovery_runs_from_main_only(self):
         # Importing flask_app (as tests do) must never signal a process.
         import ast
