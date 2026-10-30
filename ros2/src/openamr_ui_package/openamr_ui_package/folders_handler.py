@@ -6,15 +6,21 @@ import os
 import shutil
 import json
 import time
-import subprocess
 import yaml
 import csv
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseArray, Pose, PoseStamped, PoseWithCovariance
-from nav_msgs.msg import Odometry
+from nav2_msgs.srv import LoadMap, SaveMap
 from std_msgs.msg import String, Empty
 from openamr_ui_msgs.msg import ArrayPoseStampedWithCovariance
-from nav2_msgs.srv import LoadMap
+
+# Mapping and navigation belong to the platform. This node never launches
+# them and never changes the lifecycle state of platform nodes; it only
+# calls the platform's map services (openAMRobot/openamrobot-ui#32).
+MAPPING_NOT_STARTED_BY_UI = (
+    'Mapping is not started by this UI. Start mapping on the robot platform, '
+    'drive the robot around the area, then save the map here.'
+)
 
 
 class UIFoldersHandler(Node):
@@ -22,7 +28,6 @@ class UIFoldersHandler(Node):
         super().__init__('ui_folders')
         self.WPs = []
         self.waypoints = []
-        self.position = 0
 
         self.get_logger().info("------------ UI folders handler started ------------")
 
@@ -32,7 +37,6 @@ class UIFoldersHandler(Node):
         self.local_ip = data["ui/flask_app"]["ros__parameters"]["appAddress"]
         self.local_port = data["ui/flask_app"]["ros__parameters"]["portApp"]
 
-        self.odomsub = self.create_subscription(Odometry, "/odom", self.odom_callback, 10)
         self.uiopsub = self.create_subscription(String, "ui_operation", self.ui_callback, 10)
         self.waysub = self.create_subscription(PoseWithCovarianceStamped, "/new_way_point", self.new_way_point_callback, 10)
         self.navsub = self.create_subscription(Empty, "/nav_data_req", self.nav_data_callback, 10)
@@ -40,7 +44,6 @@ class UIFoldersHandler(Node):
 
         self.ui_pub = self.create_publisher(String, 'ui_message', 1)
         self.poseArray_publisher = self.create_publisher(ArrayPoseStampedWithCovariance, "/WayPoints_topic", 1)
-        self.set_pose = self.create_publisher(PoseWithCovarianceStamped, 'initialpose', 1)
         self.nav_data_pub = self.create_publisher(String, 'nav_data_resp', 1)
 
         package_share_dir = get_package_share_directory('openamr_ui_package')
@@ -79,8 +82,6 @@ class UIFoldersHandler(Node):
         except Exception as e:
             self.get_logger().error(f"Error checking current_map_route.yaml: {e}")
 
-        self.mappingCmd = "openamr_ui_package mapping_launch.py"
-        self.navigationCmd = "openamr_ui_package navigation_launch.py"
         self.dict_cmd = None
 
         # Connect to the map_server already managed by Nav2's lifecycle manager.
@@ -90,6 +91,13 @@ class UIFoldersHandler(Node):
             self.get_logger().info('CONNECTED to map_server')
         else:
             self.get_logger().warn('map_server/load_map is not available yet; map changes will retry later.')
+
+        # Platform map saver (nav2 map_saver_server). The service name is a
+        # parameter because the platform owns it; the default is the Nav2
+        # standard name.
+        self.declare_parameter('map_save_service', '/map_saver/save_map')
+        save_service = self.get_parameter('map_save_service').get_parameter_value().string_value
+        self.save_map_cli = self.create_client(SaveMap, save_service)
         webbrowser.open(f"http://{self.local_ip}:{self.local_port}")
 
     # ── Helpers ──────────────────────────────────────────────────────────────
@@ -101,9 +109,6 @@ class UIFoldersHandler(Node):
         self.nav_data_pub.publish(String(data=self.get_paths()))
 
     # ── Callbacks ─────────────────────────────────────────────────────────────
-
-    def odom_callback(self, data: Odometry):
-        self.position = data.pose.pose
 
     def nav_data_callback(self, data: Empty):
         time.sleep(0.5)
@@ -222,61 +227,52 @@ class UIFoldersHandler(Node):
     # ── Map commands ─────────────────────────────────────────────────────────
 
     def build_map_func(self):
-        try:
-            self._pub("Mapping...")
-            self.poseArray_publisher.publish(ArrayPoseStampedWithCovariance())
-            os.system("ros2 lifecycle set /amcl shutdown")
-            os.system("ros2 lifecycle set /move_base shutdown")
-            os.system("ros2 lifecycle set /map_server shutdown")
-            time.sleep(1)
-            subprocess.Popen(f"ros2 launch {self.mappingCmd}", stdout=subprocess.PIPE,
-                             shell=True, preexec_fn=os.setsid)
-            time.sleep(3)
-            self._pub("Move the robot along the perimeter of the room and return to start position")
-        except Exception as e:
-            self.get_logger().info(f"Error in build_map_func: {e}")
+        # The platform starts and stops mapping. The UI launches nothing and
+        # leaves AMCL, map_server and the controller in their current state.
+        self._pub(MAPPING_NOT_STARTED_BY_UI)
 
     def save_map_func(self):
+        group = self.dict_cmd['group']
+        map_name = self.dict_cmd['map']
+        map_path_to_save = f'{self.maps_folder}/{group}/{map_name}'
+        if not self.save_map_cli.service_is_ready():
+            self.get_logger().warn(
+                f'Map save service {self.save_map_cli.srv_name} is unavailable.')
+            self._pub('The platform map save service is not available, so the map was not saved. '
+                      'Start the platform map saver and try again.')
+            return
+
+        self._pub('Saving map...')
+        req = SaveMap.Request()
+        req.map_topic = '/map'
+        req.map_url = map_path_to_save
+        req.image_format = 'png'
+        req.map_mode = 'trinary'
+        future = self.save_map_cli.call_async(req)
+        future.add_done_callback(
+            lambda done: self._on_map_saved(done, group, map_name, map_path_to_save))
+
+    def _on_map_saved(self, future, group, map_name, map_path_to_save):
         try:
-            self._pub("Saving map...")
-            map_path_to_save = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map']}"
-            route_folder_path_to_save = f"{self.routs_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map']}"
-            map_save_command = "ros2 run map_server map_saver -f "
-            cmd = f"{map_save_command}{map_path_to_save}"
-            self.get_logger().info(cmd)
-            os.system(cmd)
-
-            os.mkdir(route_folder_path_to_save)
-            self.set_cur_route("")
-            self.WP_req_callback(Empty())
-            self._pub("Map saved")
-
-            map_yaml_file = f"{map_path_to_save}.yaml"
-            self.set_cur_map(map_path_to_save)
-
-            current = self.position
-
-            os.system("ros2 lifecycle set /slam_gmapping 5")
-            os.system("ros2 lifecycle set /map_server 5")
-
-            self._pub("Localization...")
-            time.sleep(1)
-            subprocess.Popen(f"ros2 launch {self.navigationCmd}", stdout=subprocess.PIPE,
-                             shell=True, preexec_fn=os.setsid)
-
-            # Nav2 owns /map_server. Starting a UI-owned map_server here creates
-            # duplicate /map_server nodes and breaks AMCL lifecycle management.
-            self.change_map(map_yaml_file, yaml=True)
-            time.sleep(1)
-
-            current_pose = PoseWithCovarianceStamped()
-            current_pose.header.frame_id = "map"
-            current_pose.pose.pose = current
-            self.set_pose.publish(current_pose)
-            self._pub("You can set points or follow the route")
-            self._pub_nav_data()
+            response = future.result()
         except Exception as e:
-            self.get_logger().info(f"Error in save_map_func: {e}")
+            response = None
+            self.get_logger().error(f'Map save call failed: {e}')
+        if response is None or not response.result:
+            self._pub('The platform could not save the map.')
+            return
+        try:
+            route_folder_path_to_save = f'{self.routs_folder}/{group}/{map_name}'
+            os.makedirs(route_folder_path_to_save, exist_ok=True)
+            self.dict_cmd = {'group': group, 'map': map_name}
+            self.set_cur_route('')
+            self.WP_req_callback(Empty())
+            self._pub('Map saved')
+            # Load the saved map into the platform map_server through its
+            # load_map service. Localization stays with the platform.
+            self.change_map(f'{map_path_to_save}.yaml', yaml=True)
+        except Exception as e:
+            self.get_logger().info(f'Error after saving map: {e}')
 
     def change_map_func(self):
         path_to_new_map = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map']}"

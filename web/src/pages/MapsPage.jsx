@@ -113,12 +113,11 @@ const MapsPage = () => {
     setSaveForm({ group, name: "" });
   };
 
+  // The platform runs mapping; this UI never launches or stops navigation
+  // nodes. build_map only asks the backend for its guidance message.
   const startMapping = () => {
-    if (!window.confirm(
-      "Start a new mapping session? This shuts down localization/navigation and launches mapping mode — the robot must be driven around to build the map. Save it here when done.",
-    )) return;
     sendCmd("build_map");
-    toast.info("Mapping started — drive the robot around the space, then save the map.");
+    toast.info("Mapping is started on the robot platform, not by this UI. Drive the robot around the area, then save the map here.");
   };
 
   const deleteMap = (group, map) => {
@@ -174,10 +173,10 @@ const MapsPage = () => {
         <DashboardCard className="p-4 font-[RobotoMono]">
           <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-themeBlue">Build a new map</p>
           <p className="mb-3 text-xs text-themeTextGray">
-            Launches mapping mode and stops navigation. Drive the robot around the space, then save below.
+            Mapping runs on the robot platform. This UI does not start or stop mapping or navigation. Start mapping on the platform, drive the robot around the space, then save below.
           </p>
           <button onClick={startMapping} disabled={!connected} className="rounded-lg border border-statusYellow px-3 py-1.5 text-sm font-semibold text-statusYellow transition-colors hover:bg-statusYellow hover:text-black disabled:opacity-40">
-            Start mapping
+            How to map
           </button>
         </DashboardCard>
 
