@@ -38,6 +38,86 @@ jobs:
         env:
           GENERATE_SOURCEMAP: "false"
 
+  e2e:
+    name: Route smoke test (Playwright, Demo Mode)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # Keep in sync with web/package.json "engines" (>=18 <21).
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          GENERATE_SOURCEMAP: "false"
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      # Every page in src/pages/registry.js, in Demo Mode, at 1280 x 800 and
+      # 1920 x 1200: renders, shows the Demo banner, no console errors.
+      # Playwright exits non-zero when it finds no tests.
+      - name: Route smoke test
+        run: npm run test:e2e
+        env:
+          CI: true
+
+  ros:
+    name: ROS build & tests
+    runs-on: ubuntu-latest
+    container: ros:jazzy
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      # openamrobot_description comes from openamr-platform-sw and is not in
+      # rosdistro; the tests that need it skip when it is absent.
+      - name: Install dependencies
+        run: |
+          apt-get update
+          rosdep update --rosdistro jazzy
+          rosdep install --from-paths ros2/src --ignore-src -y --rosdistro jazzy \
+            --skip-keys openamrobot_description
+
+      - name: Build
+        working-directory: ros2
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build
+
+      - name: Test
+        working-directory: ros2
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          source install/setup.bash
+          # Packages with tests, as documented in AGENTS.md;
+          # openamr_ui_bringup has none.
+          colcon test --packages-select openamr_ui_package openamr_ui_msgs
+          colcon test-result --verbose
+
+      # A run that executes zero tests is a failure, not a pass.
+      - name: Fail on zero tests
+        working-directory: ros2
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          total=$(colcon test-result --all | sed -n 's/^Summary: \([0-9]*\) tests.*/\1/p')
+          echo "tests executed: ${total:-0}"
+          test "${total:-0}" -gt 0
+
   links:
     name: Markdown link check
     runs-on: ubuntu-latest
