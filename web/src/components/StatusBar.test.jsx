@@ -5,6 +5,7 @@ import StatusBar from "./StatusBar";
 import { useRos, useRosStatus } from "../app/App";
 import { addEvent } from "../shared/events/eventLog";
 import { ACTION_CANCEL_SERVICES, AppConfig } from "../shared/constants";
+import { clearLocalStop } from "../shared/motion/motionGate";
 
 jest.mock("../app/App", () => ({
   useRos: jest.fn(),
@@ -56,6 +57,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  clearLocalStop();
   delete window.ROSLIB;
   jest.clearAllMocks();
 });

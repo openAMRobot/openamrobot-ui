@@ -9,6 +9,7 @@ import { resetMotionGate } from "../shared/motion/motionGate";
 import { attachRos, releaseAll } from "../shared/motion/uiCommand";
 import { installMockRoslib, uninstallMockRoslib } from "../shared/motion/testing/mockRoslib";
 import { openMotionGate } from "../shared/motion/testing/gate";
+import { clearLocalStop } from "../shared/motion/motionGate";
 
 let mockJoystickProps;
 jest.mock("react-joystick-component", () => ({
@@ -33,6 +34,7 @@ beforeEach(() => {
   global.fetch = jest.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }));
 });
 afterEach(() => {
+  clearLocalStop();
   releaseAll();
   attachRos(null);
   resetMotionGate();

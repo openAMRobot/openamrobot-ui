@@ -150,6 +150,10 @@ openamr-platform-sw#90, the source of the interfaces below (head
   Nikolai's simulation reruns S4, S6 and S7a pass.
 - To confirm (proposed defaults): 10 ms `/clock` throttle, 1 s stop lock
   staleness, 2 s retry for the relay parameter read.
+- Stop (software) also latches locally at once (`motionGate` `localStop`),
+  before the engage request answers; held input, programs, missions and
+  goals stay blocked until a confirmed Resume whose release succeeds. A
+  released lock sample or a reconnect does not clear it (review of #50).
 - While the lock is engaged or unknown, no Nav2 goal is sent from the map
   page (goal, home, waypoints, queue, docking), missions, route planning or
   programs; the reason is shown (`shared/motion/navGoalGate.js`).

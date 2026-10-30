@@ -128,6 +128,7 @@ describe("static guard: velocity publishers", () => {
     const releaseNames = [];
     const releaseCallers = [];
     const resumeCallers = [];
+    const clearCallers = [];
     files.forEach(({ rel, ast }) => {
       walk(ast, (node) => {
         if (memberPath(node) === "AppConfig.STOP_LOCK_RELEASE_SERVICE") releaseNames.push(rel);
@@ -136,11 +137,14 @@ describe("static guard: velocity publishers", () => {
         }
         if (node.type === "CallExpression" && node.callee.name === "releaseStopLock") releaseCallers.push(rel);
         if (node.type === "CallExpression" && node.callee.name === "resumeFromSoftwareStop") resumeCallers.push(rel);
+        if (node.type === "CallExpression" && node.callee.name === "clearLocalStop") clearCallers.push(rel);
       });
     });
     expect([...new Set(releaseNames)]).toEqual([path.join("shared", "motion", "stopLock.js")]);
     expect([...new Set(releaseCallers)]).toEqual([path.join("shared", "motion", "softwareStop.js")]);
     expect([...new Set(resumeCallers)]).toEqual([path.join("components", "MotionStopBanner.jsx")]);
+    // The local Stop latch is cleared only by the confirmed Resume path.
+    expect([...new Set(clearCallers)]).toEqual([path.join("shared", "motion", "softwareStop.js")]);
   });
 
   it("flags a forbidden publisher in a sample (the guard is not vacuous)", () => {

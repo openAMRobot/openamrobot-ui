@@ -10,7 +10,6 @@ import { getRun, setRun, subscribeCommands } from "../shared/missions/missionRun
 import { subscribeAbort } from "../shared/motion/abortBus";
 import { getMotionGate } from "../shared/motion/motionGate";
 import { navGoalBlockedReason } from "../shared/motion/navGoalGate";
-import { LOCK_RELEASED } from "../shared/motion/stopLock";
 
 // Generous timeouts so a silent Nav2/dock stack can't hang a mission forever —
 // these are "something is clearly wrong" backstops, not tuned durations.
@@ -213,13 +212,15 @@ const MissionRunner = () => {
       toast.warn("A mission is already running — stop it first.");
       return;
     }
-    const gate = getMotionGate();
-    if (gate.lock !== LOCK_RELEASED) {
-      toast.warn(`Mission not started: ${gate.reason}`);
+    // Not while the stop lock is engaged or unknown, or Stop (software) is
+    // latched in this browser (shared/motion/navGoalGate.js).
+    const blocked = navGoalBlockedReason(getMotionGate());
+    if (blocked) {
+      toast.warn(`Mission not started: ${blocked}`);
       addEvent({
         type: "navigation",
         severity: "warning",
-        message: `Mission not started: ${gate.reason}`,
+        message: `Mission not started: ${blocked}`,
       });
       return;
     }

@@ -246,7 +246,8 @@ const BlocksPage = () => {
   // Drive blocks additionally need a synced robot clock; that is checked
   // when the block runs (uiCommand refuses and the program fails there).
   const motionGate = useMotionGate();
-  const lockReleased = motionGate.lock === LOCK_RELEASED;
+  // Released and not latched by Stop (software) in this browser.
+  const lockReleased = motionGate.lock === LOCK_RELEASED && !motionGate.localStop;
   const canRun = useMemo(
     () =>
       rosStatus === "connected" &&

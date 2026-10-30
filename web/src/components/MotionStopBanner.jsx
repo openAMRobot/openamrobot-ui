@@ -25,7 +25,10 @@ const MotionStopBanner = () => {
   const connected = gate.connection === "connected";
   const locked = gate.lock === LOCK_LOCKED;
 
-  if (gate.lock === LOCK_RELEASED) {
+  // Stop (software) latched in this browser keeps the banner up even if the
+  // lock topic says released (engage still pending, failed, or a stale
+  // sample): only a confirmed Resume clears it.
+  if (gate.lock === LOCK_RELEASED && !gate.localStop) {
     if (!connected || gate.clock.synced) return null;
     return (
       <div
@@ -41,14 +44,18 @@ const MotionStopBanner = () => {
 
   let resumeBlockedReason = "";
   if (!connected) resumeBlockedReason = "Resume needs a rosbridge connection.";
-  else if (!locked) resumeBlockedReason = "Resume needs a known lock state from /safety/stop_lock.";
+  else if (!locked && gate.lock !== LOCK_RELEASED) {
+    resumeBlockedReason = "Resume needs a known lock state from /safety/stop_lock.";
+  }
   else if (pending) resumeBlockedReason = "Release request sent, waiting for the lock.";
 
   const detail = !connected
     ? "rosbridge is disconnected, so the lock state is unknown."
     : locked
       ? "The platform stop lock is engaged. No manual drive, program or mission can run."
-      : "The lock state is unknown (no recent /safety/stop_lock sample). Treated as stopped.";
+      : gate.lock === LOCK_RELEASED
+        ? "Stop (software) was pressed here and holds until Resume. The platform lock has not confirmed it yet."
+        : "The lock state is unknown (no recent /safety/stop_lock sample). Treated as stopped.";
 
   const confirmResume = async () => {
     setConfirming(false);

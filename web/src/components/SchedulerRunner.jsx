@@ -8,7 +8,7 @@ import { addEvent } from "../shared/events/eventLog";
 import { loadWaypoints as readWaypoints } from "../shared/hooks/useSavedWaypoints";
 import { requestStart as requestMissionStart } from "../shared/missions/missionRunner";
 import { getMotionGate } from "../shared/motion/motionGate";
-import { LOCK_RELEASED } from "../shared/motion/stopLock";
+import { navGoalBlockedReason } from "../shared/motion/navGoalGate";
 
 // Minute-resolution key so a schedule fires once per matching minute even
 // though we poll more often than that.
@@ -56,12 +56,12 @@ const SchedulerRunner = () => {
     const runAction = (s) => {
       // No scheduled goal or mission starts while the stop lock is locked or
       // unknown; it would otherwise run as soon as the lock is released.
-      const gate = getMotionGate();
-      if (gate.lock !== LOCK_RELEASED) {
+      const blocked = navGoalBlockedReason(getMotionGate());
+      if (blocked) {
         addEvent({
           type: "system",
           severity: "warning",
-          message: `Schedule "${s.name}" skipped: ${gate.reason}`,
+          message: `Schedule "${s.name}" skipped: ${blocked}`,
         });
         return;
       }

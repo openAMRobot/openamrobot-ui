@@ -5,6 +5,7 @@ import { resetMotionGate, setClockSource, setClockStatus, setConnection, setLock
 import { resumeFromSoftwareStop, softwareStop } from "./softwareStop";
 import { attachRos, holdVelocity, releaseAll } from "./uiCommand";
 import { installMockRoslib, uninstallMockRoslib } from "./testing/mockRoslib";
+import { clearLocalStop } from "./motionGate";
 
 jest.mock("../events/eventLog", () => ({ addEvent: jest.fn() }));
 
@@ -15,6 +16,7 @@ beforeEach(() => {
   mock.onService(AppConfig.STOP_LOCK_RELEASE_SERVICE, (req, ok) => ok({ success: true, message: "" }));
 });
 afterEach(() => {
+  clearLocalStop();
   releaseAll();
   attachRos(null);
   resetMotionGate();
