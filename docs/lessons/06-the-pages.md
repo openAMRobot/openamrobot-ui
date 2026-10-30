@@ -41,10 +41,14 @@ the page itself, so every screenshot below shows them:
 
 - The top bar (`Header.jsx`) — the sidebar/nav, a connection dot
   ("Connected"/"Disconnected"), and the light/dark theme toggle.
-- The status strip right under it (`StatusBar.jsx`) — live battery
-  percentage and a big red **E-STOP** button that zeroes `/cmd_vel` and
-  cancels the active Nav2 goal from anywhere, not just the Map page. This is a
-  non-latched software stop and does not replace a physical emergency stop.
+- The status strip right under it (`StatusBar.jsx`): live battery
+  percentage and a red **Stop (software)** button that engages the
+  platform's software stop lock, cancels the active navigation and docking
+  goals, and aborts programs and missions, from any page. While the lock is
+  engaged or unknown, a "Stopped (software)" banner with **Resume** stays on
+  screen, and manual drive, programs, missions and new navigation goals are
+  disabled with the reason shown. Only **Resume** releases the lock. It is a
+  latched functional stop and does not replace a physical emergency stop.
 - Whichever banner applies: a purple **Demo Mode** banner when
   [Demo Mode](#config--configpagejsx) is on, a replay banner while a
   [recording](#recordings--recordingspagejsx) is playing back, or an
@@ -139,10 +143,10 @@ loaded, and organize saved maps into groups.
 
 ![OpenAMRobot UI Maps page: build-a-new-map and save-current-map panels, plus a saved-maps list grouped by folder](../assets/maps/maps.png)
 
-- **Start mapping** launches mapping mode (SLAM) and stops
-  navigation/localization — drive the robot around the space (with the
-  joystick on the Map page, for example), then come back here and use
-  **Save current map** once you're done.
+- Mapping runs on the robot platform, not in this UI. **How to map** says
+  so: start mapping on the platform, drive the robot around the space (with
+  the joystick on the Map page, for example), then come back here and use
+  **Save current map**, which asks the platform's map saver to save it.
 - The saved-maps list lets you **Switch** the active map (reloads it on the
   robot immediately — set the initial pose again afterward, since old
   localization won't match a new map), **Rename**, or **Delete** it, and add
@@ -264,8 +268,8 @@ unavailable.
   Mode loads the model locally and needs no ROS connection at all — joint
   sliders just pose the 3D viewer. Live Mode instead subscribes to real
   `/joint_states` and pose topics, so the model reflects the actual robot —
-  its joint sliders become read-only, since this robot only has one coupled
-  `/cmd_vel` for both drive wheels, not a per-joint position command a
+  its joint sliders become read-only, since this robot only takes one base
+  velocity for both drive wheels (sent on `/ui/cmd_vel`), not a per-joint position command a
   slider could safely drive.
 - The **Kinematic Tree** shows every link and joint, `FIXED` or movable, in
   parent → child order; clicking one selects it in both the tree and the 3D
@@ -374,6 +378,12 @@ debugging, demos, and dataset collection.
   waits, rather than looking stuck.
 - Replayed telemetry is always clearly labeled as a replay, never presented
   as if it were a live robot.
+- Replay publishes only the telemetry topics on the allowlist in
+  `param/replay_topics.yaml`; velocity command, `/tf`, `/tf_static`, goal,
+  initial pose, safety, action and service topics in a recording are
+  skipped and listed, and a request that names one is refused before
+  playback starts. This is a UI check, not safety evidence. See
+  [Recording replay policy](../../README.md#recording-replay-policy).
 
 ## Events — `EventsPage.jsx`
 

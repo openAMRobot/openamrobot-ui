@@ -8,6 +8,9 @@ ros2/log/
 
 web/node_modules/
 web/build/
+web/public/blockly-media/
+web/test-results/
+web/playwright-report/
 
 ros2/src/openamr_ui_package/openamr_ui_package/static/app/*
 !ros2/src/openamr_ui_package/openamr_ui_package/static/app/README.md

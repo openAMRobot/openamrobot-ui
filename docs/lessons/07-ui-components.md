@@ -98,10 +98,13 @@ it's a client-side stream setting, not anything published to ROS.
 
 ## Joystick — `Joystick.jsx`
 
-Publishes to `AppConfig.CMD_VEL_TOPIC` (`/cmd_vel`) only — no subscriptions.
-While being dragged, it re-publishes the current stick position on a
-100&nbsp;ms interval (not just on movement events), and publishes one final
-zero-velocity message on release. The `maxSpeed` prop (passed in by the Map
+Sends manual velocity through `shared/motion/uiCommand.js`, the UI's only
+velocity publisher, which publishes `geometry_msgs/TwistStamped` on
+`AppConfig.UI_CMD_VEL_TOPIC` (`/ui/cmd_vel`). While being dragged, the current
+stick position is re-published at 20&nbsp;Hz, and one final zero-velocity
+message goes out on release. The stick is disabled, with the reason shown,
+while rosbridge is disconnected, the software stop lock is engaged or
+unknown, or the robot clock is not synced. The `maxSpeed` prop (passed in by the Map
 page's speed slider) scales `linear.x`; `angular.z` is always scaled by the
 fixed
 `AppConfig.MAX_ANGULAR_SPEED`, which isn't adjustable per instance.
@@ -119,10 +122,11 @@ itself — it calls an `onCancelGoal` callback passed in as a prop, and the
 Map page owns the actual `ROSLIB.Service` call to
 `AppConfig.NAV_CANCEL_GOAL_SERVICE`. That split exists so the cancel-service
 client is created once per page, not once per panel — the same service is
-also what the Map page's top-bar E-STOP button
+also what the top-bar **Stop (software)** button
 ([`StatusBar.jsx`](06-the-pages.md#the-chrome-thats-on-every-page)) calls
-from outside this component entirely. This is a one-shot software intervention,
-not a latched or safety-rated physical emergency stop.
+from outside this component entirely. Stop (software) also engages the
+platform's software stop lock, which stays engaged until **Resume**; it is a
+latched functional stop, not a safety-rated physical emergency stop.
 
 ## RobotState — `RobotState.jsx`
 
@@ -168,17 +172,11 @@ Polls `get_state` every 3 seconds for each node in the `LIFECYCLE_NODES`
 list (`map_server`, `amcl`, `controller_server`, `planner_server`,
 `bt_navigator` — shown in the UI as "Map data", "Position tracking",
 "Driving control", "Path planning", and "Navigation logic" respectively,
-with the raw node name available as a hover tooltip), and separately builds
-a `change_state` service client per node for the four action buttons
-(labeled "Prepare"/"Start"/"Pause"/"Reset" in the UI). The buttons call
-`change_state` on *all five* nodes at once with a fixed transition ID
-(`configure=1`, `cleanup=2`, `activate=3`, `deactivate=4` — the real
-`lifecycle_msgs` transition IDs) and don't wait for or react to the
-individual responses — the displayed state only updates on the next
-3-second poll, so there's a brief delay between clicking a button and
-seeing the result. Because Pause/Reset can stop navigation outright, those
-two ask for a `window.confirm()` before firing; Prepare/Start don't, since
-they're constructive. A "?" toggle in both the compact and full views shows
+with the raw node name available as a hover tooltip). The panel is read
+only: it creates `get_state` clients and no `change_state` client, and has
+no buttons that change a node's state. The platform's lifecycle manager
+configures and activates these nodes; calling `change_state` from the UI
+would bypass it. A "?" toggle in both the compact and full views shows
 a plain-language legend for what each state (`active`/`inactive`/
 `unconfigured`/`unknown`) means.
 
@@ -280,7 +278,7 @@ console drawer's open/closed state (passed down to `Header` as props — see
 **Always-mounted alongside the active page.** `AppLayout` also renders a
 handful of components that have nothing to do with whichever page is
 currently showing, and stay mounted across every navigation instead of
-belonging to one page: `StatusBar` (battery + E-STOP, see
+belonging to one page: `StatusBar` (battery + Stop (software), see
 [Lesson 06](06-the-pages.md#the-chrome-thats-on-every-page)),
 `NotificationsWatcher` and `EventRecorder` (feed the browser-notification
 and [Events page](06-the-pages.md#events--eventspagejsx) logs respectively,

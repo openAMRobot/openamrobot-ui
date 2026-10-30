@@ -13,24 +13,28 @@ build commands, run commands, ports, topics, and troubleshooting.
   relays.
 - `launch/physnode_launch.py`: starts optional map/route file-operation and
   waypoint route-following helper nodes.
-- `launch/map_server_launch.py`: deprecated compatibility launch, namespaced
-  under `ui_legacy` to avoid conflicting with the platform map server.
-- `launch/mapping_launch.py` (includes `gmapping_launch.py` +
-  `move_base_launch.py`) and `launch/navigation_launch.py` (includes
-  `move_base_launch.py` + `amcl_launch.py`): not legacy — `folders_handler.py`
-  launches these directly for the web UI's Maps page **Start mapping** and
-  **Save current map** buttons (SLAM while mapping, then back to
-  localization/navigation once saved).
+- No launch file in this package starts SLAM, AMCL, the Nav2 controller,
+  planner or navigator, or a map_server. The legacy mapping and navigation
+  launches, `param/move_base/` (openamrobot-ui#52) and `map_server_launch.py`
+  (openamrobot-ui#41) are deleted. The platform owns `map_server`; mapping and
+  navigation run on the robot platform, and the Maps page saves and loads maps
+  through the platform's map services (openamrobot-ui#32).
 
 ## Runtime pieces
 
 - `flask_app.py`: serves the compiled React app.
 - `map_relay.py`: republishes `/map` to `/ui/map` with browser-friendly QoS.
 - `nav_relays.py`: republishes AMCL and navigation/docking action status under
-  `/ui/*`.
+  `/ui/*`. The AMCL pose is repeated every second only while AMCL's map to
+  odom transform is younger than `pose_stale_after_s` (default 2.0 s), timed
+  with a monotonic clock; then the relay goes quiet and the UI shows
+  localization as stale. When the ROS clock jumps back (a simulation
+  reset), the relay drops the cached pose and waits for a new one.
 - `folders_handler.py`: handles map, group, route, and waypoint file commands.
 - `waypoint_nav.py`: optional route-following helper using Nav2 Simple
-  Commander.
+  Commander. It reports each waypoint's Nav2 result (SUCCEEDED, ABORTED,
+  CANCELED or TIMEOUT after `waypoint_timeout_s`, default 300 s) on
+  `/ui_message`; a route succeeds only if every waypoint succeeded.
 - `battery.py` (executable `battery`): optional battery-percentage
   publisher. Starts from `new_ui_launch.py` only with
   `start_battery_monitor:=true`. It reads a serial port only when

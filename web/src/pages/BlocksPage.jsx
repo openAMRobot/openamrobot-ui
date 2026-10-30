@@ -23,6 +23,10 @@ import {
   createRobotActionClient,
 } from "../features/blocks/robotActions";
 import { generatePlanFromVoice } from "../features/blocks/voicePlan";
+import { subscribeAbort } from "../shared/motion/abortBus";
+import { useMotionGate } from "../shared/motion/motionGate";
+import { LOCK_RELEASED } from "../shared/motion/stopLock";
+import { newUiRunId, setUiRun, updateUiRun } from "../shared/runs/uiRunStore";
 import {
   createSpeechRecognizer,
   extractWakeWordCommand,
@@ -58,8 +62,10 @@ import {
   fetchBlockRunHistory,
   saveBlockRunHistory,
 } from "../features/blocks/backendRunHistory";
-import { AppConfig } from "../shared/constants";
+import { fetchPlanLimits } from "../features/blocks/backendLimits";
 import { StatusBadge } from "../shared/ui/Dashboard";
+
+export const BLOCKLY_MEDIA_PATH = `${process.env.PUBLIC_URL || ""}/blockly-media/`;
 
 const STORAGE_KEY = "openamr_blockly_workspace";
 
@@ -212,6 +218,10 @@ const BlocksPage = () => {
   const activeRecognizerRef = useRef(null);
 
   const [plan, setPlan] = useState([]);
+  // Backend-owned plan limits (GET /api/limits). null until loaded; the plan
+  // cannot run without them.
+  const [planLimits, setPlanLimits] = useState(null);
+  const planLimitsRef = useRef(null);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [voiceBusy, setVoiceBusy] = useState(false);
@@ -239,13 +249,20 @@ const BlocksPage = () => {
     [validationMessages],
   );
 
+  // Programs run only while the platform stop lock is known and released.
+  // Drive blocks additionally need a synced robot clock; that is checked
+  // when the block runs (uiCommand refuses and the program fails there).
+  const motionGate = useMotionGate();
+  // Released and not latched by Stop (software) in this browser.
+  const lockReleased = motionGate.lock === LOCK_RELEASED && !motionGate.localStop;
   const canRun = useMemo(
     () =>
       rosStatus === "connected" &&
+      lockReleased &&
       plan.length > 0 &&
       !validationHasErrors &&
       !running,
-    [plan.length, rosStatus, running, validationHasErrors],
+    [lockReleased, plan.length, rosStatus, running, validationHasErrors],
   );
 
   const speechSupported = useMemo(() => isSpeechRecognitionSupported(), []);
@@ -282,7 +299,9 @@ const BlocksPage = () => {
   const updatePlanFromWorkspace = useCallback((workspace) => {
     const nextPlan = workspaceToRobotPlan(workspace);
     setPlan(nextPlan);
-    setValidationMessages(validateRobotPlan(workspace, nextPlan));
+    setValidationMessages(
+      validateRobotPlan(workspace, nextPlan, planLimitsRef.current),
+    );
     setStepStatuses(initialStepStatuses(nextPlan.length));
     return nextPlan;
   }, []);
@@ -317,6 +336,9 @@ const BlocksPage = () => {
     registerOpenAmrBlocks();
 
     const workspace = Blockly.inject(blocklyDivRef.current, {
+      // Served by this app (scripts/copy-blockly-media.js), not Blockly's
+      // default internet host, so the page works on a robot without internet.
+      media: BLOCKLY_MEDIA_PATH,
       toolbox: openAmrToolbox,
       theme: theme === "dark" ? openAmrDarkTheme : Blockly.Themes.Classic,
       grid: {
@@ -351,12 +373,22 @@ const BlocksPage = () => {
     refreshSavedPrograms();
     refreshLocations();
     refreshRunHistory();
+    let unmounted = false;
+    fetchPlanLimits()
+      .then((limits) => {
+        if (unmounted) return;
+        planLimitsRef.current = limits;
+        setPlanLimits(limits);
+        updatePlan();
+      })
+      .catch((err) => !unmounted && toast.error(err.message));
 
     const resize = () => Blockly.svgResize(workspace);
     window.addEventListener("resize", resize);
     setTimeout(resize, 0);
 
     return () => {
+      unmounted = true;
       window.removeEventListener("resize", resize);
       workspace.dispose();
       workspaceRef.current = null;
@@ -598,6 +630,16 @@ const BlocksPage = () => {
     const startedAt = new Date();
     let completedSteps = 0;
     stopRequestedRef.current = false;
+    // Reported to Reporting Mode as this tab's program run (shared/runs).
+    setUiRun("program", {
+      runId: newUiRunId("program"),
+      kind: "program",
+      name: programName.trim() || selectedTemplateInfo?.name || "Program",
+      step: 1,
+      total: plan.length,
+      status: "running",
+      reason: "",
+    });
     setRunning(true);
     setActiveStep(0);
     setStepStatuses(initialStepStatuses(plan.length));
@@ -606,6 +648,7 @@ const BlocksPage = () => {
       await executeRobotPlan(ros, plan, {
         shouldStop: () => stopRequestedRef.current,
         onStepStart: (index) => {
+          updateUiRun("program", { step: index + 1 });
           setActiveStep(index);
           setStepStatuses((current) =>
             current.map((status, statusIndex) =>
@@ -641,6 +684,7 @@ const BlocksPage = () => {
           steps_total: plan.length,
           steps_completed: completedSteps,
         });
+        updateUiRun("program", { status: "stopped", reason: "Stopped by the operator or a stop" });
         toast.info("Block program stopped");
       } else {
         await recordRunHistory({
@@ -651,9 +695,14 @@ const BlocksPage = () => {
           steps_total: plan.length,
           steps_completed: completedSteps,
         });
+        updateUiRun("program", { status: "succeeded", reason: "" });
         toast.success("Block program sent");
       }
     } catch (err) {
+      updateUiRun("program", {
+        status: stopRequestedRef.current ? "stopped" : "failed",
+        reason: err.message || "Block program failed",
+      });
       await recordRunHistory({
         program_name: programName.trim() || selectedTemplateInfo?.name,
         status: stopRequestedRef.current ? "stopped" : "failed",
@@ -669,6 +718,20 @@ const BlocksPage = () => {
       setActiveStep(null);
     }
   };
+
+  // Stop (software), a locked or unknown stop lock, or a disconnect aborts a
+  // running program (shared/motion/abortBus.js). The run loop sees the stop
+  // flag and records the run as stopped.
+  useEffect(
+    () =>
+      subscribeAbort(() => {
+        stopRequestedRef.current = true;
+        setStepStatuses((current) =>
+          current.map((status) => (status === "running" ? "stopped" : status)),
+        );
+      }),
+    [],
+  );
 
   const stopPlan = () => {
     stopRequestedRef.current = true;
@@ -828,6 +891,11 @@ const BlocksPage = () => {
             Stop
           </button>
         </div>
+        {!lockReleased && (
+          <p className="mb-3 font-[RobotoMono] text-[11px] text-statusYellow">
+            Run is disabled: {motionGate.reason}.
+          </p>
+        )}
 
         <details
           open
@@ -1138,8 +1206,9 @@ const BlocksPage = () => {
             </summary>
             <div className="mb-2 mt-2 flex justify-end">
               <span className="font-[RobotoMono] text-xs text-themeTextGray">
-                max {AppConfig.MAX_LINEAR_SPEED} m/s,{" "}
-                {AppConfig.MAX_ANGULAR_SPEED} rad/s
+                {planLimits
+                  ? `max ${planLimits.max_linear_speed_mps} m/s, ${planLimits.max_angular_speed_radps} rad/s, ${planLimits.max_distance_per_action_m} m and ${planLimits.max_duration_per_action_s} s per action`
+                  : "limits not loaded"}
               </span>
             </div>
 

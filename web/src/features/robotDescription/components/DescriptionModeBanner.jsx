@@ -29,8 +29,9 @@ const DescriptionModeBanner = ({
             {isLive ? (
               <>
                 Joint state comes from ROS 2 (<code>/joint_states</code>) when
-                connected. This robot has no per-joint position command — only{" "}
-                <code>/cmd_vel</code>, which drives both wheels together — so
+                connected. This robot has no per-joint position command. Manual
+                drive is a velocity for the whole base, sent on{" "}
+                <code>/ui/cmd_vel</code> and arbitrated by the platform, so
                 sliders here are <strong>read-only telemetry</strong>, never a
                 command to the physical robot. The model is also positioned at
                 its real map-frame pose and Nav2&apos;s current planned path is

@@ -6,15 +6,23 @@ import os
 import shutil
 import json
 import time
-import subprocess
 import yaml
 import csv
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseArray, Pose, PoseStamped, PoseWithCovariance
-from nav_msgs.msg import Odometry
+from nav2_msgs.srv import LoadMap, SaveMap
 from std_msgs.msg import String, Empty
 from openamr_ui_msgs.msg import ArrayPoseStampedWithCovariance
-from nav2_msgs.srv import LoadMap
+from openamr_ui_package import data_dir
+from openamr_ui_package import map_files
+
+# Mapping and navigation belong to the platform. This node never launches
+# them and never changes the lifecycle state of platform nodes; it only
+# calls the platform's map services (openAMRobot/openamrobot-ui#32).
+MAPPING_NOT_STARTED_BY_UI = (
+    'Mapping is not started by this UI. Start mapping on the robot platform, '
+    'drive the robot around the area, then save the map here.'
+)
 
 
 class UIFoldersHandler(Node):
@@ -22,7 +30,6 @@ class UIFoldersHandler(Node):
         super().__init__('ui_folders')
         self.WPs = []
         self.waypoints = []
-        self.position = 0
 
         self.get_logger().info("------------ UI folders handler started ------------")
 
@@ -32,7 +39,6 @@ class UIFoldersHandler(Node):
         self.local_ip = data["ui/flask_app"]["ros__parameters"]["appAddress"]
         self.local_port = data["ui/flask_app"]["ros__parameters"]["portApp"]
 
-        self.odomsub = self.create_subscription(Odometry, "/odom", self.odom_callback, 10)
         self.uiopsub = self.create_subscription(String, "ui_operation", self.ui_callback, 10)
         self.waysub = self.create_subscription(PoseWithCovarianceStamped, "/new_way_point", self.new_way_point_callback, 10)
         self.navsub = self.create_subscription(Empty, "/nav_data_req", self.nav_data_callback, 10)
@@ -40,13 +46,15 @@ class UIFoldersHandler(Node):
 
         self.ui_pub = self.create_publisher(String, 'ui_message', 1)
         self.poseArray_publisher = self.create_publisher(ArrayPoseStampedWithCovariance, "/WayPoints_topic", 1)
-        self.set_pose = self.create_publisher(PoseWithCovarianceStamped, 'initialpose', 1)
         self.nav_data_pub = self.create_publisher(String, 'nav_data_resp', 1)
 
+        # Maps and routes live in the data directory next to recordings, not
+        # in the package share or source tree; see data_dir.py.
         package_share_dir = get_package_share_directory('openamr_ui_package')
-        self.maps_folder = os.path.join(package_share_dir, 'maps')
-        self.routs_folder = os.path.join(package_share_dir, 'paths')
-        self.current_files = os.path.join(package_share_dir, 'param/current_map_route.yaml')
+        locations = data_dir.seed(package_share_dir, data_dir.default_data_dir())
+        self.maps_folder = locations['maps']
+        self.routs_folder = locations['paths']
+        self.current_files = locations['current']
 
         try:
             with open(self.current_files, 'r') as file:
@@ -79,8 +87,6 @@ class UIFoldersHandler(Node):
         except Exception as e:
             self.get_logger().error(f"Error checking current_map_route.yaml: {e}")
 
-        self.mappingCmd = "openamr_ui_package mapping_launch.py"
-        self.navigationCmd = "openamr_ui_package navigation_launch.py"
         self.dict_cmd = None
 
         # Connect to the map_server already managed by Nav2's lifecycle manager.
@@ -90,6 +96,13 @@ class UIFoldersHandler(Node):
             self.get_logger().info('CONNECTED to map_server')
         else:
             self.get_logger().warn('map_server/load_map is not available yet; map changes will retry later.')
+
+        # Platform map saver (nav2 map_saver_server). The service name is a
+        # parameter because the platform owns it; the default is the Nav2
+        # standard name.
+        self.declare_parameter('map_save_service', '/map_saver/save_map')
+        save_service = self.get_parameter('map_save_service').get_parameter_value().string_value
+        self.save_map_cli = self.create_client(SaveMap, save_service)
         webbrowser.open(f"http://{self.local_ip}:{self.local_port}")
 
     # ── Helpers ──────────────────────────────────────────────────────────────
@@ -101,9 +114,6 @@ class UIFoldersHandler(Node):
         self.nav_data_pub.publish(String(data=self.get_paths()))
 
     # ── Callbacks ─────────────────────────────────────────────────────────────
-
-    def odom_callback(self, data: Odometry):
-        self.position = data.pose.pose
 
     def nav_data_callback(self, data: Empty):
         time.sleep(0.5)
@@ -222,61 +232,52 @@ class UIFoldersHandler(Node):
     # ── Map commands ─────────────────────────────────────────────────────────
 
     def build_map_func(self):
-        try:
-            self._pub("Mapping...")
-            self.poseArray_publisher.publish(ArrayPoseStampedWithCovariance())
-            os.system("ros2 lifecycle set /amcl shutdown")
-            os.system("ros2 lifecycle set /move_base shutdown")
-            os.system("ros2 lifecycle set /map_server shutdown")
-            time.sleep(1)
-            subprocess.Popen(f"ros2 launch {self.mappingCmd}", stdout=subprocess.PIPE,
-                             shell=True, preexec_fn=os.setsid)
-            time.sleep(3)
-            self._pub("Move the robot along the perimeter of the room and return to start position")
-        except Exception as e:
-            self.get_logger().info(f"Error in build_map_func: {e}")
+        # The platform starts and stops mapping. The UI launches nothing and
+        # leaves AMCL, map_server and the controller in their current state.
+        self._pub(MAPPING_NOT_STARTED_BY_UI)
 
     def save_map_func(self):
+        group = self.dict_cmd['group']
+        map_name = self.dict_cmd['map']
+        map_path_to_save = f'{self.maps_folder}/{group}/{map_name}'
+        if not self.save_map_cli.service_is_ready():
+            self.get_logger().warn(
+                f'Map save service {self.save_map_cli.srv_name} is unavailable.')
+            self._pub('The platform map save service is not available, so the map was not saved. '
+                      'Start the platform map saver and try again.')
+            return
+
+        self._pub('Saving map...')
+        req = SaveMap.Request()
+        req.map_topic = '/map'
+        req.map_url = map_path_to_save
+        req.image_format = 'png'
+        req.map_mode = 'trinary'
+        future = self.save_map_cli.call_async(req)
+        future.add_done_callback(
+            lambda done: self._on_map_saved(done, group, map_name, map_path_to_save))
+
+    def _on_map_saved(self, future, group, map_name, map_path_to_save):
         try:
-            self._pub("Saving map...")
-            map_path_to_save = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map']}"
-            route_folder_path_to_save = f"{self.routs_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map']}"
-            map_save_command = "ros2 run map_server map_saver -f "
-            cmd = f"{map_save_command}{map_path_to_save}"
-            self.get_logger().info(cmd)
-            os.system(cmd)
-
-            os.mkdir(route_folder_path_to_save)
-            self.set_cur_route("")
-            self.WP_req_callback(Empty())
-            self._pub("Map saved")
-
-            map_yaml_file = f"{map_path_to_save}.yaml"
-            self.set_cur_map(map_path_to_save)
-
-            current = self.position
-
-            os.system("ros2 lifecycle set /slam_gmapping 5")
-            os.system("ros2 lifecycle set /map_server 5")
-
-            self._pub("Localization...")
-            time.sleep(1)
-            subprocess.Popen(f"ros2 launch {self.navigationCmd}", stdout=subprocess.PIPE,
-                             shell=True, preexec_fn=os.setsid)
-
-            # Nav2 owns /map_server. Starting a UI-owned map_server here creates
-            # duplicate /map_server nodes and breaks AMCL lifecycle management.
-            self.change_map(map_yaml_file, yaml=True)
-            time.sleep(1)
-
-            current_pose = PoseWithCovarianceStamped()
-            current_pose.header.frame_id = "map"
-            current_pose.pose.pose = current
-            self.set_pose.publish(current_pose)
-            self._pub("You can set points or follow the route")
-            self._pub_nav_data()
+            response = future.result()
         except Exception as e:
-            self.get_logger().info(f"Error in save_map_func: {e}")
+            response = None
+            self.get_logger().error(f'Map save call failed: {e}')
+        if response is None or not response.result:
+            self._pub('The platform could not save the map.')
+            return
+        try:
+            route_folder_path_to_save = f'{self.routs_folder}/{group}/{map_name}'
+            os.makedirs(route_folder_path_to_save, exist_ok=True)
+            self.dict_cmd = {'group': group, 'map': map_name}
+            self.set_cur_route('')
+            self.WP_req_callback(Empty())
+            self._pub('Map saved')
+            # Load the saved map into the platform map_server through its
+            # load_map service. Localization stays with the platform.
+            self.change_map(f'{map_path_to_save}.yaml', yaml=True)
+        except Exception as e:
+            self.get_logger().info(f'Error after saving map: {e}')
 
     def change_map_func(self):
         path_to_new_map = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map']}"
@@ -290,76 +291,78 @@ class UIFoldersHandler(Node):
         except Exception as e:
             self.get_logger().info(f"Error in create_group_func: {e}")
 
+    # Map files (<name>.yaml, its image, an optional <name>_ros.yaml) are
+    # renamed and deleted by map_files.py, which refuses an image outside the
+    # map's folder and keeps an image another map also uses.
+
+    def _first_map_in(self, group_dir):
+        """Return the first map name in group_dir, ignoring images and _ros files."""
+        names = sorted(f[:-len('.yaml')] for f in os.listdir(group_dir)
+                       if f.endswith('.yaml') and not f.endswith('_ros.yaml'))
+        return names[0] if names else None
+
     def rename_map_func(self):
         try:
-            old_map_file = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_old']}"
-            new_map_file = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_new']}"
-            old_route_folder_file = f"{self.routs_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_old']}"
-            new_route_folder_file = f"{self.routs_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_new']}"
-            old_ros_folder_file = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_old']}_ros"
-            new_ros_folder_file = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map_new']}_ros"
-
-            with open(f"{old_map_file}.yaml", 'r') as file:
-                map_cur_path = yaml.safe_load(file) or {}
-            with open(f"{old_ros_folder_file}.yaml", 'r') as file:
-                ros_cur_path = yaml.safe_load(file) or {}
-
-            map_cur_path["image"] = f"{new_map_file}.png"
-            if "map_server" in ros_cur_path and "ros__parameters" in ros_cur_path["map_server"]:
-                ros_cur_path["map_server"]["ros__parameters"]["yaml_filename"] = f"{self.dict_cmd['map_new']}.yaml"
-            else:
-                ros_cur_path["yaml_filename"] = f"{self.dict_cmd['map_new']}.yaml"
-
-            with open(f"{old_ros_folder_file}.yaml", 'w') as file:
-                yaml.dump(ros_cur_path, file)
-            with open(f"{old_map_file}.yaml", 'w') as file:
-                yaml.dump(map_cur_path, file)
-
-            os.rename(f"{old_map_file}.yaml", f"{new_map_file}.yaml")
-            os.rename(f"{old_map_file}.png", f"{new_map_file}.png")
-            os.rename(f"{old_ros_folder_file}.yaml", f"{new_ros_folder_file}.yaml")
-            os.rename(old_route_folder_file, new_route_folder_file)
+            group = self.dict_cmd['group']
+            old, new = self.dict_cmd['map_old'], self.dict_cmd['map_new']
+            old_map_file = f'{self.maps_folder}/{group}/{old}'
+            new_map_file = f'{self.maps_folder}/{group}/{new}'
+            old_route_folder_file = f'{self.routs_folder}/{group}/{old}'
+            new_route_folder_file = f'{self.routs_folder}/{group}/{new}'
+            try:
+                notes = map_files.rename_map(old_map_file, new_map_file)
+            except map_files.MapFileError as refused:
+                self._pub(f'Nothing was renamed: {refused}.')
+                return
+            for note in notes:
+                self._pub(note)
+            if os.path.isdir(old_route_folder_file):
+                os.rename(old_route_folder_file, new_route_folder_file)
 
             data = self.get_cur_files()
-            if os.path.expanduser(data["map_file"]) == f"{old_map_file}.yaml":
-                self.set_cur_map(new_map_file)
-                self.set_cur_route(f"{new_route_folder_file}/{data['route_file'].split('/')[-1].split('.')[0]}")
+            if os.path.expanduser(data.get('map_file', '')) == f'{old_map_file}.yaml':
+                self.set_cur_map(f'{new_map_file}.yaml')
+                route = data.get('route_file', '')
+                route_name = route.split('/')[-1].split('.')[0]
+                self.set_cur_route(f'{new_route_folder_file}/{route_name}' if route else '')
 
             self._pub_nav_data()
         except Exception as e:
-            self.get_logger().info(f"Error in rename_map_func: {e}")
+            self.get_logger().info(f'Error in rename_map_func: {e}')
+            self._pub(f'The map could not be renamed: {e}')
 
     def delete_map_func(self):
         try:
-            map_to_delete = f"{self.maps_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map']}"
-            route_map_folder_to_delete = f"{self.routs_folder}/{self.dict_cmd['group']}/{self.dict_cmd['map']}"
-            os.remove(f"{map_to_delete}.yaml")
-            os.remove(f"{map_to_delete}_ros.yaml")
-            os.remove(f"{map_to_delete}.png")
-            shutil.rmtree(route_map_folder_to_delete)
+            group = self.dict_cmd['group']
+            map_to_delete = f"{self.maps_folder}/{group}/{self.dict_cmd['map']}"
+            route_map_folder_to_delete = (
+                f"{self.routs_folder}/{group}/{self.dict_cmd['map']}")
+            try:
+                notes = map_files.delete_map(map_to_delete)
+            except map_files.MapFileError as refused:
+                self._pub(f'Nothing was deleted: {refused}.')
+                return
+            for note in notes:
+                self._pub(note)
+            if os.path.isdir(route_map_folder_to_delete):
+                shutil.rmtree(route_map_folder_to_delete)
 
-            maps_in_group = os.listdir(f"{self.maps_folder}/{self.dict_cmd['group']}")
-            if maps_in_group:
-                path_to_map = f"{self.maps_folder}/{self.dict_cmd['group']}/{maps_in_group[0].split('.')[0]}"
+            first = self._first_map_in(f'{self.maps_folder}/{group}')
+            if first:
+                path_to_map = f'{self.maps_folder}/{group}/{first}'
                 self.set_cur_map(path_to_map)
-                self.change_map(path_to_map, True)
-
-                routes_on_map = os.listdir(f"{self.routs_folder}/{self.dict_cmd['group']}/{maps_in_group[0].split('.')[0]}")
-                if routes_on_map:
-                    path_to_route = f"{self.routs_folder}/{self.dict_cmd['group']}/{maps_in_group[0].split('.')[0]}/{routes_on_map[0].split('.')[0]}"
-                    self.set_cur_route(path_to_route)
-                else:
-                    self.set_cur_route("")
-                    self._pub("No routes on the map")
+                self.dict_cmd = {'group': group, 'map': first}
+                self.change_map(path_to_map)
             else:
-                self.set_cur_route("")
-                self.set_cur_map("")
-                self._pub("No maps in the group")
+                self.set_cur_route('')
+                self.set_cur_map('')
+                self._pub('No maps in the group')
 
             self.WP_req_callback(Empty())
             self._pub_nav_data()
         except Exception as e:
-            self.get_logger().info(f"Error in delete_map_func: {e}")
+            self.get_logger().info(f'Error in delete_map_func: {e}')
+            self._pub(f'The map could not be deleted: {e}')
 
     def delete_group_func(self):
         try:
@@ -551,11 +554,25 @@ class UIFoldersHandler(Node):
         req = LoadMap.Request()
         req.map_url = map_yaml_file
         if self.change_map_cli.service_is_ready() or self.change_map_cli.wait_for_service(timeout_sec=1.0):
-            self.change_map_cli.call_async(req)
+            future = self.change_map_cli.call_async(req)
+            future.add_done_callback(lambda done: self._on_map_loaded(done, map_yaml_file))
         else:
             self.get_logger().warn("Cannot load map because /map_server/load_map is unavailable.")
             self._pub("Map server is unavailable; map selection was saved but not loaded.")
         self._pub_nav_data()
+
+    def _on_map_loaded(self, future, map_yaml_file):
+        try:
+            response = future.result()
+        except Exception as e:
+            self._pub(f'The platform map server could not load {map_yaml_file}: {e}')
+            return
+        if response is None or response.result != LoadMap.Response.RESULT_SUCCESS:
+            code = getattr(response, 'result', None)
+            self._pub(f'The platform map server could not load {map_yaml_file} '
+                      f'(load_map result {code}).')
+        else:
+            self._pub('Map loaded')
 
     def set_cur_map(self, map_name: str):
         data = self.get_cur_files()

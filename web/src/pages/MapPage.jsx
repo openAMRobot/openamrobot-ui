@@ -18,7 +18,11 @@ import WaypointLibrary from "../components/WaypointLibrary";
 import SpeedPresets from "../components/SpeedPresets";
 import useSavedWaypoints from "../shared/hooks/useSavedWaypoints";
 import useKeepoutZones from "../shared/hooks/useKeepoutZones";
-import { addEvent } from "../shared/events/eventLog";
+import { softwareStop } from "../shared/motion/softwareStop";
+import { subscribeAbort } from "../shared/motion/abortBus";
+import { useMotionGate } from "../shared/motion/motionGate";
+import { navGoalBlockedReason } from "../shared/motion/navGoalGate";
+import { newUiRunId, setUiRun, updateUiRun } from "../shared/runs/uiRunStore";
 
 const INITIAL_POSE_COV = [
   0.25, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -39,6 +43,7 @@ const MapPage = () => {
   };
 
   const [maxSpeed, setMaxSpeed] = useState(config.maxLinearSpeed);
+  const goalBlockedReason = navGoalBlockedReason(useMotionGate());
 
   const [waypointQueue, setWaypointQueueState] = useState([]);
   const waypointQueueRef = useRef([]);
@@ -72,7 +77,6 @@ const MapPage = () => {
   const goalPoseTopic = useRef(null);
   const initialPoseTopic = useRef(null);
   const cancelClient = useRef(null);
-  const cmdVelTopic = useRef(null);
   const pendingInitialPoseRef = useRef(false);
 
   useEffect(() => {
@@ -94,12 +98,6 @@ const MapPage = () => {
       ros,
       name: AppConfig.NAV_CANCEL_GOAL_SERVICE,
       serviceType: "action_msgs/CancelGoal",
-    });
-
-    cmdVelTopic.current = new window.ROSLIB.Topic({
-      ros,
-      name: AppConfig.CMD_VEL_TOPIC,
-      messageType: "geometry_msgs/Twist",
     });
 
     const amclTopic = new window.ROSLIB.Topic({
@@ -135,7 +133,13 @@ const MapPage = () => {
         const next = queueIdxRef.current + 1;
         if (next < waypointQueueRef.current.length) {
           queueIdxRef.current = next;
-          publishGoal(waypointQueueRef.current[next]);
+          updateUiRun("route", { step: next + 1 });
+          if (!publishGoal(waypointQueueRef.current[next])) {
+            queueExecutingRef.current = false;
+            setQueueExecuting(false);
+            updateUiRun("route", { status: "stopped", reason: navGoalBlockedReason() });
+            return;
+          }
           toast.info(
             `Waypoint ${next + 1} / ${waypointQueueRef.current.length}`,
           );
@@ -143,11 +147,16 @@ const MapPage = () => {
           queueExecutingRef.current = false;
           setQueueExecuting(false);
           setWaypointQueue([]);
+          updateUiRun("route", { status: "succeeded", reason: "" });
           toast.success("All waypoints complete!");
         }
       } else if (latest.status === 5 || latest.status === 6) {
         queueExecutingRef.current = false;
         setQueueExecuting(false);
+        updateUiRun("route", {
+          status: latest.status === 5 ? "stopped" : "failed",
+          reason: latest.status === 5 ? "Goal was cancelled" : "Goal failed",
+        });
         toast.warn("Queue stopped: goal was canceled or failed");
       }
     });
@@ -155,8 +164,16 @@ const MapPage = () => {
     return () => statusTopic.unsubscribe();
   }, [ros]);
 
+  // Every Nav2 goal from this page goes through here. While the stop lock is
+  // engaged or unknown no goal is sent (shared/motion/navGoalGate.js), so no
+  // goal can wait and run after Resume. Returns true when the goal was sent.
   const publishGoal = (pose) => {
-    if (!goalPoseTopic.current) return;
+    const blocked = navGoalBlockedReason();
+    if (blocked) {
+      toast.warn(`Goal not sent: ${blocked}`);
+      return false;
+    }
+    if (!goalPoseTopic.current) return false;
     goalPoseTopic.current.publish(
       new window.ROSLIB.Message({
         header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
@@ -172,14 +189,15 @@ const MapPage = () => {
       }),
     );
     window.NAV2D?.setGoalPose?.(pose);
+    return true;
   };
 
   const goToWaypoint = useCallback((wp) => {
-    publishGoal({
+    const sent = publishGoal({
       position: { x: wp.x, y: wp.y, z: 0 },
       orientation: { x: 0, y: 0, z: wp.z, w: wp.w },
     });
-    toast.success(`Navigating to "${wp.name}"`);
+    if (sent) toast.success(`Navigating to "${wp.name}"`);
   }, []);
 
   // The three map right-click context-menu actions (Map.jsx's onContext*
@@ -187,7 +205,7 @@ const MapPage = () => {
   // corresponding mode-button flow above, just without requiring a mode to
   // be active first or a heading drag (orientation defaults to identity).
   const sendGoalAt = (pose) => {
-    publishGoal(pose);
+    if (!publishGoal(pose)) return;
     toast.success(
       `Goal: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(2)}) m`,
     );
@@ -251,7 +269,7 @@ const MapPage = () => {
     window.NAV2D._poseCallback = (pose) => {
       const m = modeRef.current;
       if (m === "goal") {
-        publishGoal(pose);
+        if (!publishGoal(pose)) return;
         toast.success(
           `Goal: (${pose.position.x.toFixed(2)}, ${pose.position.y.toFixed(
             2,
@@ -331,42 +349,55 @@ const MapPage = () => {
     );
   }, []);
 
+  // Same Stop (software) as the status bar: engage the platform stop lock,
+  // cancel every active Nav2 and docking goal, abort programs and missions.
   const emergencyStop = useCallback(() => {
-    if (!cmdVelTopic.current) return;
-    cmdVelTopic.current.publish(
-      new window.ROSLIB.Message({
-        linear: { x: 0, y: 0, z: 0 },
-        angular: { x: 0, y: 0, z: 0 },
+    softwareStop(ros, "map page");
+    toast.warn("Stop (software) sent");
+  }, [ros]);
+
+  // The waypoint queue is a UI-side run: Stop (software), a locked or
+  // unknown stop lock, or a disconnect ends it (goals are cancelled by the
+  // stop itself; the queue must not send the next one).
+  useEffect(
+    () =>
+      subscribeAbort(() => {
+        if (!queueExecutingRef.current) return;
+        queueExecutingRef.current = false;
+        setQueueExecuting(false);
+        updateUiRun("route", { status: "stopped", reason: "Stopped (software) or connection lost" });
       }),
-    );
-    cancelGoal();
-    addEvent({ type: "safety", severity: "error", message: "Software stop (map page)" });
-    toast.warn("Software stop sent");
-  }, [cancelGoal]);
+    [],
+  );
 
   const sendHome = useCallback(() => {
-    if (!goalPoseTopic.current) return;
-    goalPoseTopic.current.publish(
-      new window.ROSLIB.Message({
-        header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
-        pose: {
-          position: { x: 0, y: 0, z: 0 },
-          orientation: { x: 0, y: 0, z: 0, w: 1 },
-        },
-      }),
-    );
-    window.NAV2D?.setGoalPose?.({
+    const sent = publishGoal({
       position: { x: 0, y: 0, z: 0 },
       orientation: { x: 0, y: 0, z: 0, w: 1 },
     });
-    toast.info("Navigating to home position (0, 0) m");
+    if (sent) toast.info("Navigating to home position (0, 0) m");
   }, []);
 
   const executeQueue = useCallback(() => {
     if (!waypointQueueRef.current.length) return;
+    const blocked = navGoalBlockedReason();
+    if (blocked) {
+      toast.warn(`Queue not started: ${blocked}`);
+      return;
+    }
     queueIdxRef.current = 0;
     queueExecutingRef.current = true;
     setQueueExecuting(true);
+    // Reported to Reporting Mode as this tab's route run (shared/runs).
+    setUiRun("route", {
+      runId: newUiRunId("route"),
+      kind: "route",
+      name: "Waypoint queue",
+      step: 1,
+      total: waypointQueueRef.current.length,
+      status: "running",
+      reason: "",
+    });
     publishGoal(waypointQueueRef.current[0]);
     toast.info(`Executing ${waypointQueueRef.current.length} waypoints`);
   }, []);
@@ -374,6 +405,7 @@ const MapPage = () => {
   const stopQueue = useCallback(() => {
     queueExecutingRef.current = false;
     setQueueExecuting(false);
+    updateUiRun("route", { status: "stopped", reason: "Stopped by the operator" });
     cancelGoal();
   }, [cancelGoal]);
 
@@ -387,12 +419,14 @@ const MapPage = () => {
     };
   }, []);
 
-  const modeBtn = (label, shortLabel, m, activeLabel, shortActiveLabel) => {
+  const modeBtn = (label, shortLabel, m, activeLabel, shortActiveLabel, disabledReason = "") => {
     const active = mode === m;
     return (
       <button
         onClick={() => (active ? deactivateMode() : activateMode(m))}
-        className={`flex-1 rounded-xl border px-2 py-3 font-[RobotoMono] text-[10px] font-semibold transition-colors sm:px-3 sm:text-sm ${
+        disabled={Boolean(disabledReason) && !active}
+        title={disabledReason || undefined}
+        className={`flex-1 disabled:cursor-not-allowed disabled:opacity-40 rounded-xl border px-2 py-3 font-[RobotoMono] text-[10px] font-semibold transition-colors sm:px-3 sm:text-sm ${
           active
             ? "border-themeBlue bg-themeBlue text-white"
             : "border-borderSubtle bg-bgCard text-themeBlue hover:border-themeBlue"
@@ -436,7 +470,7 @@ const MapPage = () => {
 
         {/* Controls row */}
         <section className="flex w-full shrink-0 flex-col gap-3">
-          {/* Manual drive: joystick + e-stop, max speed, live telemetry, docking, saved waypoints */}
+          {/* Manual drive: joystick + Stop (software), max speed, live telemetry, docking, saved waypoints */}
           <div
             className="flex w-full flex-wrap gap-3"
             data-tour="manual-drive"
@@ -448,7 +482,7 @@ const MapPage = () => {
               <Joystick maxSpeed={maxSpeed} compact />
               <button
                 onClick={emergencyStop}
-                title="Stop (software): halts motion from this UI. This is not the hardwired E-stop."
+                title="Stop (software): engages the platform stop lock and cancels active goals. This is not the hardwired E-stop."
                 className="mt-1 shrink-0 rounded-lg border-2 border-statusRed bg-statusRed/10 px-2 py-1 font-[RobotoMono] text-[10px] font-bold leading-none text-statusRed transition-colors hover:bg-statusRed hover:text-white"
               >
                 Stop (software)
@@ -509,6 +543,7 @@ const MapPage = () => {
                 "goal",
                 "● Click to Send Goal",
                 "● Goal",
+                goalBlockedReason,
               )}
               {modeBtn(
                 "⊕ Correct Robot's Position",
@@ -526,12 +561,24 @@ const MapPage = () => {
               )}
               <button
                 onClick={sendHome}
-                className="flex-1 rounded-xl border border-borderSubtle bg-bgCard px-2 py-3 font-[RobotoMono] text-[10px] font-semibold text-textWhiteHover transition-colors hover:border-themeBlue hover:text-themeBlue sm:px-3 sm:text-sm"
+                disabled={Boolean(goalBlockedReason)}
+                title={goalBlockedReason || "Navigate to (0, 0)"}
+                className="flex-1 disabled:cursor-not-allowed disabled:opacity-40 rounded-xl border border-borderSubtle bg-bgCard px-2 py-3 font-[RobotoMono] text-[10px] font-semibold text-textWhiteHover transition-colors hover:border-themeBlue hover:text-themeBlue sm:px-3 sm:text-sm"
               >
                 <span className="sm:hidden">Home</span>
                 <span className="hidden sm:inline">⌂ Go Home</span>
               </button>
             </div>
+
+            {goalBlockedReason && (
+              <p
+                role="status"
+                data-testid="nav-goals-disabled"
+                className="px-1 font-[RobotoMono] text-xs leading-5 text-statusYellow"
+              >
+                Navigation goals are disabled: {goalBlockedReason}.
+              </p>
+            )}
 
             <p className="px-1 font-[RobotoMono] text-xs leading-5 text-themeTextGray">
               {mode === "goal" &&
@@ -584,7 +631,9 @@ const MapPage = () => {
                 ) : (
                   <button
                     onClick={executeQueue}
-                    className="w-full rounded-lg border border-themeBlue bg-themeBlue/10 py-1.5 text-xs font-semibold text-themeBlue transition-colors hover:bg-themeBlue hover:text-white"
+                    disabled={Boolean(goalBlockedReason)}
+                    title={goalBlockedReason || "Send the queued waypoints one by one"}
+                    className="w-full disabled:cursor-not-allowed disabled:opacity-40 rounded-lg border border-themeBlue bg-themeBlue/10 py-1.5 text-xs font-semibold text-themeBlue transition-colors hover:bg-themeBlue hover:text-white"
                   >
                     Execute Queue
                   </button>

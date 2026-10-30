@@ -13,16 +13,11 @@ Current launch files:
   the launch logs explain how to configure it.
 - `physnode_launch.py`: optional helper launch for map/route file operations and
   waypoint route following.
-- `map_server_launch.py`: deprecated compatibility launch, namespaced under
-  `ui_legacy`.
-- `mapping_launch.py` (includes `gmapping_launch.py` + `move_base_launch.py`)
-  and `navigation_launch.py` (includes `move_base_launch.py` +
-  `amcl_launch.py`): **not legacy** — `folders_handler.py`'s `build_map_func`/
-  `save_map_func` launch these directly, and they're what the web UI's Maps
-  page **Start mapping**/**Save current map** buttons actually trigger.
-  `amcl_launch.py`, `gmapping_launch.py`, and `move_base_launch.py` on their
-  own are just the pieces those two compose — not meant to be launched
-  standalone.
+- No launch file here starts SLAM, AMCL, the Nav2 controller, planner or
+  navigator, or a map_server; those belong to the robot platform
+  (openamrobot-ui#32). The legacy mapping and navigation launches
+  (openamrobot-ui#52) and `map_server_launch.py` (openamrobot-ui#41) are
+  deleted.
 
 For normal use, see the root `README.md` and prefer
 `openamr_ui_bringup ui.launch.py`.

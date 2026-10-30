@@ -61,6 +61,17 @@ CI=true npm test -- --watchAll=false
 npm run build
 ```
 
+The route smoke test opens every page of the production build in Demo Mode
+at 1280 x 800 and 1920 x 1200 and fails on any console error. It needs a
+build and a Chromium for Playwright:
+
+```bash
+cd web
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
 `npm run lint` runs Prettier (`web/prettier.config.js`) followed by ESLint.
 The Prettier step works and rewrites files in place — run it only when you're
 ready to inspect and keep those edits. The ESLint step does not: this repo
