@@ -18,6 +18,7 @@ from geometry_msgs.msg import (
 from std_msgs.msg import String, Bool
 from nav_msgs.msg import Odometry
 from openamr_ui_msgs.msg import ArrayPoseStampedWithCovariance
+from openamr_ui_package import data_dir
 
 
 class WayPointMover(Node):
@@ -29,10 +30,10 @@ class WayPointMover(Node):
         self.on_the_route = False
         self.break_mission = False
 
-        package_share_dir = get_package_share_directory('openamr_ui_package')
-        self.current_files = os.path.join(
-            package_share_dir, 'param/current_map_route.yaml'
-        )
+        # Same data directory as folders_handler; see data_dir.py.
+        self.current_files = data_dir.seed(
+            get_package_share_directory('openamr_ui_package'), data_dir.default_data_dir()
+        )['current']
 
         self.current_pos = PoseWithCovariance()
         self.home_pose = PoseWithCovariance()
