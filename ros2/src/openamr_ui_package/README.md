@@ -15,12 +15,11 @@ build commands, run commands, ports, topics, and troubleshooting.
   waypoint route-following helper nodes.
 - `launch/map_server_launch.py`: deprecated compatibility launch, namespaced
   under `ui_legacy` to avoid conflicting with the platform map server.
-- `launch/mapping_launch.py` (includes `gmapping_launch.py` +
-  `move_base_launch.py`) and `launch/navigation_launch.py` (includes
-  `move_base_launch.py` + `amcl_launch.py`): not legacy — `folders_handler.py`
-  launches these directly for the web UI's Maps page **Start mapping** and
-  **Save current map** buttons (SLAM while mapping, then back to
-  localization/navigation once saved).
+- No launch file in this package starts SLAM, AMCL or the Nav2 controller,
+  planner or navigator. The only one that still starts a map_server is
+  `launch/map_server_launch.py` above, which openamrobot-ui#41 removes. Mapping
+  and navigation run on the robot platform; the Maps page saves and loads maps
+  through the platform's map services (openamrobot-ui#32).
 
 ## Runtime pieces
 

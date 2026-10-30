@@ -139,10 +139,10 @@ loaded, and organize saved maps into groups.
 
 ![OpenAMRobot UI Maps page: build-a-new-map and save-current-map panels, plus a saved-maps list grouped by folder](../assets/maps/maps.png)
 
-- **Start mapping** launches mapping mode (SLAM) and stops
-  navigation/localization — drive the robot around the space (with the
-  joystick on the Map page, for example), then come back here and use
-  **Save current map** once you're done.
+- Mapping runs on the robot platform, not in this UI. **How to map** says
+  so: start mapping on the platform, drive the robot around the space (with
+  the joystick on the Map page, for example), then come back here and use
+  **Save current map**, which asks the platform's map saver to save it.
 - The saved-maps list lets you **Switch** the active map (reloads it on the
   robot immediately — set the initial pose again afterward, since old
   localization won't match a new map), **Rename**, or **Delete** it, and add
