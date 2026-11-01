@@ -80,7 +80,7 @@ toolbox. If your page looks different, compare it with the labels below.
 | Zoom controls                 | Plus, minus, and center controls on the right edge of the workspace     | Zoom in/out or recenter the block workspace                                                                      |
 | Trash can                     | Delete area in the bottom-right of the workspace                        | Drag unwanted blocks to the trash, or select blocks and delete them                                              |
 | Connection status             | Connection state in the right panel                                     | `Robot connected` means the browser can talk to ROS through rosbridge; `Robot offline` means Run will be disabled |
-| Run and Stop                  | Execution buttons in the right panel                                    | Run executes the Generated Plan; Stop sends an emergency stop command                                            |
+| Run and Stop                  | Execution buttons in the right panel                                    | Run executes the Generated Plan; Stop sends a Stop (software) command, base only                                 |
 | Voice Command                 | Mic button and live transcript in the right panel                       | Tap the mic and say "Monsieur" followed by a command; Claude turns it into blocks in the workspace for you to review before Run |
 | Program Templates             | Ready-made example programs in the right panel                          | Load a safe starter program, navigation example, docking sequence, patrol route, or low-battery routine          |
 | Run History                   | Recent run results in the right panel                                   | Review success, failed, and stopped runs with timing and step counts                                             |
@@ -736,6 +736,8 @@ Use this after direct motion commands when you only want to stop velocity.
 
 This publishes zero velocity and calls the navigation cancel service. Use it
 when you need to stop direct motion and cancel active navigation.
+It is a Stop (software): a functional stop for base motion only, not an
+E-stop and not a safety function. E-stop means only the hardwired buttons.
 
 Example:
 
@@ -750,9 +752,9 @@ What happens:
 
 - The robot receives a navigation goal.
 - The program waits one second.
-- The emergency stop block sends zero velocity and cancels navigation.
+- The `emergency stop` block sends zero velocity and cancels navigation.
 
-On a real robot, this UI command is not a replacement for a physical emergency
+On a real robot, this UI command is not a replacement for a hardwired emergency
 stop.
 
 ### Docking blocks
@@ -909,7 +911,7 @@ angular 0.3
 The `Run` button is disabled when the robot isn't connected, when there are no
 generated steps, or when a program is already running.
 
-If the plan contains direct motion, docking, undocking, emergency stop, or
+If the plan contains direct motion, docking, undocking, `emergency stop` blocks, or
 validation warnings, the page asks for confirmation before running. Confirm only
 after checking that the robot area is clear.
 
@@ -917,7 +919,7 @@ after checking that the robot area is clear.
 
 ![Generated Plan panel listing queued steps built from the connected blocks](../../../../docs/assets/programs/generatedplan.png)
 
-The `Stop` button calls the same emergency stop behavior used by the
+The `Stop` button calls the same Stop (software) behavior used by the
 `emergency stop` block: it publishes zero velocity and cancels navigation.
 
 ### Safest first real-robot test
@@ -1183,7 +1185,7 @@ Common topics:
 | `/battery_status`                       | Battery percentage               |
 | `/ui_operation`                         | UI mode command                  |
 | `/ui_message`                           | Log/debug message                |
-| `/navigate_to_pose/_action/cancel_goal` | Emergency stop navigation cancel |
+| `/navigate_to_pose/_action/cancel_goal` | Stop (software) navigation cancel |
 
 If your robot uses different topic names, update `AppConfig` in
 `web/src/shared/constants/index.js` or update the topics in `robotActions.js`.
@@ -1649,7 +1651,7 @@ If the program runs but the robot does not move, check:
 - The robot or simulation stack is running.
 - `/cmd_vel` reaches the robot controller.
 - Motors or simulation control are enabled.
-- No physical or software emergency stop is active.
+- No hardwired E-stop is pressed and Stop (software) is not engaged.
 - For navigation, Nav2 is active and the robot is localized.
 
 Start with the safest test:
@@ -1721,7 +1723,7 @@ viewer that supports relative image paths with spaces in filenames.
 
 - Test first in simulation when possible.
 - Start with very small linear and angular speeds.
-- Keep a physical emergency stop available on a real robot.
+- Keep a hardwired E-stop within reach on a real robot.
 - Use `stop movement` after direct speed commands.
 - Use `emergency stop` when you need to cancel active navigation too.
 - Confirm map coordinates before running navigation or docking programs.
