@@ -148,8 +148,14 @@ openamr-platform-sw#90, the source of the interfaces below (head
   `main` (the lock stays unknown).
 - Gate A (6 Nov): needs A1 merged after #90. #31 and #34 stay open until
   Nikolai's simulation reruns S4, S6 and S7a pass.
-- To confirm (proposed defaults): 10 ms `/clock` throttle, 1 s stop lock
-  staleness, 2 s retry for the relay parameter read.
+- Confirmed by Parth (1 Nov) and Kunal (4 Nov): 10 ms `/clock` throttle,
+  1 s stop lock staleness (20 missed ticks at the gate's 20 Hz), 2 s retry
+  for the relay parameter read.
+- Stamping (Kunal, 4 Nov, platform-sw#110): the browser stamps on the
+  robot clock as above; the relay does not restamp, so a replayed or
+  delayed command still ages out. #110 is resolved by this design.
+- Parth adopted A1 on 1 Nov; merge after #90. Before merge, re-check topic
+  names, QoS and timings against #90's merged commit.
 - Stop (software) also latches locally at once (`motionGate` `localStop`),
   before the engage request answers; held input, programs, missions and
   goals stay blocked until a confirmed Resume whose release succeeds. A

@@ -38,14 +38,15 @@ export const MAX_SYNC_AGE_MS = 6000;
 // value and is at least this old when /clock goes quiet.
 export const SIM_CLOCK_MAX_SILENCE_MS = 150;
 
-// Simulation: rosbridge throttle for the /clock subscription. Proposed
-// default, owner to confirm: Gazebo publishes /clock once per physics step,
+// Simulation: rosbridge throttle for the /clock subscription. Confirmed by
+// Parth (1 Nov 2026) and Kunal (4 Nov 2026, platform-sw#110): Gazebo publishes /clock once per physics step,
 // far faster than the browser needs; 10 ms (up to 100 Hz) adds at most 10 ms
 // to the stamp age and keeps the websocket load small.
 export const SIM_CLOCK_THROTTLE_MS = 10;
 
 // Retry period for reading the relay's use_sim_time until it succeeds.
-// Proposed default, owner to confirm: same as the 2 s clock resync period.
+// Confirmed by Parth (1 Nov 2026) and Kunal (4 Nov 2026): same as the 2 s
+// clock resync period.
 export const MODE_RETRY_PERIOD_MS = 2000;
 
 // How often the clock and lock states are re-evaluated for time-based rules.
@@ -55,6 +56,6 @@ export const GATE_EVALUATE_PERIOD_MS = MANUAL_PUBLISH_PERIOD_MS;
 
 // Stop lock: treat the lock as unknown when no /safety/stop_lock sample
 // arrived for this long. Basis: safety_stop_gate_node republishes the lock on
-// every 10 Hz tick (TICK_HZ = 10), so 1 s is 10 missed ticks. Proposed
-// default, owner to confirm.
+// every tick at TICK_HZ = 20 (openamr-platform-sw#90 since 556366d), so 1 s
+// is 20 missed ticks. Confirmed by Parth (1 Nov 2026) and Kunal (4 Nov 2026).
 export const STOP_LOCK_STALE_AFTER_MS = 1000;

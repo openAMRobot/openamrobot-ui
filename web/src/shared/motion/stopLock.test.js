@@ -67,7 +67,7 @@ describe("createStopLock", () => {
     lock.stop();
   });
 
-  it("goes unknown when the 10 Hz republish stops", () => {
+  it("goes unknown when the periodic republish stops", () => {
     const onChange = jest.fn();
     const lock = createStopLock({ ros: {}, now: () => nowMs, onChange });
     mock.topicsNamed(AppConfig.STOP_LOCK_TOPIC)[0].emit({ data: false });

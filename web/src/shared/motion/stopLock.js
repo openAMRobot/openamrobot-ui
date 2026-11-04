@@ -9,7 +9,7 @@ import { GATE_EVALUATE_PERIOD_MS, STOP_LOCK_STALE_AFTER_MS } from "./timing";
  * roslibjs cannot request a QoS profile. rosbridge_suite 2.7.1 matches it:
  * when every publisher on the topic is TRANSIENT_LOCAL it subscribes
  * RELIABLE + TRANSIENT_LOCAL, so the retained sample arrives on subscribe.
- * The gate also republishes the lock on every 10 Hz tick, which covers a
+ * The gate also republishes the lock on every 20 Hz tick, which covers a
  * subscription made before the gate started.
  *
  * States: "unknown" (no sample yet, sample stale, or rosbridge down),
