@@ -76,7 +76,7 @@ evidence only, not the robot):
 | Source | Topic and type | Publish behaviour | Stale after |
 |---|---|---|---|
 | Connection | rosbridge WebSocket (roslibjs `connection`, `close`, `error`) | rosbridge_suite 2.7.1 has WebSocket ping off by default (`websocket_ping_interval` 0.0) and a browser cannot observe pings, so there is no protocol heartbeat | Disconnected on `close` or `error` |
-| Software stop lock | `/safety/stop_lock`, `std_msgs/Bool` | Republished on every 10 Hz tick of the stop gate | 1 s (10 missed ticks). This also serves as the link heartbeat. |
+| Software stop lock | `/safety/stop_lock`, `std_msgs/Bool` | Republished on every 20 Hz tick of the stop gate (`TICK_HZ` 20, openamr-platform-sw#90) | 1 s (20 missed ticks). This also serves as the link heartbeat. |
 | Navigation | `/navigation/status`, `openamr_nav_msgs/NavigationStatus` (contract version 1) | On change, and at least once per 2 Hz heartbeat | 1.5 s (3 heartbeats) |
 | Diagnostics | `/diagnostics`, `diagnostic_msgs/DiagnosticArray` | The navigation status node mirrors it on every 10 Hz tick | 1 s (10 ticks), per entry name |
 | Battery | `/battery_status`, `std_msgs/Float32` percent | 1 s timer in `battery.py` | 3 s (3 periods) |
@@ -85,7 +85,7 @@ evidence only, not the robot):
 | Mission | browser mission runner store | This browser tab only | Not a freshness source |
 | Program, route | browser run store (`shared/runs/uiRunStore.js`) | This browser tab only | Not a freshness source |
 
-The thresholds (3 heartbeats, 10 ticks, 3 periods) and the 25% battery
+The thresholds (3 heartbeats, 10 and 20 ticks, 3 periods) and the 25% battery
 limit are accepted defaults (owner decision, 30 Oct 2026). The view is re-derived every
 250 ms, so a source turns stale on screen without new data.
 
