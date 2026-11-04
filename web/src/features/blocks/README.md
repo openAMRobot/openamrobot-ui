@@ -648,8 +648,10 @@ What happens:
 
 #### `set speed linear L angular A`
 
-This publishes a velocity command to `/cmd_vel` and immediately continues to the
-next block. It does not stop by itself.
+This holds a velocity command and immediately continues to the next block. The
+command is published as `geometry_msgs/TwistStamped` on `/ui/cmd_vel` at 20 Hz
+until a `stop movement` block, another drive block, or the end of the program.
+A program never leaves the robot moving after it ends.
 
 Example:
 
@@ -719,7 +721,8 @@ start robot program
 
 #### `stop movement`
 
-This publishes zero velocity to `/cmd_vel`. It does not cancel a navigation goal.
+This publishes one zero velocity on `/ui/cmd_vel` and ends the held command. It
+does not cancel a navigation goal.
 
 Example:
 
@@ -734,8 +737,10 @@ Use this after direct motion commands when you only want to stop velocity.
 
 #### `emergency stop`
 
-This publishes zero velocity and calls the navigation cancel service. Use it
-when you need to stop direct motion and cancel active navigation.
+This publishes one zero velocity on `/ui/cmd_vel` and calls the navigation
+cancel service. Use it when you need to stop direct motion and cancel active
+navigation. Despite its name, it does not engage the software stop lock and it
+is not the hardwired E-stop; for a latched stop use Stop (software).
 
 Example:
 
@@ -754,6 +759,26 @@ What happens:
 
 On a real robot, this UI command is not a replacement for a physical emergency
 stop.
+
+### How direct motion reaches the robot
+
+Drive, rotate, set speed and stop blocks never publish `/cmd_vel`. They go
+through the UI's single velocity publisher
+(`web/src/shared/motion/uiCommand.js`), which stamps each command on the robot
+clock and publishes it on `/ui/cmd_vel`. On the robot, a relay drops stale
+commands and passes the rest to `twist_mux`; the velocity smoother and the
+collision monitor come after it, and the collision monitor is the only
+publisher of the final `/cmd_vel`.
+
+Programs follow the platform software stop lock (`/safety/stop_lock`):
+
+- A program cannot start while the lock is engaged or its state is unknown.
+- Pressing Stop (software), the lock engaging, the lock state becoming unknown,
+  or a lost connection aborts a running program.
+- While the lock is engaged or unknown, or while the robot clock is not synced,
+  a drive block fails the program with the reason instead of moving, and a
+  navigate, dock or undock block fails without sending a goal.
+- Only Resume on the operator screen releases the lock.
 
 ### Docking blocks
 
@@ -917,8 +942,9 @@ after checking that the robot area is clear.
 
 ![Generated Plan panel listing queued steps built from the connected blocks](../../../../docs/assets/programs/generatedplan.png)
 
-The `Stop` button calls the same emergency stop behavior used by the
-`emergency stop` block: it publishes zero velocity and cancels navigation.
+The `Stop` button calls the same behaviour as the `emergency stop` block: it
+publishes one zero velocity on `/ui/cmd_vel` and cancels navigation. It does
+not engage the stop lock; use Stop (software) in the status bar for that.
 
 ### Safest first real-robot test
 
@@ -936,7 +962,9 @@ Expected result:
 - The robot stops automatically.
 
 If this does not work, do not test larger programs yet. Check the connection
-status, `/cmd_vel`, robot motor enable state, and the robot/simulation bringup.
+status, the stop lock state (the banner must not say "Stopped (software)"),
+the "Robot clock not synced" notice, `/ui/cmd_vel`, robot motor enable state,
+and the robot/simulation bringup.
 
 ## Important values
 
@@ -955,7 +983,7 @@ yaw 3.14   = face backward
 
 ### Velocity values
 
-Direct motion uses `/cmd_vel`.
+Direct motion uses `/ui/cmd_vel` (see "How direct motion reaches the robot").
 
 ```text
 linear 0.1 angular 0    = move forward slowly
@@ -1176,7 +1204,8 @@ Common topics:
 | Topic or Service                        | Used For                         |
 | --------------------------------------- | -------------------------------- |
 | `/goal_pose`                            | Navigation goal pose             |
-| `/cmd_vel`                              | Direct velocity commands         |
+| `/ui/cmd_vel`                           | Direct velocity commands         |
+| `/safety/stop_lock`                     | Software stop lock state         |
 | `/dock_trigger`                         | Dock trigger                     |
 | `/undock_robot`                         | Undock trigger                   |
 | `/ui/navigate_to_pose/status`           | Navigation completion status     |
@@ -1647,9 +1676,11 @@ If the program runs but the robot does not move, check:
 
 - The connection status shows `Robot connected`.
 - The robot or simulation stack is running.
-- `/cmd_vel` reaches the robot controller.
+- The software stop lock is released and the robot clock is synced (no
+  "Stopped (software)" banner, no "Robot clock not synced" notice).
+- `/ui/cmd_vel` reaches the platform relay and `twist_mux`.
 - Motors or simulation control are enabled.
-- No physical or software emergency stop is active.
+- No physical emergency stop is active.
 - For navigation, Nav2 is active and the robot is localized.
 
 Start with the safest test:

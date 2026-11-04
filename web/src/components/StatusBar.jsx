@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import { useRos, useRosStatus } from "../app/App";
 import { AppConfig } from "../shared/constants";
-import { addEvent } from "../shared/events/eventLog";
+import { softwareStop } from "../shared/motion/softwareStop";
 import { useT } from "../shared/i18n/i18n";
 
 const CONN = {
@@ -25,10 +25,12 @@ const batteryColor = (pct) =>
  * the three things an operator needs at a glance from anywhere: rosbridge
  * connection, battery level, and a one-tap "Stop (software)" button.
  *
- * Stop (software) publishes a zero Twist and cancels the active Nav2 goal,
- * the same halt the Map page's stop button does, so it works no matter which
- * page is open. It is a software stop only. It is NOT the hardwired E-stop and
- * must never be labelled as one: the hardwired E-stop stays the safety function.
+ * Stop (software) engages the platform stop lock, cancels every active Nav2
+ * and docking goal and aborts UI programs and missions (shared/motion/
+ * softwareStop.js), the same call the Map page's stop button makes, so it
+ * works no matter which page is open. It is a software stop only. It is NOT
+ * the hardwired E-stop and must never be labelled as one: the hardwired
+ * E-stop stays the safety function.
  */
 const StatusBar = () => {
   const ros = useRos();
@@ -36,22 +38,8 @@ const StatusBar = () => {
   const { t } = useT();
   const [battery, setBattery] = useState(null);
 
-  const cmdVelRef = useRef(null);
-  const cancelRef = useRef(null);
-
   useEffect(() => {
     if (!ros || !window.ROSLIB) return undefined;
-
-    cmdVelRef.current = new window.ROSLIB.Topic({
-      ros,
-      name: AppConfig.CMD_VEL_TOPIC,
-      messageType: "geometry_msgs/Twist",
-    });
-    cancelRef.current = new window.ROSLIB.Service({
-      ros,
-      name: AppConfig.NAV_CANCEL_GOAL_SERVICE,
-      serviceType: "action_msgs/CancelGoal",
-    });
 
     const batteryTopic = new window.ROSLIB.Topic({
       ros,
@@ -63,22 +51,9 @@ const StatusBar = () => {
     return () => batteryTopic.unsubscribe();
   }, [ros]);
 
-  const softwareStop = useCallback(() => {
-    cmdVelRef.current?.publish(
-      new window.ROSLIB.Message({
-        linear: { x: 0, y: 0, z: 0 },
-        angular: { x: 0, y: 0, z: 0 },
-      }),
-    );
-    cancelRef.current?.callService(
-      new window.ROSLIB.ServiceRequest({
-        goal_info: { goal_id: { uuid: new Array(16).fill(0) }, stamp: { sec: 0, nanosec: 0 } },
-      }),
-      () => {},
-      () => {},
-    );
-    addEvent({ type: "safety", severity: "error", message: "Software stop (status bar)" });
-  }, []);
+  const onSoftwareStop = useCallback(() => {
+    softwareStop(ros, "status bar");
+  }, [ros]);
 
   const conn = CONN[rosStatus] || CONN.disconnected;
   const pct = battery == null ? null : Math.round(battery);
@@ -112,8 +87,8 @@ const StatusBar = () => {
       </div>
 
       <button
-        onClick={softwareStop}
-        title="Software stop: halts motion commands from this UI. This is not the hardwired E-stop."
+        onClick={onSoftwareStop}
+        title="Stop (software): engages the platform stop lock and cancels active goals. This is not the hardwired E-stop."
         className="ml-auto rounded-lg border-2 border-statusRed bg-statusRed/10 px-3 py-1 text-xs font-bold text-statusRed transition-colors hover:bg-statusRed hover:text-white"
       >
         {t("Stop (software)")}

@@ -1,8 +1,9 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Joystick } from "react-joystick-component";
 
-import { AppConfig } from "../shared/constants/index";
-import { useRos, useRuntimeConfig } from "../app/App";
+import { useRuntimeConfig } from "../app/App";
+import { useMotionGate } from "../shared/motion/motionGate";
+import { holdVelocity, releaseVelocity } from "../shared/motion/uiCommand";
 
 // W3C Gamepad API standard mapping: left stick is axes[0] (x, +right) and
 // axes[1] (y, +down — inverted vs. the joystick lib's evt.y, which is +up).
@@ -10,76 +11,51 @@ const GAMEPAD_DEADZONE = 0.12;
 const applyDeadzone = (value) => (Math.abs(value) > GAMEPAD_DEADZONE ? value : 0);
 
 const JoystickComponent = ({ maxSpeed, compact = false }) => {
-  const ros = useRos();
   const { config } = useRuntimeConfig();
+  const gate = useMotionGate();
   const joysticRef = useRef();
   const [size, setSize] = useState(180);
   const [stickSize, setStickSize] = useState(120);
   const [gamepadConnected, setGamepadConnected] = useState(false);
 
   const effectiveMax = maxSpeed ?? config.maxLinearSpeed;
+  const disabled = !gate.canDrive;
 
-  const cmdVel = useRef(null);
-  const intervalRef = useRef(null);
-  const latestCoordsRef = useRef(null);
-
-  useEffect(() => {
-    if (!ros || !window.ROSLIB) return;
-    cmdVel.current = new window.ROSLIB.Topic({
-      ros,
-      name: AppConfig.CMD_VEL_TOPIC,
-      messageType: "geometry_msgs/Twist",
-    });
-  }, [ros]);
-
-  // Updates the in-flight publish rather than restarting the interval on
-  // every call — the gamepad poller (below) calls this every animation
-  // frame while the stick is held, and restarting a 100ms interval that
-  // often would starve it of ever firing.
-  const setDataToRos = useCallback((coordsData) => {
-    latestCoordsRef.current = coordsData;
-    if (!intervalRef.current) {
-      intervalRef.current = setInterval(() => {
-        if (cmdVel.current && latestCoordsRef.current) {
-          cmdVel.current.publish(new window.ROSLIB.Message(latestCoordsRef.current));
-        }
-      }, 100);
-    }
-  }, []);
-
-  const handleJoysticMove = useCallback(
-    (evt) => {
-      setDataToRos({
-        linear: { x: evt.y * effectiveMax, y: 0, z: 0 },
-        angular: { x: 0, y: 0, z: -evt.x * config.maxAngularSpeed },
-      });
-    },
-    [setDataToRos, effectiveMax, config.maxAngularSpeed],
+  // Both inputs go through shared/motion/uiCommand.js, the only velocity
+  // publisher: it stamps each command, publishes on /ui/cmd_vel at 20 Hz while
+  // held and sends one zero on release. Nothing is published while the
+  // motion gate is closed.
+  const driveFrom = useCallback(
+    (source, evt) =>
+      holdVelocity(source, {
+        linear: evt.y * effectiveMax,
+        angular: -evt.x * config.maxAngularSpeed,
+      }),
+    [effectiveMax, config.maxAngularSpeed],
   );
 
+  // Same rule as the gamepad below: a drag that was refused (gate closed)
+  // drives again only after the stick is released and pressed again.
+  const joystickNeedsReleaseRef = useRef(false);
+  const handleJoysticMove = useCallback(
+    (evt) => {
+      if (joystickNeedsReleaseRef.current) return;
+      if (!driveFrom("joystick", evt).ok) joystickNeedsReleaseRef.current = true;
+    },
+    [driveFrom],
+  );
   const handleStop = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    latestCoordsRef.current = null;
-    if (cmdVel.current) {
-      cmdVel.current.publish(
-        new window.ROSLIB.Message({
-          linear: { x: 0, y: 0, z: 0 },
-          angular: { x: 0, y: 0, z: 0 },
-        }),
-      );
-    }
+    joystickNeedsReleaseRef.current = false;
+    releaseVelocity("joystick");
   }, []);
 
-  // Gamepad support: an alternate input feeding the same setDataToRos/
-  // handleStop path the on-screen joystick uses, so it publishes to the
-  // exact same cmd_vel topic with the same speed limits. Polled via rAF
-  // (the Gamepad API has no change events for stick movement), edge-
-  // triggered so handleStop only fires once per release, not every frame.
+  // Gamepad support: an alternate input feeding the same uiCommand path the
+  // on-screen joystick uses, with the same topic and speed limits. Polled
+  // via rAF (the Gamepad API has no change events for stick movement),
+  // edge-triggered so the release fires once per release, not every frame.
   useEffect(() => {
     const gamepadActiveRef = { current: false };
+    const needsNeutralRef = { current: false };
     let rafId;
 
     const poll = () => {
@@ -89,11 +65,22 @@ const JoystickComponent = ({ maxSpeed, compact = false }) => {
       const y = gp ? applyDeadzone(gp.axes[1] || 0) : 0;
 
       if (x !== 0 || y !== 0) {
-        gamepadActiveRef.current = true;
-        handleJoysticMove({ x, y: -y });
-      } else if (gamepadActiveRef.current) {
-        gamepadActiveRef.current = false;
-        handleStop();
+        // A stick held while the gate was closed (stop, unknown lock, clock
+        // not synced) must return to neutral before it drives again, so
+        // Resume never starts motion from a stick that is already deflected.
+        if (!needsNeutralRef.current) {
+          gamepadActiveRef.current = true;
+          if (!driveFrom("gamepad", { x, y: -y }).ok) {
+            needsNeutralRef.current = true;
+            gamepadActiveRef.current = false;
+          }
+        }
+      } else {
+        needsNeutralRef.current = false;
+        if (gamepadActiveRef.current) {
+          gamepadActiveRef.current = false;
+          releaseVelocity("gamepad");
+        }
       }
       rafId = requestAnimationFrame(poll);
     };
@@ -110,7 +97,7 @@ const JoystickComponent = ({ maxSpeed, compact = false }) => {
       window.removeEventListener("gamepadconnected", onConnect);
       window.removeEventListener("gamepaddisconnected", onDisconnect);
     };
-  }, [handleJoysticMove, handleStop]);
+  }, [driveFrom]);
 
   useEffect(() => {
     if (!joysticRef.current) return;
@@ -119,9 +106,8 @@ const JoystickComponent = ({ maxSpeed, compact = false }) => {
     setStickSize(blockWidth * 0.66);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      releaseVelocity("joystick");
+      releaseVelocity("gamepad");
     };
   }, []);
 
@@ -143,8 +129,18 @@ const JoystickComponent = ({ maxSpeed, compact = false }) => {
           stickColor="#8b5cf6"
           move={handleJoysticMove}
           stop={handleStop}
+          disabled={disabled}
         />
       </div>
+      {disabled && (
+        <div
+          role="status"
+          data-testid="manual-drive-disabled"
+          className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 p-1 text-center font-[RobotoMono] text-[9px] leading-tight text-statusYellow"
+        >
+          {gate.reason}
+        </div>
+      )}
       {gamepadConnected && (
         <span
           title="Gamepad connected — left stick drives"

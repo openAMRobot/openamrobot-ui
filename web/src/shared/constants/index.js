@@ -4,7 +4,20 @@ export const AppConfig = {
   CAMERA_PORT: "8080",
   RECONNECTION_TIME: 1000,
 
-  CMD_VEL_TOPIC: "/cmd_vel",
+  // Manual drive input (geometry_msgs/TwistStamped). The platform relay
+  // (openamr-platform-sw#90, ui_cmd_vel_relay_node) forwards it to twist_mux;
+  // collision_monitor stays the only publisher of the final /cmd_vel.
+  // Only shared/motion/uiCommand.js may publish here.
+  UI_CMD_VEL_TOPIC: "/ui/cmd_vel",
+  // Stop lock owned by safety_stop_gate_node (openamr-platform-sw#90):
+  // std_msgs/Bool, true = engaged, RELIABLE + TRANSIENT_LOCAL depth 1.
+  STOP_LOCK_TOPIC: "/safety/stop_lock",
+  STOP_LOCK_ENGAGE_SERVICE: "/safety/stop_lock_engage", // std_srvs/Trigger
+  STOP_LOCK_RELEASE_SERVICE: "/safety/stop_lock_release", // std_srvs/Trigger
+  // Robot clock sources for stamping /ui/cmd_vel (see shared/motion/robotClock.js).
+  UI_CMD_VEL_RELAY_GET_PARAMETERS_SERVICE: "/ui_cmd_vel_relay_node/get_parameters",
+  CLOCK_TOPIC: "/clock",
+  ROSAPI_GET_TIME_SERVICE: "/rosapi/get_time",
   ROBOT_POSE_TOPIC: "/odom",
   ROBOT_VELOCITY_TOPIC: "/odom",
   MAP_TOPIC: "/ui/map",
@@ -18,6 +31,12 @@ export const AppConfig = {
   NAV_STATUS_TOPIC: "/ui/navigate_to_pose/status",
   NAV_FEEDBACK_TOPIC: "/navigate_to_pose/_action/feedback",
   NAV_CANCEL_GOAL_SERVICE: "/navigate_to_pose/_action/cancel_goal",
+  // Cancel services for the other actions the UI starts, directly
+  // (compute_path_to_pose from the Route page) or through dock_trigger
+  // (undock_robot; dock_robot status is relayed to /ui/dock_robot/status).
+  COMPUTE_PATH_CANCEL_GOAL_SERVICE: "/compute_path_to_pose/_action/cancel_goal",
+  DOCK_CANCEL_GOAL_SERVICE: "/dock_robot/_action/cancel_goal",
+  UNDOCK_CANCEL_GOAL_SERVICE: "/undock_robot/_action/cancel_goal",
   DOCK_STATUS_TOPIC: "/ui/dock_robot/status",
   DOCK_TRIGGER_STATUS_TOPIC: "/dock_trigger_status",
   DOCK_TRIGGER_TOPIC: "/dock_trigger",
@@ -53,6 +72,15 @@ export const AppConfig = {
   MAX_LINEAR_SPEED: 0.2,
   MAX_ANGULAR_SPEED: 2,
 };
+
+// Every action cancel service Stop (software) calls. A CancelGoal request
+// with a zero goal id and zero stamp cancels all goals of that action server.
+export const ACTION_CANCEL_SERVICES = [
+  AppConfig.NAV_CANCEL_GOAL_SERVICE,
+  AppConfig.COMPUTE_PATH_CANCEL_GOAL_SERVICE,
+  AppConfig.DOCK_CANCEL_GOAL_SERVICE,
+  AppConfig.UNDOCK_CANCEL_GOAL_SERVICE,
+];
 
 // Camera image topics selectable on the Camera panel; value must match a
 // topic actually published by the robot/simulation stack or web_video_server
