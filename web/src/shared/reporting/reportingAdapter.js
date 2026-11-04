@@ -46,7 +46,7 @@ export const STALE_AFTER_MS = {
   // navigation_status_node mirrors /diagnostics on every 10 Hz tick.
   // Ten ticks.
   diagnostics: 1000,
-  // safety_stop_gate_node republishes /safety/stop_lock at 10 Hz. Shared
+  // safety_stop_gate_node republishes /safety/stop_lock at 20 Hz. Shared
   // with the command path (shared/motion/timing.js).
   stopLock: STOP_LOCK_STALE_AFTER_MS,
 };
