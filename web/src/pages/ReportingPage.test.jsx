@@ -2,7 +2,7 @@ import React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-import ReportingPage, { EXIT_HOLD_MS, MAX_WARNINGS_SHOWN, STATE_FONT_SIZE } from "./ReportingPage";
+import ReportingPage, { EXIT_HOLD_MS, MAX_WARNINGS_SHOWN, STATE_FONT_SIZE, fluid } from "./ReportingPage";
 import { RosContext, RosStatusContext } from "../app/App";
 import { AppConfig } from "../shared/constants";
 import { installMockRoslib, uninstallMockRoslib } from "../shared/motion/testing/mockRoslib";
@@ -164,7 +164,7 @@ describe("Reporting Mode portrait layout", () => {
     const footer = screen.getByTestId("reporting-footer");
     expect(footer.className).toMatch(/\bgrid-cols-2\b/);
     expect(footer.className).not.toMatch(/grid-cols-3/);
-    expect(STATE_FONT_SIZE).toBe("min(120px, calc((100vw - 80px) / 10))");
+    expect(STATE_FONT_SIZE).toBe("min(120px, calc((100vw - 2 * min(40px, 3.3333vw)) / 10))");
   });
 
   it("keeps the exit control in the header row, not over the header text", () => {
@@ -187,5 +187,29 @@ describe("Reporting Mode portrait layout", () => {
     expect(warnings.querySelectorAll("li")).toHaveLength(MAX_WARNINGS_SHOWN + 1);
     expect(screen.getByTestId("reporting-warnings-more").textContent).toBe("3 more not shown");
     expect(warnings.closest("section").getAttribute("style")).toContain("overflow-wrap: anywhere");
+  });
+});
+
+// Review of #54 (5 Nov): the page width in CSS px depends on the display
+// scale Chrome uses on the ZX80, which is not confirmed. Sizes are a share
+// of the page width, capped at their 1200 px value, and the middle scrolls
+// rather than clipping. Checked in Chromium at 1200 x 1920, 800 x 1280 and
+// 600 x 960 (see the PR description); JSDOM drops min() from inline styles,
+// so these check the values and classes.
+describe("Reporting Mode on a scaled display", () => {
+  it("scales every size with the page width, capped at its 1200 px value", () => {
+    expect(fluid(44)).toBe("min(44px, 3.6667vw)");
+    expect(fluid(120)).toBe("min(120px, 10vw)");
+    expect(fluid(20)).toBe("min(20px, 1.6667vw)");
+  });
+
+  it("scrolls the middle instead of clipping it, keeping the source rows on screen", () => {
+    renderPage();
+    feedHealthy();
+    const main = screen.getByTestId("reporting-main");
+    expect(main.className).toMatch(/\boverflow-y-auto\b/);
+    expect(main.className).not.toMatch(/\boverflow-hidden\b/);
+    expect(main.className).toMatch(/\bmin-h-0\b/);
+    expect(screen.getByTestId("reporting-footer").parentElement).toBe(screen.getByTestId("reporting-page"));
   });
 });
