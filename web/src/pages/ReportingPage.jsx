@@ -6,8 +6,10 @@ import { DISPLAY } from "../shared/reporting/reportingAdapter";
 import { useReporting } from "../shared/reporting/reportingSource";
 
 /**
- * Reporting Mode: read-only, full-screen view for the detachable panel
- * (Getac ZX80, 8 inch, 1920 x 1200, landscape, Android Chrome). Scope is
+ * Reporting Mode: read-only, full-screen view for the operator panel
+ * (Getac ZX80, 8 inch, 1920 x 1200, portrait only on a fixed mount, so the
+ * page is 1200 wide and 1920 tall; TABLET-MOUNT, decision of 2 Nov 2026;
+ * Android Chrome). The layout is a single column. Scope is
  * base and navigation only. It has no command of any kind: it only renders
  * the shared reporting adapter (shared/reporting).
  *
@@ -15,8 +17,21 @@ import { useReporting } from "../shared/reporting/reportingSource";
  * TYPE below and the 2 s long press on the exit control.
  */
 
-// Type sizes in CSS px for 1920 x 1200. Proposed defaults.
+// Type sizes in CSS px for the 1200 x 1920 portrait page. Proposed defaults.
 const TYPE = { state: 120, reason: 44, action: 32, body: 28, row: 24, small: 20 };
+
+// The state word may be one long token (NEEDS_ASSISTANCE, 16 characters).
+// In RobotoMono a character is about 0.6 em wide, so 16 characters need
+// 9.6 em; dividing the width inside the 40 px side padding by 10 keeps every
+// state word on the page, and the size never exceeds TYPE.state.
+export const STATE_FONT_SIZE = `min(${TYPE.state}px, calc((100vw - 80px) / 10))`;
+
+// Warnings listed on the page. More are counted, never dropped silently.
+// Proposed default (fits the portrait page with long, wrapped warnings).
+export const MAX_WARNINGS_SHOWN = 8;
+
+// Long diagnostic names and reasons can be single tokens; let them wrap.
+const WRAP = { overflowWrap: "anywhere" };
 
 // Long press on the corner control to leave Reporting Mode. Proposed default.
 export const EXIT_HOLD_MS = 2000;
@@ -86,7 +101,7 @@ const ExitControl = () => {
       onPointerCancel={cancel}
       onContextMenu={(e) => e.preventDefault()}
       style={{ fontSize: TYPE.small }}
-      className={`absolute right-4 top-4 rounded-lg border px-4 py-3 ${
+      className={`shrink-0 rounded-lg border px-4 py-3 ${
         holding ? "border-white bg-white/20" : "border-white/30 bg-black/30"
       } select-none text-white/80`}
     >
@@ -152,20 +167,26 @@ const ReportingPage = () => {
       className="relative flex h-screen w-screen flex-col overflow-hidden font-[RobotoMono]"
       style={{ background: style.bg, color: style.fg }}
     >
-      <ExitControl />
-      <header className="flex items-center gap-6 px-10 pt-6" style={{ fontSize: TYPE.body }}>
-        <span className="font-semibold">Base and navigation</span>
-        <span className="text-white/60" style={{ fontSize: TYPE.small }}>
-          Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
-        </span>
+      <header
+        data-testid="reporting-header"
+        className="flex items-start justify-between gap-6 px-10 pt-6"
+        style={{ fontSize: TYPE.body }}
+      >
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="font-semibold">Base and navigation</span>
+          <span className="text-white/60" style={{ fontSize: TYPE.small }}>
+            Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
+          </span>
+        </div>
+        <ExitControl />
       </header>
 
-      <main className="grid flex-1 grid-cols-2 gap-10 px-10 py-6">
-        <section aria-label="Robot state">
+      <main data-testid="reporting-main" className="flex min-h-0 flex-1 flex-col gap-10 overflow-hidden px-10 py-6">
+        <section aria-label="Robot state" style={WRAP}>
           <h1
             data-testid="reporting-state"
             className="font-bold leading-none"
-            style={{ fontSize: TYPE.state, color: style.accent }}
+            style={{ fontSize: STATE_FONT_SIZE, color: style.accent }}
           >
             {view.display}
           </h1>
@@ -182,7 +203,7 @@ const ReportingPage = () => {
           )}
         </section>
 
-        <section aria-label="Task and result" style={{ fontSize: TYPE.body }} className="flex flex-col gap-5">
+        <section aria-label="Task and result" style={{ fontSize: TYPE.body, ...WRAP }} className="flex min-w-0 flex-col gap-5">
           <div data-testid="reporting-task">
             <p className="text-white/60" style={{ fontSize: TYPE.small }}>Current task</p>
             {view.task ? (
@@ -232,9 +253,14 @@ const ReportingPage = () => {
             <p className="text-white/60" style={{ fontSize: TYPE.small }}>Warnings</p>
             {view.warnings.length ? (
               <ul className="list-disc pl-8">
-                {view.warnings.slice(0, 5).map((w) => (
+                {view.warnings.slice(0, MAX_WARNINGS_SHOWN).map((w) => (
                   <li key={w}>{w}</li>
                 ))}
+                {view.warnings.length > MAX_WARNINGS_SHOWN && (
+                  <li data-testid="reporting-warnings-more" className="text-white/70">
+                    {view.warnings.length - MAX_WARNINGS_SHOWN} more not shown
+                  </li>
+                )}
               </ul>
             ) : (
               <p className="text-white/70">None</p>
@@ -243,7 +269,11 @@ const ReportingPage = () => {
         </section>
       </main>
 
-      <footer className="grid grid-cols-3 gap-x-10 gap-y-2 border-t border-white/20 px-10 py-4" style={{ fontSize: TYPE.row }}>
+      <footer
+        data-testid="reporting-footer"
+        className="grid grid-cols-2 gap-x-10 gap-y-2 border-t border-white/20 px-10 py-4"
+        style={{ fontSize: TYPE.row }}
+      >
         {view.rows.map((row) => (
           <div key={row.label} className="flex justify-between gap-4" data-testid={`row-${row.label}`}>
             <span className="text-white/70">{row.label}</span>
@@ -253,7 +283,7 @@ const ReportingPage = () => {
             </span>
           </div>
         ))}
-        <div className="col-span-3 mt-2 flex items-center justify-between text-white/60" style={{ fontSize: TYPE.small }}>
+        <div className="col-span-2 mt-2 flex items-center justify-between text-white/60" style={{ fontSize: TYPE.small }}>
           <span>Screen wake lock: {wakeLock}</span>
           <SpeechToggle view={view} />
         </div>

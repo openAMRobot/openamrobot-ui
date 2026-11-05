@@ -1,9 +1,12 @@
 # Reporting Mode
 
 Reporting Mode is a read-only, full-screen page at `/report` for the
-detachable operator panel (reference panel: 8 inch, 1920 x 1200, landscape,
-Android Chrome). It shows what the robot base and navigation are doing in
-large type, readable from a few metres away. It has no command of any kind.
+operator panel: the Getac ZX80, 8 inch, 1920 x 1200, portrait only on a
+fixed mount (149.8 mm wide x 234 mm tall, no rotation and no landscape
+position; TABLET-MOUNT, decision of 2 Nov 2026), Android Chrome. The page
+is laid out for a 1200 wide by 1920 tall screen. It shows what the robot
+base and navigation are doing in large type, readable from a few metres
+away. It has no command of any kind.
 
 Scope is base and navigation only. The page header says "Base and
 navigation". Navigation status reports navigation health only. It is not
@@ -45,10 +48,28 @@ time settings. The time shown with a diagnostics fault ("last error at" or
 "last fault at") comes from the panel's own clock, so it is correct only
 while the panel clock is set automatically.
 
+## Layout
+
+One column, top to bottom: the header with the exit control at its right
+end, the state word, the reason and next action, then task, progress, last
+result and warnings, and the source rows in two columns at the bottom. The
+state word shrinks with the page width so that the longest one
+(NEEDS_ASSISTANCE) fits; long diagnostic names and reasons wrap. Up to 8
+warnings are listed; any more are counted ("3 more not shown").
+
+The layout was checked in Chromium at 1200 x 1920 for elements outside the
+screen, clipped text, text wider than its box, and the exit control
+covering header text, with seven scripted screens including a long fault
+reason and a long unbroken diagnostic name. None was found. That is a
+browser check with a scripted rosbridge stand-in, not a check on the
+ZX80: the panel's display scaling, and so the page size Chrome gives it,
+is not confirmed (see "Proposed defaults to confirm on the panel").
+
 ## Screenshots
 
-Taken at 1920 x 1200 with a scripted rosbridge stand-in (development
-evidence only, not the robot):
+Taken at 1200 x 1920 (portrait) with a scripted rosbridge stand-in
+(development evidence only, not the robot). The FAULTED screen shows a
+latched diagnostics fault with a long reason:
 
 | READY | EXECUTING | STOPPED (SOFTWARE) |
 |---|---|---|
@@ -231,15 +252,20 @@ files.
 ## Proposed defaults to confirm on the panel
 
 The stale thresholds and the battery limit above are accepted. These
-display values remain proposed until checked on the ZX80:
+display values remain proposed until checked on the ZX80. Sizes are CSS px
+for a 1200 x 1920 page. If the panel's Chrome scales the display (for
+example a page of 600 x 960 CSS px), these sizes are too large: in that
+browser check a long fault reason pushed the warnings off the screen, so
+the sizes would need to be scaled.
 
 | Item | Value |
 |---|---|
-| State word | 120 px |
+| State word | 120 px, or less on a narrower page (the page width less 80 px, divided by 10) |
 | Reason | 44 px |
 | Next action | 32 px |
 | Body text | 28 px |
 | Source rows | 24 px |
 | Small labels | 20 px |
 | Exit long press | 2 s |
+| Warnings listed | 8, then a count |
 | View refresh | 250 ms |

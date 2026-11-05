@@ -179,8 +179,9 @@ openamr-platform-sw#90, the source of the interfaces below (head
 
 Branched from A1 (`ui/gate-a-command-path`); merges after A1.
 
-- Read-only, full-screen route `/report` for the detachable panel, outside
-  the app layout. Header "Base and navigation". Rows for Arms, Lift and
+- Read-only, full-screen route `/report` for the operator panel (Getac
+  ZX80, portrait only on a fixed mount, TABLET-MOUNT, 2 Nov), outside the
+  app layout, laid out as one column for 1200 x 1920. Header "Base and navigation". Rows for Arms, Lift and
   Physical E-stop show "Not reported".
 - One consumer-neutral adapter, `web/src/shared/reporting/reportingAdapter.js`,
   fed by `reportingSource.js` (subscriptions only). States: DISCONNECTED,
@@ -215,7 +216,11 @@ Branched from A1 (`ui/gate-a-command-path`); merges after A1.
   with reported warnings shown below"), not a claim that every check passes
   (review of #54). Fault times use the panel clock, so the ZX80 keeps
   "Automatic date and time" on (docs/reporting-mode.md, Panel setup).
-- Evidence: unit, component and browser (Playwright at 1920 x 1200 against
+- Portrait layout (review of #54, TABLET-MOUNT): checked in Chromium at
+  1200 x 1920 with no overflow, clipping or overlap on seven scripted
+  screens. The ZX80's display scaling is not confirmed; at 600 x 960 CSS px
+  the type sizes are too large (proposed values, to check on the panel).
+- Evidence: unit, component and browser (Playwright at 1200 x 1920 against
   a scripted rosbridge stand-in). Not run against simulation, on the panel
   or on a robot.
 

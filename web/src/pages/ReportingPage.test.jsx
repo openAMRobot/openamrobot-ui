@@ -2,7 +2,7 @@ import React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-import ReportingPage, { EXIT_HOLD_MS } from "./ReportingPage";
+import ReportingPage, { EXIT_HOLD_MS, MAX_WARNINGS_SHOWN, STATE_FONT_SIZE } from "./ReportingPage";
 import { RosContext, RosStatusContext } from "../app/App";
 import { AppConfig } from "../shared/constants";
 import { installMockRoslib, uninstallMockRoslib } from "../shared/motion/testing/mockRoslib";
@@ -146,5 +146,46 @@ describe("Reporting Mode page", () => {
       "Navigation goal: succeeded.",
       "Completed: Navigation goal",
     ]);
+  });
+});
+
+// TABLET-MOUNT (decision of 2 Nov 2026, review of #54): the ZX80 is portrait
+// only on a fixed mount, so the page is 1200 wide and 1920 tall. JSDOM has
+// no layout, so these check the structure that keeps the page inside a
+// portrait screen; the overflow itself was checked in Chromium at 1200 x 1920
+// (see the PR description).
+describe("Reporting Mode portrait layout", () => {
+  it("uses one column, a two-column source footer and a width-bounded state word", () => {
+    renderPage();
+    feedHealthy();
+    const main = screen.getByTestId("reporting-main");
+    expect(main.className).toMatch(/\bflex-col\b/);
+    expect(main.className).not.toMatch(/grid-cols-/);
+    const footer = screen.getByTestId("reporting-footer");
+    expect(footer.className).toMatch(/\bgrid-cols-2\b/);
+    expect(footer.className).not.toMatch(/grid-cols-3/);
+    expect(STATE_FONT_SIZE).toBe("min(120px, calc((100vw - 80px) / 10))");
+  });
+
+  it("keeps the exit control in the header row, not over the header text", () => {
+    renderPage();
+    feedHealthy();
+    const exit = screen.getByRole("button", { name: "Hold to exit Reporting Mode" });
+    expect(screen.getByTestId("reporting-header").contains(exit)).toBe(true);
+    expect(exit.className).not.toMatch(/\babsolute\b/);
+  });
+
+  it("lets long names wrap and counts warnings it does not list", () => {
+    renderPage();
+    feedHealthy();
+    const many = Array.from({ length: MAX_WARNINGS_SHOWN + 3 }, (_, i) => [1, `source_${i}_with_a_long_name`, "warn"]);
+    emit(AppConfig.DIAGNOSTICS_TOPIC, {
+      header: { stamp: { sec: 100, nanosec: 0 } },
+      status: many.map(([level, name, message]) => ({ level, name, message, hardware_id: "", values: [] })),
+    });
+    const warnings = screen.getByTestId("reporting-warnings");
+    expect(warnings.querySelectorAll("li")).toHaveLength(MAX_WARNINGS_SHOWN + 1);
+    expect(screen.getByTestId("reporting-warnings-more").textContent).toBe("3 more not shown");
+    expect(warnings.closest("section").getAttribute("style")).toContain("overflow-wrap: anywhere");
   });
 });
