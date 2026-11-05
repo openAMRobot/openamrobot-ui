@@ -26,6 +26,7 @@ import { generatePlanFromVoice } from "../features/blocks/voicePlan";
 import { subscribeAbort } from "../shared/motion/abortBus";
 import { useMotionGate } from "../shared/motion/motionGate";
 import { LOCK_RELEASED } from "../shared/motion/stopLock";
+import { newUiRunId, setUiRun, updateUiRun } from "../shared/runs/uiRunStore";
 import {
   createSpeechRecognizer,
   extractWakeWordCommand,
@@ -608,6 +609,16 @@ const BlocksPage = () => {
     const startedAt = new Date();
     let completedSteps = 0;
     stopRequestedRef.current = false;
+    // Reported to Reporting Mode as this tab's program run (shared/runs).
+    setUiRun("program", {
+      runId: newUiRunId("program"),
+      kind: "program",
+      name: programName.trim() || selectedTemplateInfo?.name || "Program",
+      step: 1,
+      total: plan.length,
+      status: "running",
+      reason: "",
+    });
     setRunning(true);
     setActiveStep(0);
     setStepStatuses(initialStepStatuses(plan.length));
@@ -616,6 +627,7 @@ const BlocksPage = () => {
       await executeRobotPlan(ros, plan, {
         shouldStop: () => stopRequestedRef.current,
         onStepStart: (index) => {
+          updateUiRun("program", { step: index + 1 });
           setActiveStep(index);
           setStepStatuses((current) =>
             current.map((status, statusIndex) =>
@@ -651,6 +663,7 @@ const BlocksPage = () => {
           steps_total: plan.length,
           steps_completed: completedSteps,
         });
+        updateUiRun("program", { status: "stopped", reason: "Stopped by the operator or a stop" });
         toast.info("Block program stopped");
       } else {
         await recordRunHistory({
@@ -661,9 +674,14 @@ const BlocksPage = () => {
           steps_total: plan.length,
           steps_completed: completedSteps,
         });
+        updateUiRun("program", { status: "succeeded", reason: "" });
         toast.success("Block program sent");
       }
     } catch (err) {
+      updateUiRun("program", {
+        status: stopRequestedRef.current ? "stopped" : "failed",
+        reason: err.message || "Block program failed",
+      });
       await recordRunHistory({
         program_name: programName.trim() || selectedTemplateInfo?.name,
         status: stopRequestedRef.current ? "stopped" : "failed",
