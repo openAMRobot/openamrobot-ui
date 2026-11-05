@@ -8,9 +8,9 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
   style="background: rgb(17, 17, 17); color: rgb(255, 255, 255);"
 >
   <header
-    class="flex items-start justify-between gap-6 px-10 pt-6"
+    class="flex items-start justify-between"
     data-testid="reporting-header"
-    style="font-size: 28px;"
+    style="gap: min(24px, 2vw);"
   >
     <div
       class="flex min-w-0 flex-col gap-1"
@@ -22,7 +22,6 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       </span>
       <span
         class="text-white/60"
-        style="font-size: 20px;"
       >
         Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
       </span>
@@ -30,15 +29,15 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
     <button
       aria-label="Hold to exit Reporting Mode"
       class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
-      style="font-size: 20px;"
       type="button"
     >
       Hold to exit
     </button>
   </header>
   <main
-    class="flex min-h-0 flex-1 flex-col gap-10 overflow-hidden px-10 py-6"
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
     data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
   >
     <section
       aria-label="Robot state"
@@ -54,14 +53,12 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       <p
         class="mt-6 font-semibold"
         data-testid="reporting-reason"
-        style="font-size: 44px;"
       >
         No connection to the robot
       </p>
       <p
         class="mt-4 text-white/90"
         data-testid="reporting-next"
-        style="font-size: 32px;"
       >
         Next: 
         Check the panel's network connection. It reconnects on its own.
@@ -70,14 +67,13 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
     <section
       aria-label="Task and result"
       class="flex min-w-0 flex-col gap-5"
-      style="font-size: 28px; overflow-wrap: anywhere;"
+      style="overflow-wrap: anywhere;"
     >
       <div
         data-testid="reporting-task"
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Current task
         </p>
@@ -92,7 +88,6 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Last result
         </p>
@@ -107,7 +102,6 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Warnings
         </p>
@@ -120,9 +114,9 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
     </section>
   </main>
   <footer
-    class="grid grid-cols-2 gap-x-10 gap-y-2 border-t border-white/20 px-10 py-4"
+    class="grid grid-cols-2 border-t border-white/20"
     data-testid="reporting-footer"
-    style="font-size: 24px;"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
       class="flex justify-between gap-4"
@@ -266,7 +260,6 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
     </div>
     <div
       class="col-span-2 mt-2 flex items-center justify-between text-white/60"
-      style="font-size: 20px;"
     >
       <span>
         Screen wake lock: 
@@ -275,7 +268,6 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       <button
         aria-pressed="false"
         class="rounded-lg border border-white/30 px-4 py-3 text-white"
-        style="font-size: 20px;"
         type="button"
       >
         Speech off
@@ -293,9 +285,9 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
   style="color: rgb(255, 255, 255); background: rgb(11, 42, 74);"
 >
   <header
-    class="flex items-start justify-between gap-6 px-10 pt-6"
+    class="flex items-start justify-between"
     data-testid="reporting-header"
-    style="font-size: 28px;"
+    style="gap: min(24px, 2vw);"
   >
     <div
       class="flex min-w-0 flex-col gap-1"
@@ -307,7 +299,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
       <span
         class="text-white/60"
-        style="font-size: 20px;"
       >
         Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
       </span>
@@ -315,15 +306,15 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     <button
       aria-label="Hold to exit Reporting Mode"
       class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
-      style="font-size: 20px;"
       type="button"
     >
       Hold to exit
     </button>
   </header>
   <main
-    class="flex min-h-0 flex-1 flex-col gap-10 overflow-hidden px-10 py-6"
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
     data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
   >
     <section
       aria-label="Robot state"
@@ -339,14 +330,12 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       <p
         class="mt-6 font-semibold"
         data-testid="reporting-reason"
-        style="font-size: 44px;"
       >
         Driving to the goal
       </p>
       <p
         class="mt-4 text-white/90"
         data-testid="reporting-next"
-        style="font-size: 32px;"
       >
         Next: 
         Wait for completion. Use Stop (software) on the operator screen if needed.
@@ -355,14 +344,13 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     <section
       aria-label="Task and result"
       class="flex min-w-0 flex-col gap-5"
-      style="font-size: 28px; overflow-wrap: anywhere;"
+      style="overflow-wrap: anywhere;"
     >
       <div
         data-testid="reporting-task"
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Current task
         </p>
@@ -375,7 +363,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Progress
         </p>
@@ -405,7 +392,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Last result
         </p>
@@ -420,7 +406,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Warnings
         </p>
@@ -433,9 +418,9 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </section>
   </main>
   <footer
-    class="grid grid-cols-2 gap-x-10 gap-y-2 border-t border-white/20 px-10 py-4"
+    class="grid grid-cols-2 border-t border-white/20"
     data-testid="reporting-footer"
-    style="font-size: 24px;"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
       class="flex justify-between gap-4"
@@ -574,7 +559,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </div>
     <div
       class="col-span-2 mt-2 flex items-center justify-between text-white/60"
-      style="font-size: 20px;"
     >
       <span>
         Screen wake lock: 
@@ -583,7 +567,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       <button
         aria-pressed="false"
         class="rounded-lg border border-white/30 px-4 py-3 text-white"
-        style="font-size: 20px;"
         type="button"
       >
         Speech off
@@ -601,9 +584,9 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
   style="color: rgb(255, 255, 255); background: rgb(92, 11, 11);"
 >
   <header
-    class="flex items-start justify-between gap-6 px-10 pt-6"
+    class="flex items-start justify-between"
     data-testid="reporting-header"
-    style="font-size: 28px;"
+    style="gap: min(24px, 2vw);"
   >
     <div
       class="flex min-w-0 flex-col gap-1"
@@ -615,7 +598,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
       <span
         class="text-white/60"
-        style="font-size: 20px;"
       >
         Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
       </span>
@@ -623,15 +605,15 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     <button
       aria-label="Hold to exit Reporting Mode"
       class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
-      style="font-size: 20px;"
       type="button"
     >
       Hold to exit
     </button>
   </header>
   <main
-    class="flex min-h-0 flex-1 flex-col gap-10 overflow-hidden px-10 py-6"
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
     data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
   >
     <section
       aria-label="Robot state"
@@ -647,14 +629,12 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       <p
         class="mt-6 font-semibold"
         data-testid="reporting-reason"
-        style="font-size: 44px;"
       >
         Unknown navigation fault
       </p>
       <p
         class="mt-4 text-white/90"
         data-testid="reporting-next"
-        style="font-size: 32px;"
       >
         Next: 
         Call an engineer. Check Health and Events on the operator screen.
@@ -663,14 +643,13 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     <section
       aria-label="Task and result"
       class="flex min-w-0 flex-col gap-5"
-      style="font-size: 28px; overflow-wrap: anywhere;"
+      style="overflow-wrap: anywhere;"
     >
       <div
         data-testid="reporting-task"
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Current task
         </p>
@@ -683,7 +662,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Progress
         </p>
@@ -713,7 +691,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Last result
         </p>
@@ -728,7 +705,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Warnings
         </p>
@@ -741,9 +717,9 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </section>
   </main>
   <footer
-    class="grid grid-cols-2 gap-x-10 gap-y-2 border-t border-white/20 px-10 py-4"
+    class="grid grid-cols-2 border-t border-white/20"
     data-testid="reporting-footer"
-    style="font-size: 24px;"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
       class="flex justify-between gap-4"
@@ -882,7 +858,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </div>
     <div
       class="col-span-2 mt-2 flex items-center justify-between text-white/60"
-      style="font-size: 20px;"
     >
       <span>
         Screen wake lock: 
@@ -891,7 +866,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       <button
         aria-pressed="false"
         class="rounded-lg border border-white/30 px-4 py-3 text-white"
-        style="font-size: 20px;"
         type="button"
       >
         Speech off
@@ -909,9 +883,9 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
   style="color: rgb(255, 255, 255); background: rgb(11, 61, 30);"
 >
   <header
-    class="flex items-start justify-between gap-6 px-10 pt-6"
+    class="flex items-start justify-between"
     data-testid="reporting-header"
-    style="font-size: 28px;"
+    style="gap: min(24px, 2vw);"
   >
     <div
       class="flex min-w-0 flex-col gap-1"
@@ -923,7 +897,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
       <span
         class="text-white/60"
-        style="font-size: 20px;"
       >
         Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
       </span>
@@ -931,15 +904,15 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     <button
       aria-label="Hold to exit Reporting Mode"
       class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
-      style="font-size: 20px;"
       type="button"
     >
       Hold to exit
     </button>
   </header>
   <main
-    class="flex min-h-0 flex-1 flex-col gap-10 overflow-hidden px-10 py-6"
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
     data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
   >
     <section
       aria-label="Robot state"
@@ -955,14 +928,12 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       <p
         class="mt-6 font-semibold"
         data-testid="reporting-reason"
-        style="font-size: 44px;"
       >
         No blocking faults in current reported data
       </p>
       <p
         class="mt-4 text-white/90"
         data-testid="reporting-next"
-        style="font-size: 32px;"
       >
         Next: 
         Start a task from the operator screen.
@@ -971,14 +942,13 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     <section
       aria-label="Task and result"
       class="flex min-w-0 flex-col gap-5"
-      style="font-size: 28px; overflow-wrap: anywhere;"
+      style="overflow-wrap: anywhere;"
     >
       <div
         data-testid="reporting-task"
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Current task
         </p>
@@ -993,7 +963,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Last result
         </p>
@@ -1008,7 +977,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Warnings
         </p>
@@ -1021,9 +989,9 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </section>
   </main>
   <footer
-    class="grid grid-cols-2 gap-x-10 gap-y-2 border-t border-white/20 px-10 py-4"
+    class="grid grid-cols-2 border-t border-white/20"
     data-testid="reporting-footer"
-    style="font-size: 24px;"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
       class="flex justify-between gap-4"
@@ -1162,7 +1130,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </div>
     <div
       class="col-span-2 mt-2 flex items-center justify-between text-white/60"
-      style="font-size: 20px;"
     >
       <span>
         Screen wake lock: 
@@ -1171,7 +1138,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       <button
         aria-pressed="false"
         class="rounded-lg border border-white/30 px-4 py-3 text-white"
-        style="font-size: 20px;"
         type="button"
       >
         Speech off
@@ -1189,9 +1155,9 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
   style="color: rgb(255, 255, 255); background: rgb(58, 10, 10);"
 >
   <header
-    class="flex items-start justify-between gap-6 px-10 pt-6"
+    class="flex items-start justify-between"
     data-testid="reporting-header"
-    style="font-size: 28px;"
+    style="gap: min(24px, 2vw);"
   >
     <div
       class="flex min-w-0 flex-col gap-1"
@@ -1203,7 +1169,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
       <span
         class="text-white/60"
-        style="font-size: 20px;"
       >
         Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
       </span>
@@ -1211,15 +1176,15 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     <button
       aria-label="Hold to exit Reporting Mode"
       class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
-      style="font-size: 20px;"
       type="button"
     >
       Hold to exit
     </button>
   </header>
   <main
-    class="flex min-h-0 flex-1 flex-col gap-10 overflow-hidden px-10 py-6"
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
     data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
   >
     <section
       aria-label="Robot state"
@@ -1235,14 +1200,12 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       <p
         class="mt-6 font-semibold"
         data-testid="reporting-reason"
-        style="font-size: 44px;"
       >
         The software stop lock is engaged
       </p>
       <p
         class="mt-4 text-white/90"
         data-testid="reporting-next"
-        style="font-size: 32px;"
       >
         Next: 
         Check the area, then press Resume on the operator screen.
@@ -1251,14 +1214,13 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     <section
       aria-label="Task and result"
       class="flex min-w-0 flex-col gap-5"
-      style="font-size: 28px; overflow-wrap: anywhere;"
+      style="overflow-wrap: anywhere;"
     >
       <div
         data-testid="reporting-task"
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Current task
         </p>
@@ -1271,7 +1233,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Progress
         </p>
@@ -1301,7 +1262,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Last result
         </p>
@@ -1316,7 +1276,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Warnings
         </p>
@@ -1329,9 +1288,9 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </section>
   </main>
   <footer
-    class="grid grid-cols-2 gap-x-10 gap-y-2 border-t border-white/20 px-10 py-4"
+    class="grid grid-cols-2 border-t border-white/20"
     data-testid="reporting-footer"
-    style="font-size: 24px;"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
       class="flex justify-between gap-4"
@@ -1470,7 +1429,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </div>
     <div
       class="col-span-2 mt-2 flex items-center justify-between text-white/60"
-      style="font-size: 20px;"
     >
       <span>
         Screen wake lock: 
@@ -1479,7 +1437,6 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       <button
         aria-pressed="false"
         class="rounded-lg border border-white/30 px-4 py-3 text-white"
-        style="font-size: 20px;"
         type="button"
       >
         Speech off
@@ -1497,9 +1454,9 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
   style="color: rgb(255, 255, 255); background: rgb(42, 42, 42);"
 >
   <header
-    class="flex items-start justify-between gap-6 px-10 pt-6"
+    class="flex items-start justify-between"
     data-testid="reporting-header"
-    style="font-size: 28px;"
+    style="gap: min(24px, 2vw);"
   >
     <div
       class="flex min-w-0 flex-col gap-1"
@@ -1511,7 +1468,6 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       </span>
       <span
         class="text-white/60"
-        style="font-size: 20px;"
       >
         Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
       </span>
@@ -1519,15 +1475,15 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
     <button
       aria-label="Hold to exit Reporting Mode"
       class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
-      style="font-size: 20px;"
       type="button"
     >
       Hold to exit
     </button>
   </header>
   <main
-    class="flex min-h-0 flex-1 flex-col gap-10 overflow-hidden px-10 py-6"
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
     data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
   >
     <section
       aria-label="Robot state"
@@ -1543,14 +1499,12 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       <p
         class="mt-6 font-semibold"
         data-testid="reporting-reason"
-        style="font-size: 44px;"
       >
         Battery data is stale or invalid
       </p>
       <p
         class="mt-4 text-white/90"
         data-testid="reporting-next"
-        style="font-size: 32px;"
       >
         Next: 
         Resolve the reason shown before starting a task. (Battery data is stale or invalid)
@@ -1559,14 +1513,13 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
     <section
       aria-label="Task and result"
       class="flex min-w-0 flex-col gap-5"
-      style="font-size: 28px; overflow-wrap: anywhere;"
+      style="overflow-wrap: anywhere;"
     >
       <div
         data-testid="reporting-task"
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Current task
         </p>
@@ -1581,7 +1534,6 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Last result
         </p>
@@ -1596,7 +1548,6 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       >
         <p
           class="text-white/60"
-          style="font-size: 20px;"
         >
           Warnings
         </p>
@@ -1611,9 +1562,9 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
     </section>
   </main>
   <footer
-    class="grid grid-cols-2 gap-x-10 gap-y-2 border-t border-white/20 px-10 py-4"
+    class="grid grid-cols-2 border-t border-white/20"
     data-testid="reporting-footer"
-    style="font-size: 24px;"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
       class="flex justify-between gap-4"
@@ -1753,7 +1704,6 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
     </div>
     <div
       class="col-span-2 mt-2 flex items-center justify-between text-white/60"
-      style="font-size: 20px;"
     >
       <span>
         Screen wake lock: 
@@ -1762,7 +1712,6 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       <button
         aria-pressed="false"
         class="rounded-lg border border-white/30 px-4 py-3 text-white"
-        style="font-size: 20px;"
         type="button"
       >
         Speech off

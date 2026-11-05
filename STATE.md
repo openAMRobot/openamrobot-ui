@@ -218,8 +218,9 @@ Branched from A1 (`ui/gate-a-command-path`); merges after A1.
   "Automatic date and time" on (docs/reporting-mode.md, Panel setup).
 - Portrait layout (review of #54, TABLET-MOUNT): checked in Chromium at
   1200 x 1920 with no overflow, clipping or overlap on seven scripted
-  screens. The ZX80's display scaling is not confirmed; at 600 x 960 CSS px
-  the type sizes are too large (proposed values, to check on the panel).
+  screens, and again at 800 x 1280 and 600 x 960: sizes and spacing scale
+  with the page width (the ZX80's display scale is not confirmed), and the
+  middle scrolls if content still does not fit.
 - Evidence: unit, component and browser (Playwright at 1200 x 1920 against
   a scripted rosbridge stand-in). Not run against simulation, on the panel
   or on a robot.

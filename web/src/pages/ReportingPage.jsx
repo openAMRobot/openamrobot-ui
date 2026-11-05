@@ -17,14 +17,25 @@ import { useReporting } from "../shared/reporting/reportingSource";
  * TYPE below and the 2 s long press on the exit control.
  */
 
-// Type sizes in CSS px for the 1200 x 1920 portrait page. Proposed defaults.
-const TYPE = { state: 120, reason: 44, action: 32, body: 28, row: 24, small: 20 };
+// Type sizes in CSS px for a 1200 x 1920 portrait page. Proposed defaults.
+const TYPE_PX = { state: 120, reason: 44, action: 32, body: 28, row: 24, small: 20 };
+
+// The ZX80 is 1200 physical pixels wide in portrait, but the page width in
+// CSS px depends on the display scale Chrome uses there (width=device-width),
+// which is not confirmed. Each size is therefore a share of the page width
+// (px / 1200 of 100vw), capped at its 1200 px value: the text keeps the same
+// physical size whatever the scale (review of #54).
+export const fluid = (px) => `min(${px}px, ${+(px / 12).toFixed(4)}vw)`;
+const TYPE = Object.fromEntries(Object.entries(TYPE_PX).map(([k, px]) => [k, fluid(px)]));
+
+// Spacing scales the same way: 40 px side padding at 1200 px wide.
+const SIDE = fluid(40);
 
 // The state word may be one long token (NEEDS_ASSISTANCE, 16 characters).
 // In RobotoMono a character is about 0.6 em wide, so 16 characters need
-// 9.6 em; dividing the width inside the 40 px side padding by 10 keeps every
-// state word on the page, and the size never exceeds TYPE.state.
-export const STATE_FONT_SIZE = `min(${TYPE.state}px, calc((100vw - 80px) / 10))`;
+// 9.6 em; dividing the width inside the side padding by 10 keeps every
+// state word on the page, and the size never exceeds TYPE_PX.state.
+export const STATE_FONT_SIZE = `min(${TYPE_PX.state}px, calc((100vw - 2 * ${SIDE}) / 10))`;
 
 // Warnings listed on the page. More are counted, never dropped silently.
 // Proposed default (fits the portrait page with long, wrapped warnings).
@@ -169,8 +180,8 @@ const ReportingPage = () => {
     >
       <header
         data-testid="reporting-header"
-        className="flex items-start justify-between gap-6 px-10 pt-6"
-        style={{ fontSize: TYPE.body }}
+        className="flex items-start justify-between"
+        style={{ fontSize: TYPE.body, gap: fluid(24), padding: `${fluid(24)} ${SIDE} 0` }}
       >
         <div className="flex min-w-0 flex-col gap-1">
           <span className="font-semibold">Base and navigation</span>
@@ -181,7 +192,13 @@ const ReportingPage = () => {
         <ExitControl />
       </header>
 
-      <main data-testid="reporting-main" className="flex min-h-0 flex-1 flex-col gap-10 overflow-hidden px-10 py-6">
+      {/* If a long reason still does not fit, the middle scrolls; the header
+          and the source rows stay on screen. */}
+      <main
+        data-testid="reporting-main"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+        style={{ gap: SIDE, padding: `${fluid(24)} ${SIDE}` }}
+      >
         <section aria-label="Robot state" style={WRAP}>
           <h1
             data-testid="reporting-state"
@@ -271,8 +288,8 @@ const ReportingPage = () => {
 
       <footer
         data-testid="reporting-footer"
-        className="grid grid-cols-2 gap-x-10 gap-y-2 border-t border-white/20 px-10 py-4"
-        style={{ fontSize: TYPE.row }}
+        className="grid grid-cols-2 border-t border-white/20"
+        style={{ fontSize: TYPE.row, columnGap: SIDE, rowGap: fluid(8), padding: `${fluid(16)} ${SIDE}` }}
       >
         {view.rows.map((row) => (
           <div key={row.label} className="flex justify-between gap-4" data-testid={`row-${row.label}`}>

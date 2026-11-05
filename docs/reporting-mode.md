@@ -57,19 +57,31 @@ state word shrinks with the page width so that the longest one
 (NEEDS_ASSISTANCE) fits; long diagnostic names and reasons wrap. Up to 8
 warnings are listed; any more are counted ("3 more not shown").
 
-The layout was checked in Chromium at 1200 x 1920 for elements outside the
-screen, clipped text, text wider than its box, and the exit control
-covering header text, with seven scripted screens including a long fault
-reason and a long unbroken diagnostic name. None was found. That is a
-browser check with a scripted rosbridge stand-in, not a check on the
-ZX80: the panel's display scaling, and so the page size Chrome gives it,
-is not confirmed (see "Proposed defaults to confirm on the panel").
+The panel is 1200 physical pixels wide, but the page width in CSS px
+depends on the display scale Chrome uses there (the page sets
+`width=device-width`), which is not confirmed. Every type size, padding
+and gap is therefore a share of the page width (its 1200 px value divided
+by 1200, times the width), capped at the 1200 px value. The text then has
+the same physical size on the panel whatever the scale. If the content
+still does not fit, the middle of the page scrolls; the header and the
+source rows stay on screen.
+
+The layout was checked in Chromium at 1200 x 1920, 800 x 1280 and 600 x 960
+(display scales 1, 1.5 and 2). The check looked for elements outside the
+screen, clipped text, text wider than its box, the exit control covering
+header text, and a middle that needs scrolling. It used seven scripted
+screens, including a long fault reason with four sources and a long
+unbroken diagnostic name. None was found at any size. A screen with a much
+longer reason and eleven warnings scrolls the middle at 600 x 960 with the
+source rows still on screen. That is a browser check with a scripted
+rosbridge stand-in, not a check on the ZX80.
 
 ## Screenshots
 
 Taken at 1200 x 1920 (portrait) with a scripted rosbridge stand-in
 (development evidence only, not the robot). The FAULTED screen shows a
-latched diagnostics fault with a long reason:
+latched diagnostics fault with a long reason; the same screen at 600 x 960
+is [faulted-600x960.png](reporting-mode/faulted-600x960.png):
 
 | READY | EXECUTING | STOPPED (SOFTWARE) |
 |---|---|---|
@@ -253,10 +265,8 @@ files.
 
 The stale thresholds and the battery limit above are accepted. These
 display values remain proposed until checked on the ZX80. Sizes are CSS px
-for a 1200 x 1920 page. If the panel's Chrome scales the display (for
-example a page of 600 x 960 CSS px), these sizes are too large: in that
-browser check a long fault reason pushed the warnings off the screen, so
-the sizes would need to be scaled.
+for a 1200 x 1920 page and scale down in proportion on a narrower page (see
+Layout).
 
 | Item | Value |
 |---|---|
