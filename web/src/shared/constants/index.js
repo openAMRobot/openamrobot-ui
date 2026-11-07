@@ -35,6 +35,12 @@ export const AppConfig = {
   // (compute_path_to_pose from the Route page) or through dock_trigger
   // (undock_robot; dock_robot status is relayed to /ui/dock_robot/status).
   COMPUTE_PATH_CANCEL_GOAL_SERVICE: "/compute_path_to_pose/_action/cancel_goal",
+  // navigate_through_poses is not started by this UI, but it can be executing
+  // from another client (a behaviour tree, a script, another operator). Stop
+  // must cancel it too: the platform gate already cancels it
+  // (safety_stop_gate_node _CANCEL_ACTIONS), and a UI-side stop should not
+  // cover less than the platform-side stop.
+  THROUGH_POSES_CANCEL_GOAL_SERVICE: "/navigate_through_poses/_action/cancel_goal",
   DOCK_CANCEL_GOAL_SERVICE: "/dock_robot/_action/cancel_goal",
   UNDOCK_CANCEL_GOAL_SERVICE: "/undock_robot/_action/cancel_goal",
   DOCK_STATUS_TOPIC: "/ui/dock_robot/status",
@@ -84,6 +90,7 @@ export const AppConfig = {
 // with a zero goal id and zero stamp cancels all goals of that action server.
 export const ACTION_CANCEL_SERVICES = [
   AppConfig.NAV_CANCEL_GOAL_SERVICE,
+  AppConfig.THROUGH_POSES_CANCEL_GOAL_SERVICE,
   AppConfig.COMPUTE_PATH_CANCEL_GOAL_SERVICE,
   AppConfig.DOCK_CANCEL_GOAL_SERVICE,
   AppConfig.UNDOCK_CANCEL_GOAL_SERVICE,
