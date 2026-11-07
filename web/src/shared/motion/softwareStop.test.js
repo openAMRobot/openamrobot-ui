@@ -28,6 +28,7 @@ describe("Stop (software)", () => {
   it("cancels every Nav2 and docking action the UI starts", () => {
     expect(ACTION_CANCEL_SERVICES).toEqual([
       "/navigate_to_pose/_action/cancel_goal",
+      "/navigate_through_poses/_action/cancel_goal",
       "/compute_path_to_pose/_action/cancel_goal",
       "/dock_robot/_action/cancel_goal",
       "/undock_robot/_action/cancel_goal",
