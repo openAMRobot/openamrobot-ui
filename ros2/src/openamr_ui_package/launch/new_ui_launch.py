@@ -40,6 +40,22 @@ def generate_launch_description():
 
     actions = []
 
+    # use_sim_time is passed in by ui.launch.py and handed to every node below,
+    # so the UI's ROS side runs on the same clock as the platform (/clock in
+    # simulation, wall time on the robot). The browser picks its stamping mode
+    # from the relay node's own use_sim_time, not from this value. Default
+    # false keeps the behaviour of launching this file directly unchanged:
+    # before this argument existed, no node here set use_sim_time.
+    use_sim_time = LaunchConfiguration("use_sim_time")
+    actions.append(
+        DeclareLaunchArgument(
+            "use_sim_time",
+            default_value="false",
+            description="Use /clock for every UI node (ui.launch.py passes its own value).",
+        )
+    )
+    sim_time = {"use_sim_time": use_sim_time}
+
     if not flask_env and not os.environ.get("ANTHROPIC_API_KEY"):
         actions.append(
             LogInfo(
@@ -58,6 +74,7 @@ def generate_launch_description():
             name="map_volatile_relay",
             namespace="ui",
             output="screen",
+            parameters=[sim_time],
         )
     )
 
@@ -69,6 +86,7 @@ def generate_launch_description():
             name="nav_relays",
             namespace="ui",
             output="screen",
+            parameters=[sim_time],
         )
     )
 
@@ -101,7 +119,7 @@ def generate_launch_description():
             executable="battery",
             name="battery_monitor",
             output="screen",
-            parameters=[{"port": LaunchConfiguration("battery_port")}],
+            parameters=[{"port": LaunchConfiguration("battery_port")}, sim_time],
             condition=IfCondition(LaunchConfiguration("start_battery_monitor")),
         )
     )
@@ -114,7 +132,7 @@ def generate_launch_description():
             name="flask_app",
             namespace="ui",
             output="screen",
-            parameters=[config],
+            parameters=[config, sim_time],
             additional_env=flask_env,
         )
     )
@@ -129,7 +147,7 @@ def generate_launch_description():
                 executable="rosbridge_websocket",
                 name="rosbridge_websocket",
                 output="screen",
-                parameters=[config],
+                parameters=[config, sim_time],
             )
         )
     except PackageNotFoundError:
@@ -149,6 +167,7 @@ def generate_launch_description():
                 executable="rosapi_node",
                 name="rosapi",
                 output="screen",
+                parameters=[sim_time],
             )
         )
     except PackageNotFoundError:
@@ -168,7 +187,7 @@ def generate_launch_description():
                 executable="web_video_server",
                 name="camera",
                 output="screen",
-                parameters=[config],
+                parameters=[config, sim_time],
             )
         )
     except PackageNotFoundError:

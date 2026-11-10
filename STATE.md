@@ -3,13 +3,13 @@
 Working state of this repository for contributors and agents. Read it before
 starting work; update it in the same pull request (AGENTS.md, Decisions).
 
-Last updated: 30 Oct 2026, base `main` at
-`0ca798b424cadbb77d6791f5298bb4f7e0f37a89`.
+Last updated: 10 Nov 2026, base `main` at
+`51b4af38d6b7eeb260610e8ab2ebde0a340beea9` (#48 merged). The B items below
+were written against `main` at `0ca798b424cadbb77d6791f5298bb4f7e0f37a89`.
 
-This file currently covers only the backend and process items for
-v2.0.0-rc.1 listed below (B1 to B10). Other work in this repository, such as
-the UI command path and Reporting Mode, is tracked by its own owners and
-pull requests and is not described here.
+This file covers the backend and process items for v2.0.0-rc.1 listed
+below (B1 to B10) and the Gate A UI command path (A1, at the end). Reporting
+Mode is tracked by its own pull request.
 
 ## Ownership
 
@@ -122,13 +122,79 @@ ZX80 or on a robot.
 
 ## Known gaps
 
-- The Stop (software) lock is not on `main` yet and is not documented here;
-  it belongs to the UI command path work.
+- The Stop (software) lock is not on `main` yet; see A1 below.
 - The Blocks page loads Blockly sounds and sprites from
   `blockly-demo.appspot.com`, which an offline robot cannot reach.
 - `test_flake8.py`, `test_pep257.py` and `test_copyright.py` are skipped
   without a tracking issue, and most existing Python files are not flake8
   clean.
+
+## A1 `ui/gate-a-command-path` (part of #31, part of #34)
+
+Base `main` at `51b4af38d6b7eeb260610e8ab2ebde0a340beea9`, merged into the
+branch at `d527ea65` (branched from `0ca798b4`). Merge only after
+openamr-platform-sw#90, the source of the interfaces below. The interfaces
+were checked at #90 `710c98bc3d384a3d0612e87ff5e8c0c00b804dc0` and the stop
+gate tick rate at `a23bca14`. #90's current head
+`2425d4d75fd309ca97b1e75b92db47e7ba08df8f` (open, D-13 status-readiness
+changes pending) is not re-checked: refresh the pin once #90's D-13 changes
+are accepted, and re-check topic names, QoS and timings at its merged
+commit. Evidence from the older heads is not current for #90's final
+interface.
+
+- Manual drive (joystick, gamepad, map page drive controls, Blockly drive,
+  rotate and stop blocks, voice-planned drive actions run through Blockly)
+  goes through one module, `web/src/shared/motion/uiCommand.js`. It
+  publishes `geometry_msgs/TwistStamped` on `/ui/cmd_vel` only, at 20 Hz
+  while held and one zero on release. No UI code publishes `/cmd_vel` or
+  any `cmd_vel_*` topic; a Jest static guard and a page runtime test check
+  it. There is no keyboard teleop in the UI.
+- Manual drive is enabled only when rosbridge is connected, the platform
+  stop lock (`/safety/stop_lock`) is known and released, and the robot
+  clock is synced. Simulation stamps with the latest `/clock`; the real
+  robot stamps from `/rosapi/get_time` samples (rosbridge_suite 2.7.1
+  returns wall time from it even with `use_sim_time` true). The mode
+  follows `/ui_cmd_vel_relay_node`'s own `use_sim_time`.
+- Stop (software) engages `/safety/stop_lock_engage`, cancels every active
+  `navigate_to_pose`, `compute_path_to_pose`, `dock_robot` and
+  `undock_robot` goal, and aborts UI programs, missions and the map page
+  waypoint queue. Resume is the only call to `/safety/stop_lock_release`,
+  behind a confirmation. It is a functional stop (E-01, issue #34), not the
+  hardwired E-stop and not a safety function.
+- `new_ui_launch.py` passes `use_sim_time` to every node it starts.
+- Until #90 is merged, manual driving from the UI is intentionally inert on
+  `main` (the lock stays unknown).
+- Gate A (6 Nov): needs A1 merged after #90. #31 and #34 stay open until
+  Nikolai's simulation reruns S4, S6 and S7a pass.
+- Confirmed by Parth (1 Nov) and Kunal (4 Nov): 10 ms `/clock` throttle,
+  1 s stop lock staleness (20 missed ticks at the gate's 20 Hz), 2 s retry
+  for the relay parameter read.
+- Stamping (Kunal, 4 Nov, platform-sw#110): the browser stamps on the
+  robot clock as above; the relay does not restamp, so a replayed or
+  delayed command still ages out. #110 is resolved by this design.
+- Parth adopted A1 on 1 Nov; merge after #90. Before merge, re-check topic
+  names, QoS and timings against #90's merged commit.
+- Stop (software) also latches locally at once (`motionGate` `localStop`),
+  before the engage request answers; held input, programs, missions and
+  goals stay blocked until a confirmed Resume whose release succeeds. A
+  released lock sample or a reconnect does not clear it (review of #50).
+- While the lock is engaged or unknown, no Nav2 goal is sent from the map
+  page (goal, home, waypoints, queue, docking), missions, route planning or
+  programs; the reason is shown (`shared/motion/navGoalGate.js`).
+- README and docs/ describe the latched Stop (software), the explicit
+  Resume and the disabled controls (`web/src/shared/motion/stopDocs.test.js`).
+  Draft #49 describes the earlier one-shot stop; where both change the same
+  lines, keep this PR's text.
+- Platform gap (openamr-platform-sw, owner Kunal): the `dock_trigger.py`
+  docking sequence is not an action and cannot be cancelled by the UI.
+- `.github/decisions.yaml` entries for the UI command topic and the stop
+  lock interface: needed, handled separately in openAMRobot/.github.
+- Evidence: unit and component tests (Jest, mocked ROSLIB), pure launch
+  test. Not run in a browser, in simulation, on the Getac ZX80 or on a
+  robot.
+
+Open issues on 30 Oct: #19, #28, #29, #31, #32, #33, #34, #35, #36, #37,
+#39. Open pull requests on 30 Oct: drafts #21 and #40 to #46, plus A1.
 
 ## Focused B9 follow-up, 30 October 2026 (#57)
 
@@ -147,6 +213,5 @@ The existing standard-library test command runs nine cases with no skips.
 Keeping these tests and restoring the original helper produces three
 failures and one error; the fixed helper passes all nine. No ROS, Docker,
 web build, simulation or hardware run was performed locally for this fix.
-Hosted checks and Parth's adopt/adapt/reject decision on #48 are still
-required. #51 incorporates the fix by merging `ui/ci`; integration candidate
+#48 merged on 10 Nov 2026 as 51b4af3, owned by the platform lead. #51 incorporates the fix by merging `ui/ci`; integration candidate
 #56 must be rebuilt by its owner to include it.

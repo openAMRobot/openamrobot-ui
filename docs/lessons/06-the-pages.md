@@ -41,10 +41,14 @@ the page itself, so every screenshot below shows them:
 
 - The top bar (`Header.jsx`) — the sidebar/nav, a connection dot
   ("Connected"/"Disconnected"), and the light/dark theme toggle.
-- The status strip right under it (`StatusBar.jsx`) — live battery
-  percentage and a big red **E-STOP** button that zeroes `/cmd_vel` and
-  cancels the active Nav2 goal from anywhere, not just the Map page. This is a
-  non-latched software stop and does not replace a physical emergency stop.
+- The status strip right under it (`StatusBar.jsx`): live battery
+  percentage and a red **Stop (software)** button that engages the
+  platform's software stop lock, cancels the active navigation and docking
+  goals, and aborts programs and missions, from any page. While the lock is
+  engaged or unknown, a "Stopped (software)" banner with **Resume** stays on
+  screen, and manual drive, programs, missions and new navigation goals are
+  disabled with the reason shown. Only **Resume** releases the lock. It is a
+  latched functional stop and does not replace a physical emergency stop.
 - Whichever banner applies: a purple **Demo Mode** banner when
   [Demo Mode](#config--configpagejsx) is on, a replay banner while a
   [recording](#recordings--recordingspagejsx) is playing back, or an
@@ -264,8 +268,8 @@ unavailable.
   Mode loads the model locally and needs no ROS connection at all — joint
   sliders just pose the 3D viewer. Live Mode instead subscribes to real
   `/joint_states` and pose topics, so the model reflects the actual robot —
-  its joint sliders become read-only, since this robot only has one coupled
-  `/cmd_vel` for both drive wheels, not a per-joint position command a
+  its joint sliders become read-only, since this robot only takes one base
+  velocity for both drive wheels (sent on `/ui/cmd_vel`), not a per-joint position command a
   slider could safely drive.
 - The **Kinematic Tree** shows every link and joint, `FIXED` or movable, in
   parent → child order; clicking one selects it in both the tree and the 3D
