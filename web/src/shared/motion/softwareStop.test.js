@@ -28,6 +28,7 @@ describe("Stop (software)", () => {
   it("cancels every Nav2 and docking action the UI starts", () => {
     expect(ACTION_CANCEL_SERVICES).toEqual([
       "/navigate_to_pose/_action/cancel_goal",
+      "/navigate_through_poses/_action/cancel_goal",
       "/compute_path_to_pose/_action/cancel_goal",
       "/dock_robot/_action/cancel_goal",
       "/undock_robot/_action/cancel_goal",
@@ -95,6 +96,27 @@ describe("Stop (software)", () => {
 });
 
 describe("Resume", () => {
+  it("leaves the cancelled goals cancelled: no new goal, no command, only the release", async () => {
+    setConnection("connected");
+    setLockState("released");
+    await softwareStop({}, "test");
+    const callsAfterStop = {};
+    const names = [...new Set([...ACTION_CANCEL_SERVICES, AppConfig.STOP_LOCK_ENGAGE_SERVICE])];
+    names.forEach((name) => { callsAfterStop[name] = mock.callsTo(name).length; });
+    const published = (topicName) => mock.topicsNamed(topicName).reduce((n, t) => n + t.published.length, 0);
+    const cmdBefore = published(AppConfig.UI_CMD_VEL_TOPIC);
+
+    await resumeFromSoftwareStop({});
+
+    expect(mock.callsTo(AppConfig.STOP_LOCK_RELEASE_SERVICE)).toHaveLength(1);
+    names.forEach((name) => expect(mock.callsTo(name)).toHaveLength(callsAfterStop[name]));
+    // Resume never re-sends a goal: no send_goal call on any Nav2 or docking action.
+    ACTION_CANCEL_SERVICES.forEach((name) => {
+      expect(mock.callsTo(name.replace("cancel_goal", "send_goal"))).toHaveLength(0);
+    });
+    expect(published(AppConfig.UI_CMD_VEL_TOPIC)).toBe(cmdBefore);
+  });
+
   it("calls only the release service", async () => {
     await resumeFromSoftwareStop({});
     expect(mock.callsTo(AppConfig.STOP_LOCK_RELEASE_SERVICE)).toHaveLength(1);
