@@ -3,8 +3,9 @@
 Working state of this repository for contributors and agents. Read it before
 starting work; update it in the same pull request (AGENTS.md, Decisions).
 
-Last updated: 30 Oct 2026, base `main` at
-`0ca798b424cadbb77d6791f5298bb4f7e0f37a89`.
+Last updated: 10 Nov 2026, base `main` at
+`51b4af38d6b7eeb260610e8ab2ebde0a340beea9` (#48 merged). The B items below
+were written against `main` at `0ca798b424cadbb77d6791f5298bb4f7e0f37a89`.
 
 This file covers the backend and process items for v2.0.0-rc.1 listed
 below (B1 to B10) and the Gate A UI command path (A1, at the end). Reporting
@@ -130,9 +131,16 @@ ZX80 or on a robot.
 
 ## A1 `ui/gate-a-command-path` (part of #31, part of #34)
 
-Base `main` at `0ca798b424cadbb77d6791f5298bb4f7e0f37a89`. Merge only after
-openamr-platform-sw#90, the source of the interfaces below (head
-`710c98bc3d384a3d0612e87ff5e8c0c00b804dc0`).
+Base `main` at `51b4af38d6b7eeb260610e8ab2ebde0a340beea9`, merged into the
+branch at `d527ea65` (branched from `0ca798b4`). Merge only after
+openamr-platform-sw#90, the source of the interfaces below. The interfaces
+were checked at #90 `710c98bc3d384a3d0612e87ff5e8c0c00b804dc0` and the stop
+gate tick rate at `a23bca14`. #90's current head
+`2425d4d75fd309ca97b1e75b92db47e7ba08df8f` (open, D-13 status-readiness
+changes pending) is not re-checked: refresh the pin once #90's D-13 changes
+are accepted, and re-check topic names, QoS and timings at its merged
+commit. Evidence from the older heads is not current for #90's final
+interface.
 
 - Manual drive (joystick, gamepad, map page drive controls, Blockly drive,
   rotate and stop blocks, voice-planned drive actions run through Blockly)
