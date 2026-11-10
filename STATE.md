@@ -96,8 +96,18 @@ ZX80 or on a robot.
 ### B9 `ui/ci`
 
 - CI gains a `ros` job (ros:jazzy container, colcon build and test, fails on
-  zero tests) and an `e2e` job (Playwright, every page in Demo Mode at
-  1280 x 800 and 1920 x 1200, no console errors).
+  zero executed tests) and an `e2e` job (Playwright, every page in Demo Mode
+  at 1280 x 800 and 1920 x 1200, no console errors).
+- The zero-test guard is `scripts/count_test_results.py`. It reads the JUnit
+  files colcon writes, prints total, skipped and executed separately, and
+  fails when no result file exists or executed (total minus skipped) is 0,
+  so an all-skipped run fails (review of #48). Its own tests
+  (`scripts/test_count_test_results.py`) run as a step of the same job.
+- Malformed or unreadable XML under the build folder also fails the guard,
+  even when another result file has executed tests; it names each such file
+  and labels the counts incomplete. Well-formed non-JUnit XML is still
+  ignored. This fix is Mohamed's #57, merged into `ui/ci` as
+  `bd82a1ada6f5a02dcb1f1d25385fb44e65e63216` (second review of #48).
 - Evidence: job steps reproduced locally; the jobs themselves run on the
   pull request.
 
@@ -177,3 +187,23 @@ openamr-platform-sw#90, the source of the interfaces below (head
 
 Open issues on 30 Oct: #19, #28, #29, #31, #32, #33, #34, #35, #36, #37,
 #39. Open pull requests on 30 Oct: drafts #21 and #40 to #46, plus A1.
+
+## Focused B9 follow-up, 30 October 2026 (#57)
+
+Written in #57, which was stacked on #48 at
+`216f79629636023c924fd070701f8b814f860cbd` and is now merged into `ui/ci`
+(#48) as `bd82a1ada6f5a02dcb1f1d25385fb44e65e63216`. The inherited item
+summaries above are not whole-stack acceptance.
+
+The counter now fails on malformed or unreadable XML under the requested
+build directory even when another result contains executed tests. It names
+each unreadable file and labels the counts incomplete. Well-formed
+non-JUnit XML remains ignored. Existing skipped-test counting is unchanged;
+colcon test-result still owns ordinary test-failure reporting.
+
+The existing standard-library test command runs nine cases with no skips.
+Keeping these tests and restoring the original helper produces three
+failures and one error; the fixed helper passes all nine. No ROS, Docker,
+web build, simulation or hardware run was performed locally for this fix.
+#48 merged on 10 Nov 2026 as 51b4af3, owned by the platform lead. #51 incorporates the fix by merging `ui/ci`; integration candidate
+#56 must be rebuilt by its owner to include it.
