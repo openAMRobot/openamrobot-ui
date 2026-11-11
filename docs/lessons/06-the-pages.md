@@ -224,7 +224,8 @@ drive controls to accidentally bump.
   of the last 40 readings — useful for spotting "draining faster than
   usual" at a glance, not just the instantaneous number.
 - Charging station status is a simple connected/not-connected read from
-  `/charge_station_connected`.
+  `/charge_station_connected`. It is not a charge-state signal: docking
+  never establishes charging, and no charge-state source feeds this card yet.
 - The full-detail `SystemHealth` panel here is the same component shown
   compact elsewhere (Fleet, Config) — see
   [Lesson 07](07-ui-components.md#systemhealth--systemhealthjsx) for exactly

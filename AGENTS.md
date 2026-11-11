@@ -120,7 +120,7 @@ decision. A text check proves textual consistency, never mechanical, electrical 
   claim that all app data is fake when only the fixture view is isolated.
 - Share one consumer-neutral adapter for operator and future Reporting consumers.
 - No fixture command path to hardware. Absence of forbidden imports alone is not proof.
-- Authentication, production command controls and software E-STOP labelling require
+- Authentication, production command controls and Stop (software) labelling require
   separate explicitly scoped work; do not slip these into fixture-only changes.
 
 ## Canonical context
