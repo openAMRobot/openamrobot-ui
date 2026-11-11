@@ -137,7 +137,7 @@ const MapPage = () => {
           if (!publishGoal(waypointQueueRef.current[next])) {
             queueExecutingRef.current = false;
             setQueueExecuting(false);
-            updateUiRun("route", { status: "stopped", reason: navGoalBlockedReason() });
+            updateUiRun("route", { status: "stopped", reason: goalNotSentReason() });
             return;
           }
           toast.info(
@@ -163,6 +163,10 @@ const MapPage = () => {
 
     return () => statusTopic.unsubscribe();
   }, [ros]);
+
+  // Why the last goal was not sent: the goal check's reason, or the goal
+  // topic not being ready yet.
+  const goalNotSentReason = () => navGoalBlockedReason() || "Goal not sent: the goal topic is not ready";
 
   // Every Nav2 goal from this page goes through here. While the stop lock is
   // engaged or unknown no goal is sent (shared/motion/navGoalGate.js), so no
@@ -386,19 +390,27 @@ const MapPage = () => {
       return;
     }
     queueIdxRef.current = 0;
-    queueExecutingRef.current = true;
-    setQueueExecuting(true);
-    // Reported to Reporting Mode as this tab's route run (shared/runs).
+    // The run is reported as running only once the first goal was sent; a
+    // first goal that is not sent ends the run as stopped, with the reason
+    // (review of #54). Reported to Reporting Mode as this tab's route run
+    // (shared/runs).
+    const sent = publishGoal(waypointQueueRef.current[0]);
     setUiRun("route", {
       runId: newUiRunId("route"),
       kind: "route",
       name: "Waypoint queue",
       step: 1,
       total: waypointQueueRef.current.length,
-      status: "running",
-      reason: "",
+      status: sent ? "running" : "stopped",
+      reason: sent ? "" : goalNotSentReason(),
     });
-    publishGoal(waypointQueueRef.current[0]);
+    if (!sent) {
+      queueExecutingRef.current = false;
+      setQueueExecuting(false);
+      return;
+    }
+    queueExecutingRef.current = true;
+    setQueueExecuting(true);
     toast.info(`Executing ${waypointQueueRef.current.length} waypoints`);
   }, []);
 
