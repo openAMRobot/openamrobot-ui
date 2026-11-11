@@ -241,7 +241,9 @@ a DEGRADED navigation health are shown as warnings.
 ## Runs and results
 
 - A new goal id, or a mission start, opens a new run and clears the result
-  panel. A mission, program or route that sent a goal stays the current
+  panel. A waypoint queue whose first goal is not sent (the stop lock
+  engaged, or the goal topic not ready) is recorded as stopped with the
+  reason and never shows as running. A mission, program or route that sent a goal stays the current
   task.
 - Goal events are ordered by goal id and stamp. A duplicate status is
   ignored. A goal older than the current one, or a goal id seen before, is

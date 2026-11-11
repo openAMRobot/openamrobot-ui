@@ -239,6 +239,9 @@ Branched from A1 (`ui/gate-a-command-path`); merges after A1.
   screens, and again at 800 x 1280 and 600 x 960: sizes and spacing scale
   with the page width (the ZX80's display scale is not confirmed), and the
   middle scrolls if content still does not fit.
+- Map page waypoint queue (review of #54): the route run is reported as
+  running only once the first goal was sent; otherwise it is recorded as
+  stopped with the reason.
 - Evidence: unit, component and browser (Playwright at 1200 x 1920 against
   a scripted rosbridge stand-in). Not run against simulation, on the panel
   or on a robot.
