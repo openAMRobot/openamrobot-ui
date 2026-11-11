@@ -22,6 +22,7 @@ import { softwareStop } from "../shared/motion/softwareStop";
 import { subscribeAbort } from "../shared/motion/abortBus";
 import { useMotionGate } from "../shared/motion/motionGate";
 import { navGoalBlockedReason } from "../shared/motion/navGoalGate";
+import { newUiRunId, setUiRun, updateUiRun } from "../shared/runs/uiRunStore";
 
 const INITIAL_POSE_COV = [
   0.25, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -132,9 +133,11 @@ const MapPage = () => {
         const next = queueIdxRef.current + 1;
         if (next < waypointQueueRef.current.length) {
           queueIdxRef.current = next;
+          updateUiRun("route", { step: next + 1 });
           if (!publishGoal(waypointQueueRef.current[next])) {
             queueExecutingRef.current = false;
             setQueueExecuting(false);
+            updateUiRun("route", { status: "stopped", reason: goalNotSentReason() });
             return;
           }
           toast.info(
@@ -144,17 +147,26 @@ const MapPage = () => {
           queueExecutingRef.current = false;
           setQueueExecuting(false);
           setWaypointQueue([]);
+          updateUiRun("route", { status: "succeeded", reason: "" });
           toast.success("All waypoints complete!");
         }
       } else if (latest.status === 5 || latest.status === 6) {
         queueExecutingRef.current = false;
         setQueueExecuting(false);
+        updateUiRun("route", {
+          status: latest.status === 5 ? "stopped" : "failed",
+          reason: latest.status === 5 ? "Goal was cancelled" : "Goal failed",
+        });
         toast.warn("Queue stopped: goal was canceled or failed");
       }
     });
 
     return () => statusTopic.unsubscribe();
   }, [ros]);
+
+  // Why the last goal was not sent: the goal check's reason, or the goal
+  // topic not being ready yet.
+  const goalNotSentReason = () => navGoalBlockedReason() || "Goal not sent: the goal topic is not ready";
 
   // Every Nav2 goal from this page goes through here. While the stop lock is
   // engaged or unknown no goal is sent (shared/motion/navGoalGate.js), so no
@@ -357,6 +369,7 @@ const MapPage = () => {
         if (!queueExecutingRef.current) return;
         queueExecutingRef.current = false;
         setQueueExecuting(false);
+        updateUiRun("route", { status: "stopped", reason: "Stopped (software) or connection lost" });
       }),
     [],
   );
@@ -377,15 +390,34 @@ const MapPage = () => {
       return;
     }
     queueIdxRef.current = 0;
+    // The run is reported as running only once the first goal was sent; a
+    // first goal that is not sent ends the run as stopped, with the reason
+    // (review of #54). Reported to Reporting Mode as this tab's route run
+    // (shared/runs).
+    const sent = publishGoal(waypointQueueRef.current[0]);
+    setUiRun("route", {
+      runId: newUiRunId("route"),
+      kind: "route",
+      name: "Waypoint queue",
+      step: 1,
+      total: waypointQueueRef.current.length,
+      status: sent ? "running" : "stopped",
+      reason: sent ? "" : goalNotSentReason(),
+    });
+    if (!sent) {
+      queueExecutingRef.current = false;
+      setQueueExecuting(false);
+      return;
+    }
     queueExecutingRef.current = true;
     setQueueExecuting(true);
-    publishGoal(waypointQueueRef.current[0]);
     toast.info(`Executing ${waypointQueueRef.current.length} waypoints`);
   }, []);
 
   const stopQueue = useCallback(() => {
     queueExecutingRef.current = false;
     setQueueExecuting(false);
+    updateUiRun("route", { status: "stopped", reason: "Stopped by the operator" });
     cancelGoal();
   }, [cancelGoal]);
 

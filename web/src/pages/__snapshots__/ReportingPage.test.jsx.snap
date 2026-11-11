@@ -1,0 +1,1722 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1`] = `
+<div
+  class="relative flex h-screen w-screen flex-col overflow-hidden font-[RobotoMono]"
+  data-state="DISCONNECTED"
+  data-testid="reporting-page"
+  style="background: rgb(17, 17, 17); color: rgb(255, 255, 255);"
+>
+  <header
+    class="flex items-start justify-between"
+    data-testid="reporting-header"
+    style="gap: min(24px, 2vw);"
+  >
+    <div
+      class="flex min-w-0 flex-col gap-1"
+    >
+      <span
+        class="font-semibold"
+      >
+        Base and navigation
+      </span>
+      <span
+        class="text-white/60"
+      >
+        Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
+      </span>
+    </div>
+    <button
+      aria-label="Hold to exit Reporting Mode"
+      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      type="button"
+    >
+      Hold to exit
+    </button>
+  </header>
+  <main
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
+  >
+    <section
+      aria-label="Robot state"
+      style="overflow-wrap: anywhere;"
+    >
+      <h1
+        class="font-bold leading-none"
+        data-testid="reporting-state"
+        style="color: rgb(156, 163, 175);"
+      >
+        DISCONNECTED
+      </h1>
+      <p
+        class="mt-6 font-semibold"
+        data-testid="reporting-reason"
+      >
+        No connection to the robot
+      </p>
+      <p
+        class="mt-4 text-white/90"
+        data-testid="reporting-next"
+      >
+        Next: 
+        Check the panel's network connection. It reconnects on its own.
+      </p>
+    </section>
+    <section
+      aria-label="Task and result"
+      class="flex min-w-0 flex-col gap-5"
+      style="overflow-wrap: anywhere;"
+    >
+      <div
+        data-testid="reporting-task"
+      >
+        <p
+          class="text-white/60"
+        >
+          Current task
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+      <div
+        data-testid="reporting-result"
+      >
+        <p
+          class="text-white/60"
+        >
+          Last result
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+      <div
+        data-testid="reporting-warnings"
+      >
+        <p
+          class="text-white/60"
+        >
+          Warnings
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+    </section>
+  </main>
+  <footer
+    class="grid grid-cols-2 border-t border-white/20"
+    data-testid="reporting-footer"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
+  >
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Connection"
+    >
+      <span
+        class="text-white/70"
+      >
+        Connection
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Disconnected
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Software stop lock"
+    >
+      <span
+        class="text-white/70"
+      >
+        Software stop lock
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Unknown
+         (no data)
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Navigation"
+    >
+      <span
+        class="text-white/70"
+      >
+        Navigation
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Unknown
+         (no data)
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Localization"
+    >
+      <span
+        class="text-white/70"
+      >
+        Localization
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Unknown
+         (no data)
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Battery"
+    >
+      <span
+        class="text-white/70"
+      >
+        Battery
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Unknown
+         (no data)
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Diagnostics"
+    >
+      <span
+        class="text-white/70"
+      >
+        Diagnostics
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Unknown
+         (no data)
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Arms"
+    >
+      <span
+        class="text-white/70"
+      >
+        Arms
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Lift"
+    >
+      <span
+        class="text-white/70"
+      >
+        Lift
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Physical E-stop"
+    >
+      <span
+        class="text-white/70"
+      >
+        Physical E-stop
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+    >
+      <span>
+        Screen wake lock: 
+        not supported
+      </span>
+      <button
+        aria-pressed="false"
+        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        type="button"
+      >
+        Speech off
+      </button>
+    </div>
+  </footer>
+</div>
+`;
+
+exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SOFTWARE), FAULTED, stale and DISCONNECTED: EXECUTING 1`] = `
+<div
+  class="relative flex h-screen w-screen flex-col overflow-hidden font-[RobotoMono]"
+  data-state="EXECUTING"
+  data-testid="reporting-page"
+  style="color: rgb(255, 255, 255); background: rgb(11, 42, 74);"
+>
+  <header
+    class="flex items-start justify-between"
+    data-testid="reporting-header"
+    style="gap: min(24px, 2vw);"
+  >
+    <div
+      class="flex min-w-0 flex-col gap-1"
+    >
+      <span
+        class="font-semibold"
+      >
+        Base and navigation
+      </span>
+      <span
+        class="text-white/60"
+      >
+        Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
+      </span>
+    </div>
+    <button
+      aria-label="Hold to exit Reporting Mode"
+      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      type="button"
+    >
+      Hold to exit
+    </button>
+  </header>
+  <main
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
+  >
+    <section
+      aria-label="Robot state"
+      style="overflow-wrap: anywhere;"
+    >
+      <h1
+        class="font-bold leading-none"
+        data-testid="reporting-state"
+        style="color: rgb(96, 165, 250);"
+      >
+        EXECUTING
+      </h1>
+      <p
+        class="mt-6 font-semibold"
+        data-testid="reporting-reason"
+      >
+        Driving to the goal
+      </p>
+      <p
+        class="mt-4 text-white/90"
+        data-testid="reporting-next"
+      >
+        Next: 
+        Wait for completion. Use Stop (software) on the operator screen if needed.
+      </p>
+    </section>
+    <section
+      aria-label="Task and result"
+      class="flex min-w-0 flex-col gap-5"
+      style="overflow-wrap: anywhere;"
+    >
+      <div
+        data-testid="reporting-task"
+      >
+        <p
+          class="text-white/60"
+        >
+          Current task
+        </p>
+        <p>
+          Navigation goal
+        </p>
+      </div>
+      <div
+        data-testid="reporting-progress"
+      >
+        <p
+          class="text-white/60"
+        >
+          Progress
+        </p>
+        <div
+          aria-valuemax="100"
+          aria-valuemin="0"
+          aria-valuenow="75"
+          class="mt-2 h-6 w-full overflow-hidden rounded-full"
+          role="progressbar"
+          style="background: rgba(255, 255, 255, 0.2);"
+        >
+          <div
+            class="h-full"
+            style="width: 75%; background: rgb(255, 255, 255);"
+          />
+        </div>
+        <p
+          class="mt-2"
+        >
+          2.0
+           m remaining
+          , about 4 s
+        </p>
+      </div>
+      <div
+        data-testid="reporting-result"
+      >
+        <p
+          class="text-white/60"
+        >
+          Last result
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+      <div
+        data-testid="reporting-warnings"
+      >
+        <p
+          class="text-white/60"
+        >
+          Warnings
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+    </section>
+  </main>
+  <footer
+    class="grid grid-cols-2 border-t border-white/20"
+    data-testid="reporting-footer"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
+  >
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Connection"
+    >
+      <span
+        class="text-white/70"
+      >
+        Connection
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Connected
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Software stop lock"
+    >
+      <span
+        class="text-white/70"
+      >
+        Software stop lock
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Released
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Navigation"
+    >
+      <span
+        class="text-white/70"
+      >
+        Navigation
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Ready
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Localization"
+    >
+      <span
+        class="text-white/70"
+      >
+        Localization
+      </span>
+      <span
+        class="font-semibold"
+      >
+        OK
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Battery"
+    >
+      <span
+        class="text-white/70"
+      >
+        Battery
+      </span>
+      <span
+        class="font-semibold"
+      >
+        80%
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Diagnostics"
+    >
+      <span
+        class="text-white/70"
+      >
+        Diagnostics
+      </span>
+      <span
+        class="font-semibold"
+      >
+        OK
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Arms"
+    >
+      <span
+        class="text-white/70"
+      >
+        Arms
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Lift"
+    >
+      <span
+        class="text-white/70"
+      >
+        Lift
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Physical E-stop"
+    >
+      <span
+        class="text-white/70"
+      >
+        Physical E-stop
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+    >
+      <span>
+        Screen wake lock: 
+        not supported
+      </span>
+      <button
+        aria-pressed="false"
+        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        type="button"
+      >
+        Speech off
+      </button>
+    </div>
+  </footer>
+</div>
+`;
+
+exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SOFTWARE), FAULTED, stale and DISCONNECTED: FAULTED 1`] = `
+<div
+  class="relative flex h-screen w-screen flex-col overflow-hidden font-[RobotoMono]"
+  data-state="FAULTED"
+  data-testid="reporting-page"
+  style="color: rgb(255, 255, 255); background: rgb(92, 11, 11);"
+>
+  <header
+    class="flex items-start justify-between"
+    data-testid="reporting-header"
+    style="gap: min(24px, 2vw);"
+  >
+    <div
+      class="flex min-w-0 flex-col gap-1"
+    >
+      <span
+        class="font-semibold"
+      >
+        Base and navigation
+      </span>
+      <span
+        class="text-white/60"
+      >
+        Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
+      </span>
+    </div>
+    <button
+      aria-label="Hold to exit Reporting Mode"
+      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      type="button"
+    >
+      Hold to exit
+    </button>
+  </header>
+  <main
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
+  >
+    <section
+      aria-label="Robot state"
+      style="overflow-wrap: anywhere;"
+    >
+      <h1
+        class="font-bold leading-none"
+        data-testid="reporting-state"
+        style="color: rgb(248, 113, 113);"
+      >
+        FAULTED
+      </h1>
+      <p
+        class="mt-6 font-semibold"
+        data-testid="reporting-reason"
+      >
+        Unknown navigation fault
+      </p>
+      <p
+        class="mt-4 text-white/90"
+        data-testid="reporting-next"
+      >
+        Next: 
+        Call an engineer. Check Health and Events on the operator screen.
+      </p>
+    </section>
+    <section
+      aria-label="Task and result"
+      class="flex min-w-0 flex-col gap-5"
+      style="overflow-wrap: anywhere;"
+    >
+      <div
+        data-testid="reporting-task"
+      >
+        <p
+          class="text-white/60"
+        >
+          Current task
+        </p>
+        <p>
+          Navigation goal
+        </p>
+      </div>
+      <div
+        data-testid="reporting-progress"
+      >
+        <p
+          class="text-white/60"
+        >
+          Progress
+        </p>
+        <div
+          aria-valuemax="100"
+          aria-valuemin="0"
+          aria-valuenow="75"
+          class="mt-2 h-6 w-full overflow-hidden rounded-full"
+          role="progressbar"
+          style="background: rgba(255, 255, 255, 0.2);"
+        >
+          <div
+            class="h-full"
+            style="width: 75%; background: rgb(255, 255, 255);"
+          />
+        </div>
+        <p
+          class="mt-2"
+        >
+          2.0
+           m remaining
+          , about 4 s
+        </p>
+      </div>
+      <div
+        data-testid="reporting-result"
+      >
+        <p
+          class="text-white/60"
+        >
+          Last result
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+      <div
+        data-testid="reporting-warnings"
+      >
+        <p
+          class="text-white/60"
+        >
+          Warnings
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+    </section>
+  </main>
+  <footer
+    class="grid grid-cols-2 border-t border-white/20"
+    data-testid="reporting-footer"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
+  >
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Connection"
+    >
+      <span
+        class="text-white/70"
+      >
+        Connection
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Connected
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Software stop lock"
+    >
+      <span
+        class="text-white/70"
+      >
+        Software stop lock
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Released
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Navigation"
+    >
+      <span
+        class="text-white/70"
+      >
+        Navigation
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Ready
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Localization"
+    >
+      <span
+        class="text-white/70"
+      >
+        Localization
+      </span>
+      <span
+        class="font-semibold"
+      >
+        OK
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Battery"
+    >
+      <span
+        class="text-white/70"
+      >
+        Battery
+      </span>
+      <span
+        class="font-semibold"
+      >
+        80%
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Diagnostics"
+    >
+      <span
+        class="text-white/70"
+      >
+        Diagnostics
+      </span>
+      <span
+        class="font-semibold"
+      >
+        OK
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Arms"
+    >
+      <span
+        class="text-white/70"
+      >
+        Arms
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Lift"
+    >
+      <span
+        class="text-white/70"
+      >
+        Lift
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Physical E-stop"
+    >
+      <span
+        class="text-white/70"
+      >
+        Physical E-stop
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+    >
+      <span>
+        Screen wake lock: 
+        not supported
+      </span>
+      <button
+        aria-pressed="false"
+        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        type="button"
+      >
+        Speech off
+      </button>
+    </div>
+  </footer>
+</div>
+`;
+
+exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SOFTWARE), FAULTED, stale and DISCONNECTED: READY 1`] = `
+<div
+  class="relative flex h-screen w-screen flex-col overflow-hidden font-[RobotoMono]"
+  data-state="READY"
+  data-testid="reporting-page"
+  style="color: rgb(255, 255, 255); background: rgb(11, 61, 30);"
+>
+  <header
+    class="flex items-start justify-between"
+    data-testid="reporting-header"
+    style="gap: min(24px, 2vw);"
+  >
+    <div
+      class="flex min-w-0 flex-col gap-1"
+    >
+      <span
+        class="font-semibold"
+      >
+        Base and navigation
+      </span>
+      <span
+        class="text-white/60"
+      >
+        Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
+      </span>
+    </div>
+    <button
+      aria-label="Hold to exit Reporting Mode"
+      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      type="button"
+    >
+      Hold to exit
+    </button>
+  </header>
+  <main
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
+  >
+    <section
+      aria-label="Robot state"
+      style="overflow-wrap: anywhere;"
+    >
+      <h1
+        class="font-bold leading-none"
+        data-testid="reporting-state"
+        style="color: rgb(52, 211, 153);"
+      >
+        READY
+      </h1>
+      <p
+        class="mt-6 font-semibold"
+        data-testid="reporting-reason"
+      >
+        No blocking faults in current reported data
+      </p>
+      <p
+        class="mt-4 text-white/90"
+        data-testid="reporting-next"
+      >
+        Next: 
+        Start a task from the operator screen.
+      </p>
+    </section>
+    <section
+      aria-label="Task and result"
+      class="flex min-w-0 flex-col gap-5"
+      style="overflow-wrap: anywhere;"
+    >
+      <div
+        data-testid="reporting-task"
+      >
+        <p
+          class="text-white/60"
+        >
+          Current task
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+      <div
+        data-testid="reporting-result"
+      >
+        <p
+          class="text-white/60"
+        >
+          Last result
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+      <div
+        data-testid="reporting-warnings"
+      >
+        <p
+          class="text-white/60"
+        >
+          Warnings
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+    </section>
+  </main>
+  <footer
+    class="grid grid-cols-2 border-t border-white/20"
+    data-testid="reporting-footer"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
+  >
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Connection"
+    >
+      <span
+        class="text-white/70"
+      >
+        Connection
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Connected
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Software stop lock"
+    >
+      <span
+        class="text-white/70"
+      >
+        Software stop lock
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Released
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Navigation"
+    >
+      <span
+        class="text-white/70"
+      >
+        Navigation
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Ready
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Localization"
+    >
+      <span
+        class="text-white/70"
+      >
+        Localization
+      </span>
+      <span
+        class="font-semibold"
+      >
+        OK
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Battery"
+    >
+      <span
+        class="text-white/70"
+      >
+        Battery
+      </span>
+      <span
+        class="font-semibold"
+      >
+        80%
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Diagnostics"
+    >
+      <span
+        class="text-white/70"
+      >
+        Diagnostics
+      </span>
+      <span
+        class="font-semibold"
+      >
+        OK
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Arms"
+    >
+      <span
+        class="text-white/70"
+      >
+        Arms
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Lift"
+    >
+      <span
+        class="text-white/70"
+      >
+        Lift
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Physical E-stop"
+    >
+      <span
+        class="text-white/70"
+      >
+        Physical E-stop
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+    >
+      <span>
+        Screen wake lock: 
+        not supported
+      </span>
+      <button
+        aria-pressed="false"
+        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        type="button"
+      >
+        Speech off
+      </button>
+    </div>
+  </footer>
+</div>
+`;
+
+exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SOFTWARE), FAULTED, stale and DISCONNECTED: STOPPED (SOFTWARE) 1`] = `
+<div
+  class="relative flex h-screen w-screen flex-col overflow-hidden font-[RobotoMono]"
+  data-state="STOPPED (SOFTWARE)"
+  data-testid="reporting-page"
+  style="color: rgb(255, 255, 255); background: rgb(58, 10, 10);"
+>
+  <header
+    class="flex items-start justify-between"
+    data-testid="reporting-header"
+    style="gap: min(24px, 2vw);"
+  >
+    <div
+      class="flex min-w-0 flex-col gap-1"
+    >
+      <span
+        class="font-semibold"
+      >
+        Base and navigation
+      </span>
+      <span
+        class="text-white/60"
+      >
+        Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
+      </span>
+    </div>
+    <button
+      aria-label="Hold to exit Reporting Mode"
+      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      type="button"
+    >
+      Hold to exit
+    </button>
+  </header>
+  <main
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
+  >
+    <section
+      aria-label="Robot state"
+      style="overflow-wrap: anywhere;"
+    >
+      <h1
+        class="font-bold leading-none"
+        data-testid="reporting-state"
+        style="color: rgb(248, 113, 113);"
+      >
+        STOPPED (SOFTWARE)
+      </h1>
+      <p
+        class="mt-6 font-semibold"
+        data-testid="reporting-reason"
+      >
+        The software stop lock is engaged
+      </p>
+      <p
+        class="mt-4 text-white/90"
+        data-testid="reporting-next"
+      >
+        Next: 
+        Check the area, then press Resume on the operator screen.
+      </p>
+    </section>
+    <section
+      aria-label="Task and result"
+      class="flex min-w-0 flex-col gap-5"
+      style="overflow-wrap: anywhere;"
+    >
+      <div
+        data-testid="reporting-task"
+      >
+        <p
+          class="text-white/60"
+        >
+          Current task
+        </p>
+        <p>
+          Navigation goal
+        </p>
+      </div>
+      <div
+        data-testid="reporting-progress"
+      >
+        <p
+          class="text-white/60"
+        >
+          Progress
+        </p>
+        <div
+          aria-valuemax="100"
+          aria-valuemin="0"
+          aria-valuenow="75"
+          class="mt-2 h-6 w-full overflow-hidden rounded-full"
+          role="progressbar"
+          style="background: rgba(255, 255, 255, 0.2);"
+        >
+          <div
+            class="h-full"
+            style="width: 75%; background: rgb(255, 255, 255);"
+          />
+        </div>
+        <p
+          class="mt-2"
+        >
+          2.0
+           m remaining
+          , about 4 s
+        </p>
+      </div>
+      <div
+        data-testid="reporting-result"
+      >
+        <p
+          class="text-white/60"
+        >
+          Last result
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+      <div
+        data-testid="reporting-warnings"
+      >
+        <p
+          class="text-white/60"
+        >
+          Warnings
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+    </section>
+  </main>
+  <footer
+    class="grid grid-cols-2 border-t border-white/20"
+    data-testid="reporting-footer"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
+  >
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Connection"
+    >
+      <span
+        class="text-white/70"
+      >
+        Connection
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Connected
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Software stop lock"
+    >
+      <span
+        class="text-white/70"
+      >
+        Software stop lock
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Engaged
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Navigation"
+    >
+      <span
+        class="text-white/70"
+      >
+        Navigation
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Ready
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Localization"
+    >
+      <span
+        class="text-white/70"
+      >
+        Localization
+      </span>
+      <span
+        class="font-semibold"
+      >
+        OK
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Battery"
+    >
+      <span
+        class="text-white/70"
+      >
+        Battery
+      </span>
+      <span
+        class="font-semibold"
+      >
+        80%
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Diagnostics"
+    >
+      <span
+        class="text-white/70"
+      >
+        Diagnostics
+      </span>
+      <span
+        class="font-semibold"
+      >
+        OK
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Arms"
+    >
+      <span
+        class="text-white/70"
+      >
+        Arms
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Lift"
+    >
+      <span
+        class="text-white/70"
+      >
+        Lift
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Physical E-stop"
+    >
+      <span
+        class="text-white/70"
+      >
+        Physical E-stop
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+    >
+      <span>
+        Screen wake lock: 
+        not supported
+      </span>
+      <button
+        aria-pressed="false"
+        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        type="button"
+      >
+        Speech off
+      </button>
+    </div>
+  </footer>
+</div>
+`;
+
+exports[`Reporting Mode page shows a stale source as stale, never as healthy: stale battery 1`] = `
+<div
+  class="relative flex h-screen w-screen flex-col overflow-hidden font-[RobotoMono]"
+  data-state="WAITING"
+  data-testid="reporting-page"
+  style="color: rgb(255, 255, 255); background: rgb(42, 42, 42);"
+>
+  <header
+    class="flex items-start justify-between"
+    data-testid="reporting-header"
+    style="gap: min(24px, 2vw);"
+  >
+    <div
+      class="flex min-w-0 flex-col gap-1"
+    >
+      <span
+        class="font-semibold"
+      >
+        Base and navigation
+      </span>
+      <span
+        class="text-white/60"
+      >
+        Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
+      </span>
+    </div>
+    <button
+      aria-label="Hold to exit Reporting Mode"
+      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      type="button"
+    >
+      Hold to exit
+    </button>
+  </header>
+  <main
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    data-testid="reporting-main"
+    style="gap: min(40px, 3.3333vw);"
+  >
+    <section
+      aria-label="Robot state"
+      style="overflow-wrap: anywhere;"
+    >
+      <h1
+        class="font-bold leading-none"
+        data-testid="reporting-state"
+        style="color: rgb(229, 231, 235);"
+      >
+        WAITING
+      </h1>
+      <p
+        class="mt-6 font-semibold"
+        data-testid="reporting-reason"
+      >
+        Battery data is stale or invalid
+      </p>
+      <p
+        class="mt-4 text-white/90"
+        data-testid="reporting-next"
+      >
+        Next: 
+        Resolve the reason shown before starting a task. (Battery data is stale or invalid)
+      </p>
+    </section>
+    <section
+      aria-label="Task and result"
+      class="flex min-w-0 flex-col gap-5"
+      style="overflow-wrap: anywhere;"
+    >
+      <div
+        data-testid="reporting-task"
+      >
+        <p
+          class="text-white/60"
+        >
+          Current task
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+      <div
+        data-testid="reporting-result"
+      >
+        <p
+          class="text-white/60"
+        >
+          Last result
+        </p>
+        <p
+          class="text-white/70"
+        >
+          None
+        </p>
+      </div>
+      <div
+        data-testid="reporting-warnings"
+      >
+        <p
+          class="text-white/60"
+        >
+          Warnings
+        </p>
+        <ul
+          class="list-disc pl-8"
+        >
+          <li>
+            Battery data is stale
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+  <footer
+    class="grid grid-cols-2 border-t border-white/20"
+    data-testid="reporting-footer"
+    style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
+  >
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Connection"
+    >
+      <span
+        class="text-white/70"
+      >
+        Connection
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Connected
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Software stop lock"
+    >
+      <span
+        class="text-white/70"
+      >
+        Software stop lock
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Released
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Navigation"
+    >
+      <span
+        class="text-white/70"
+      >
+        Navigation
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Ready
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Localization"
+    >
+      <span
+        class="text-white/70"
+      >
+        Localization
+      </span>
+      <span
+        class="font-semibold"
+      >
+        OK
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Battery"
+    >
+      <span
+        class="text-white/70"
+      >
+        Battery
+      </span>
+      <span
+        class="font-semibold"
+      >
+        80%
+         (stale)
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Diagnostics"
+    >
+      <span
+        class="text-white/70"
+      >
+        Diagnostics
+      </span>
+      <span
+        class="font-semibold"
+      >
+        OK
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Arms"
+    >
+      <span
+        class="text-white/70"
+      >
+        Arms
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Lift"
+    >
+      <span
+        class="text-white/70"
+      >
+        Lift
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="flex justify-between gap-4"
+      data-testid="row-Physical E-stop"
+    >
+      <span
+        class="text-white/70"
+      >
+        Physical E-stop
+      </span>
+      <span
+        class="font-semibold"
+      >
+        Not reported
+      </span>
+    </div>
+    <div
+      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+    >
+      <span>
+        Screen wake lock: 
+        not supported
+      </span>
+      <button
+        aria-pressed="false"
+        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        type="button"
+      >
+        Speech off
+      </button>
+    </div>
+  </footer>
+</div>
+`;
