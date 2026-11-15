@@ -28,7 +28,8 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
     </div>
     <button
       aria-label="Hold to exit Reporting Mode"
-      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      class="shrink-0 rounded-lg border px-4 border-white/30 bg-black/30 select-none text-white/80"
+      style="min-height: 48px;"
       type="button"
     >
       Hold to exit
@@ -43,12 +44,37 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       aria-label="Robot state"
       style="overflow-wrap: anywhere;"
     >
-      <h1
-        class="font-bold leading-none"
-        data-testid="reporting-state"
-        style="color: rgb(156, 163, 175);"
+      <div
+        class="mb-4 border-2 border-white/60 bg-black px-4 py-3 font-bold"
+        data-testid="reporting-disconnected-banner"
+        role="status"
       >
-        DISCONNECTED
+        Disconnected
+         · 
+        Last known state
+        :
+         
+        <span
+          data-testid="reporting-last-known-state"
+        >
+          UNKNOWN
+        </span>
+      </div>
+      <h1
+        class="flex items-center gap-3 font-bold leading-none"
+        data-testid="reporting-state"
+        style="color: rgb(209, 213, 219);"
+      >
+        <span
+          aria-hidden="true"
+          data-testid="reporting-state-icon"
+          style="font-size: 0.6em;"
+        >
+          ⨯
+        </span>
+        <span>
+          DISCONNECTED
+        </span>
       </h1>
       <p
         class="mt-6 font-semibold"
@@ -60,7 +86,8 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
         class="mt-4 text-white/90"
         data-testid="reporting-next"
       >
-        Next: 
+        Next:
+         
         Check the panel's network connection. It reconnects on its own.
       </p>
     </section>
@@ -119,7 +146,7 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
     style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Connection"
     >
       <span
@@ -134,7 +161,8 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="No data"
       data-testid="row-Software stop lock"
     >
       <span
@@ -150,7 +178,8 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="No data"
       data-testid="row-Navigation"
     >
       <span
@@ -166,7 +195,8 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="No data"
       data-testid="row-Localization"
     >
       <span
@@ -182,7 +212,8 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="No data"
       data-testid="row-Battery"
     >
       <span
@@ -198,7 +229,8 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="No data"
       data-testid="row-Diagnostics"
     >
       <span
@@ -214,7 +246,7 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Arms"
     >
       <span
@@ -229,7 +261,7 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Lift"
     >
       <span
@@ -244,7 +276,7 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Physical E-stop"
     >
       <span
@@ -258,16 +290,30 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
         Not reported
       </span>
     </div>
+    <p
+      aria-live="polite"
+      class="col-span-2 mt-2"
+      data-testid="reporting-speech-text"
+      role="status"
+      style="overflow-wrap: anywhere;"
+    >
+      Last announcement
+      : 
+      disconnected. No connection to the robot
+    </p>
     <div
-      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+      class="col-span-2 flex items-center justify-between text-white/60"
     >
       <span>
-        Screen wake lock: 
+        Screen wake lock
+        : 
         not supported
       </span>
       <button
         aria-pressed="false"
-        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        class="rounded-lg border border-white/30 px-4 text-white"
+        data-testid="speech-toggle"
+        style="min-height: 48px;"
         type="button"
       >
         Speech off
@@ -305,7 +351,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </div>
     <button
       aria-label="Hold to exit Reporting Mode"
-      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      class="shrink-0 rounded-lg border px-4 border-white/30 bg-black/30 select-none text-white/80"
+      style="min-height: 48px;"
       type="button"
     >
       Hold to exit
@@ -321,11 +368,20 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       style="overflow-wrap: anywhere;"
     >
       <h1
-        class="font-bold leading-none"
+        class="flex items-center gap-3 font-bold leading-none"
         data-testid="reporting-state"
         style="color: rgb(96, 165, 250);"
       >
-        EXECUTING
+        <span
+          aria-hidden="true"
+          data-testid="reporting-state-icon"
+          style="font-size: 0.6em;"
+        >
+          ▶
+        </span>
+        <span>
+          EXECUTING
+        </span>
       </h1>
       <p
         class="mt-6 font-semibold"
@@ -337,7 +393,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         class="mt-4 text-white/90"
         data-testid="reporting-next"
       >
-        Next: 
+        Next:
+         
         Wait for completion. Use Stop (software) on the operator screen if needed.
       </p>
     </section>
@@ -383,7 +440,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
           class="mt-2"
         >
           2.0
-           m remaining
+           
+          m remaining
           , about 4 s
         </p>
       </div>
@@ -423,7 +481,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Connection"
     >
       <span
@@ -438,7 +496,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Software stop lock"
     >
       <span
@@ -453,7 +512,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Navigation"
     >
       <span
@@ -468,7 +528,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Localization"
     >
       <span
@@ -483,7 +544,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Battery"
     >
       <span
@@ -498,7 +560,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Diagnostics"
     >
       <span
@@ -513,7 +576,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Arms"
     >
       <span
@@ -528,7 +591,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Lift"
     >
       <span
@@ -543,7 +606,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Physical E-stop"
     >
       <span
@@ -557,16 +620,30 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         Not reported
       </span>
     </div>
+    <p
+      aria-live="polite"
+      class="col-span-2 mt-2"
+      data-testid="reporting-speech-text"
+      role="status"
+      style="overflow-wrap: anywhere;"
+    >
+      Last announcement
+      : 
+      executing. Driving to the goal
+    </p>
     <div
-      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+      class="col-span-2 flex items-center justify-between text-white/60"
     >
       <span>
-        Screen wake lock: 
+        Screen wake lock
+        : 
         not supported
       </span>
       <button
         aria-pressed="false"
-        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        class="rounded-lg border border-white/30 px-4 text-white"
+        data-testid="speech-toggle"
+        style="min-height: 48px;"
         type="button"
       >
         Speech off
@@ -604,7 +681,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </div>
     <button
       aria-label="Hold to exit Reporting Mode"
-      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      class="shrink-0 rounded-lg border px-4 border-white/30 bg-black/30 select-none text-white/80"
+      style="min-height: 48px;"
       type="button"
     >
       Hold to exit
@@ -620,11 +698,20 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       style="overflow-wrap: anywhere;"
     >
       <h1
-        class="font-bold leading-none"
+        class="flex items-center gap-3 font-bold leading-none"
         data-testid="reporting-state"
         style="color: rgb(248, 113, 113);"
       >
-        FAULTED
+        <span
+          aria-hidden="true"
+          data-testid="reporting-state-icon"
+          style="font-size: 0.6em;"
+        >
+          ▲
+        </span>
+        <span>
+          FAULTED
+        </span>
       </h1>
       <p
         class="mt-6 font-semibold"
@@ -636,7 +723,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         class="mt-4 text-white/90"
         data-testid="reporting-next"
       >
-        Next: 
+        Next:
+         
         Call an engineer. Check Health and Events on the operator screen.
       </p>
     </section>
@@ -682,7 +770,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
           class="mt-2"
         >
           2.0
-           m remaining
+           
+          m remaining
           , about 4 s
         </p>
       </div>
@@ -722,7 +811,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Connection"
     >
       <span
@@ -737,7 +826,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Software stop lock"
     >
       <span
@@ -752,7 +842,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Navigation"
     >
       <span
@@ -767,7 +858,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Localization"
     >
       <span
@@ -782,7 +874,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Battery"
     >
       <span
@@ -797,7 +890,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Diagnostics"
     >
       <span
@@ -812,7 +906,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Arms"
     >
       <span
@@ -827,7 +921,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Lift"
     >
       <span
@@ -842,7 +936,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Physical E-stop"
     >
       <span
@@ -856,16 +950,30 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         Not reported
       </span>
     </div>
+    <p
+      aria-live="polite"
+      class="col-span-2 mt-2"
+      data-testid="reporting-speech-text"
+      role="status"
+      style="overflow-wrap: anywhere;"
+    >
+      Last announcement
+      : 
+      faulted. Unknown navigation fault
+    </p>
     <div
-      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+      class="col-span-2 flex items-center justify-between text-white/60"
     >
       <span>
-        Screen wake lock: 
+        Screen wake lock
+        : 
         not supported
       </span>
       <button
         aria-pressed="false"
-        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        class="rounded-lg border border-white/30 px-4 text-white"
+        data-testid="speech-toggle"
+        style="min-height: 48px;"
         type="button"
       >
         Speech off
@@ -903,7 +1011,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </div>
     <button
       aria-label="Hold to exit Reporting Mode"
-      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      class="shrink-0 rounded-lg border px-4 border-white/30 bg-black/30 select-none text-white/80"
+      style="min-height: 48px;"
       type="button"
     >
       Hold to exit
@@ -919,11 +1028,20 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       style="overflow-wrap: anywhere;"
     >
       <h1
-        class="font-bold leading-none"
+        class="flex items-center gap-3 font-bold leading-none"
         data-testid="reporting-state"
         style="color: rgb(52, 211, 153);"
       >
-        READY
+        <span
+          aria-hidden="true"
+          data-testid="reporting-state-icon"
+          style="font-size: 0.6em;"
+        >
+          ●
+        </span>
+        <span>
+          READY
+        </span>
       </h1>
       <p
         class="mt-6 font-semibold"
@@ -935,7 +1053,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         class="mt-4 text-white/90"
         data-testid="reporting-next"
       >
-        Next: 
+        Next:
+         
         Start a task from the operator screen.
       </p>
     </section>
@@ -994,7 +1113,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Connection"
     >
       <span
@@ -1009,7 +1128,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Software stop lock"
     >
       <span
@@ -1024,7 +1144,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Navigation"
     >
       <span
@@ -1039,7 +1160,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Localization"
     >
       <span
@@ -1054,7 +1176,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Battery"
     >
       <span
@@ -1069,7 +1192,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Diagnostics"
     >
       <span
@@ -1084,7 +1208,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Arms"
     >
       <span
@@ -1099,7 +1223,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Lift"
     >
       <span
@@ -1114,7 +1238,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Physical E-stop"
     >
       <span
@@ -1128,16 +1252,30 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         Not reported
       </span>
     </div>
+    <p
+      aria-live="polite"
+      class="col-span-2 mt-2"
+      data-testid="reporting-speech-text"
+      role="status"
+      style="overflow-wrap: anywhere;"
+    >
+      Last announcement
+      : 
+      ready. No blocking faults in current reported data
+    </p>
     <div
-      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+      class="col-span-2 flex items-center justify-between text-white/60"
     >
       <span>
-        Screen wake lock: 
+        Screen wake lock
+        : 
         not supported
       </span>
       <button
         aria-pressed="false"
-        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        class="rounded-lg border border-white/30 px-4 text-white"
+        data-testid="speech-toggle"
+        style="min-height: 48px;"
         type="button"
       >
         Speech off
@@ -1175,7 +1313,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     </div>
     <button
       aria-label="Hold to exit Reporting Mode"
-      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      class="shrink-0 rounded-lg border px-4 border-white/30 bg-black/30 select-none text-white/80"
+      style="min-height: 48px;"
       type="button"
     >
       Hold to exit
@@ -1191,11 +1330,20 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       style="overflow-wrap: anywhere;"
     >
       <h1
-        class="font-bold leading-none"
+        class="flex items-center gap-3 font-bold leading-none"
         data-testid="reporting-state"
-        style="color: rgb(248, 113, 113);"
+        style="color: rgb(252, 165, 165);"
       >
-        STOPPED (SOFTWARE)
+        <span
+          aria-hidden="true"
+          data-testid="reporting-state-icon"
+          style="font-size: 0.6em;"
+        >
+          ■
+        </span>
+        <span>
+          STOPPED (SOFTWARE)
+        </span>
       </h1>
       <p
         class="mt-6 font-semibold"
@@ -1207,7 +1355,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         class="mt-4 text-white/90"
         data-testid="reporting-next"
       >
-        Next: 
+        Next:
+         
         Check the area, then press Resume on the operator screen.
       </p>
     </section>
@@ -1253,7 +1402,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
           class="mt-2"
         >
           2.0
-           m remaining
+           
+          m remaining
           , about 4 s
         </p>
       </div>
@@ -1293,7 +1443,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
     style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Connection"
     >
       <span
@@ -1308,7 +1458,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Software stop lock"
     >
       <span
@@ -1323,7 +1474,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Navigation"
     >
       <span
@@ -1338,7 +1490,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Localization"
     >
       <span
@@ -1353,7 +1506,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Battery"
     >
       <span
@@ -1368,7 +1522,8 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Diagnostics"
     >
       <span
@@ -1383,7 +1538,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Arms"
     >
       <span
@@ -1398,7 +1553,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Lift"
     >
       <span
@@ -1413,7 +1568,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Physical E-stop"
     >
       <span
@@ -1427,16 +1582,30 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         Not reported
       </span>
     </div>
+    <p
+      aria-live="polite"
+      class="col-span-2 mt-2"
+      data-testid="reporting-speech-text"
+      role="status"
+      style="overflow-wrap: anywhere;"
+    >
+      Last announcement
+      : 
+      stopped (software). The software stop lock is engaged
+    </p>
     <div
-      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+      class="col-span-2 flex items-center justify-between text-white/60"
     >
       <span>
-        Screen wake lock: 
+        Screen wake lock
+        : 
         not supported
       </span>
       <button
         aria-pressed="false"
-        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        class="rounded-lg border border-white/30 px-4 text-white"
+        data-testid="speech-toggle"
+        style="min-height: 48px;"
         type="button"
       >
         Speech off
@@ -1474,7 +1643,8 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
     </div>
     <button
       aria-label="Hold to exit Reporting Mode"
-      class="shrink-0 rounded-lg border px-4 py-3 border-white/30 bg-black/30 select-none text-white/80"
+      class="shrink-0 rounded-lg border px-4 border-white/30 bg-black/30 select-none text-white/80"
+      style="min-height: 48px;"
       type="button"
     >
       Hold to exit
@@ -1489,12 +1659,30 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       aria-label="Robot state"
       style="overflow-wrap: anywhere;"
     >
+      <div
+        class="mb-4 border-2 border-amber-300 bg-amber-950 px-4 py-3 font-bold text-amber-100"
+        data-testid="reporting-stale-banner"
+        role="status"
+      >
+        Stale data
+        : 
+        Connection is up; source data is old
+      </div>
       <h1
-        class="font-bold leading-none"
+        class="flex items-center gap-3 font-bold leading-none"
         data-testid="reporting-state"
         style="color: rgb(229, 231, 235);"
       >
-        WAITING
+        <span
+          aria-hidden="true"
+          data-testid="reporting-state-icon"
+          style="font-size: 0.6em;"
+        >
+          Ⅱ
+        </span>
+        <span>
+          WAITING
+        </span>
       </h1>
       <p
         class="mt-6 font-semibold"
@@ -1506,7 +1694,8 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
         class="mt-4 text-white/90"
         data-testid="reporting-next"
       >
-        Next: 
+        Next:
+         
         Resolve the reason shown before starting a task. (Battery data is stale or invalid)
       </p>
     </section>
@@ -1567,7 +1756,7 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
     style="column-gap: min(40px, 3.3333vw); row-gap: min(8px, 0.6667vw);"
   >
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Connection"
     >
       <span
@@ -1582,7 +1771,8 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Software stop lock"
     >
       <span
@@ -1597,7 +1787,8 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Navigation"
     >
       <span
@@ -1612,7 +1803,8 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Localization"
     >
       <span
@@ -1627,7 +1819,8 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 opacity-50"
+      data-freshness="Stale"
       data-testid="row-Battery"
     >
       <span
@@ -1639,11 +1832,12 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
         class="font-semibold"
       >
         80%
-         (stale)
+         Stale (3 s)
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
+      data-freshness="Fresh"
       data-testid="row-Diagnostics"
     >
       <span
@@ -1658,7 +1852,7 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Arms"
     >
       <span
@@ -1673,7 +1867,7 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Lift"
     >
       <span
@@ -1688,7 +1882,7 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
       </span>
     </div>
     <div
-      class="flex justify-between gap-4"
+      class="flex justify-between gap-4 "
       data-testid="row-Physical E-stop"
     >
       <span
@@ -1702,16 +1896,30 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
         Not reported
       </span>
     </div>
+    <p
+      aria-live="polite"
+      class="col-span-2 mt-2"
+      data-testid="reporting-speech-text"
+      role="status"
+      style="overflow-wrap: anywhere;"
+    >
+      Last announcement
+      : 
+      waiting. Diagnostics are stale
+    </p>
     <div
-      class="col-span-2 mt-2 flex items-center justify-between text-white/60"
+      class="col-span-2 flex items-center justify-between text-white/60"
     >
       <span>
-        Screen wake lock: 
+        Screen wake lock
+        : 
         not supported
       </span>
       <button
         aria-pressed="false"
-        class="rounded-lg border border-white/30 px-4 py-3 text-white"
+        class="rounded-lg border border-white/30 px-4 text-white"
+        data-testid="speech-toggle"
+        style="min-height: 48px;"
         type="button"
       >
         Speech off

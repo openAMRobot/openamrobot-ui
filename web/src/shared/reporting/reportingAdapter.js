@@ -136,6 +136,7 @@ export const RESULT_UNKNOWN_TEXT = "Result unknown (invalid data)";
 
 export const initialReportingState = () => ({
   connection: "disconnected",
+  lastKnownDisplay: null,
   lock: { lastValue: null, lastSampleMs: null },
   nav: { msg: null, receivedAt: null, invalid: "" },
   battery: { percent: null, receivedAt: null, invalid: "" },
@@ -361,8 +362,12 @@ export const reduceReporting = (state, event, nowMs, wallMs = null) => {
   const logs = [];
   let next = state;
   switch (event.type) {
-    case "connection":
+    case "connection": {
       if (event.status === state.connection) break;
+      const lastKnownDisplay =
+        event.status === "disconnected" && state.connection === "connected"
+          ? deriveReport(state, nowMs).display
+          : state.lastKnownDisplay;
       // A new connection starts with no data: nothing from before the
       // disconnect may look fresh or known, and latched diagnostics faults
       // are cleared (a new connection epoch). The current run and last
@@ -370,12 +375,14 @@ export const reduceReporting = (state, event, nowMs, wallMs = null) => {
       next = {
         ...initialReportingState(),
         connection: event.status,
+        lastKnownDisplay,
         goal: state.goal,
         seenGoals: state.seenGoals,
         task: state.task,
         result: state.result,
       };
       break;
+    }
     case "lock":
       if (typeof event.msg?.data === "boolean") {
         next = { ...state, lock: { lastValue: event.msg.data, lastSampleMs: nowMs } };
@@ -424,6 +431,11 @@ const freshness = (receivedAt, limit, nowMs, invalid) => {
   if (invalid) return "Invalid";
   return fresh(receivedAt, limit, nowMs) ? "Fresh" : "Stale";
 };
+
+const ageSeconds = (receivedAt, nowMs) =>
+  receivedAt === null || !Number.isFinite(nowMs)
+    ? null
+    : Math.max(0, Math.floor((nowMs - receivedAt) / 1000));
 
 const DIAG_LEVEL = { OK: 0, WARN: 1, ERROR: 2, STALE: 3 };
 
@@ -503,6 +515,10 @@ export const deriveReport = (state, nowMs) => {
   // Per-entry freshness: an entry older than the threshold drops out.
   const diagAll = Object.entries(state.diagnostics.entries);
   const diagEntries = diagAll.filter(([, e]) => fresh(e.receivedAt, STALE_AFTER_MS.diagnostics, nowMs));
+  const diagAgeSeconds = diagAll.reduce(
+    (oldest, [, entry]) => Math.max(oldest, ageSeconds(entry.receivedAt, nowMs) ?? 0),
+    0,
+  );
   const diagFresh = diagEntries.length > 0;
   // Latched faults: every name whose last report was ERROR or STALE, fresh
   // or not. Ageing out and reports from other names never clear them.
@@ -512,26 +528,30 @@ export const deriveReport = (state, nowMs) => {
   const diagWarns = diagEntries.filter(([, e]) => e.level === DIAG_LEVEL.WARN);
 
   const rows = [
-    { label: "Connection", value: state.connection === "connected" ? "Connected" : "Disconnected", freshness: "" },
+    { label: "Connection", value: state.connection === "connected" ? "Connected" : "Disconnected", freshness: "", ageSeconds: null },
     {
       label: "Software stop lock",
       value: { locked: "Engaged", released: "Released", unknown: "Unknown" }[lockState],
       freshness: freshness(state.lock.lastSampleMs, STALE_AFTER_MS.stopLock, nowMs, ""),
+      ageSeconds: ageSeconds(state.lock.lastSampleMs, nowMs),
     },
     {
       label: "Navigation",
       value: navMsg ? (navMsg.navigation_readiness === NAV.READY ? "Ready" : "Not ready") : "Unknown",
       freshness: freshness(state.nav.receivedAt, STALE_AFTER_MS.navigationStatus, nowMs, state.nav.invalid),
+      ageSeconds: ageSeconds(state.nav.receivedAt, nowMs),
     },
     {
       label: "Localization",
       value: navMsg ? { 0: "Unknown", 1: "Lost", 2: "Degraded", 3: "OK" }[navMsg.localization?.state] || "Unknown" : "Unknown",
       freshness: freshness(state.nav.receivedAt, STALE_AFTER_MS.navigationStatus, nowMs, state.nav.invalid),
+      ageSeconds: ageSeconds(state.nav.receivedAt, nowMs),
     },
     {
       label: "Battery",
       value: state.battery.percent === null ? "Unknown" : `${Math.round(state.battery.percent)}%`,
       freshness: freshness(state.battery.receivedAt, STALE_AFTER_MS.battery, nowMs, state.battery.invalid),
+      ageSeconds: ageSeconds(state.battery.receivedAt, nowMs),
     },
     {
       label: "Diagnostics",
@@ -543,10 +563,11 @@ export const deriveReport = (state, nowMs) => {
             ? "Warning"
             : "OK",
       freshness: diagAll.length === 0 ? "No data" : diagFresh ? "Fresh" : "Stale",
+      ageSeconds: diagAll.length === 0 ? null : diagAgeSeconds,
     },
-    { label: "Arms", value: "Not reported", freshness: "" },
-    { label: "Lift", value: "Not reported", freshness: "" },
-    { label: "Physical E-stop", value: "Not reported", freshness: "" },
+    { label: "Arms", value: "Not reported", freshness: "", ageSeconds: null },
+    { label: "Lift", value: "Not reported", freshness: "", ageSeconds: null },
+    { label: "Physical E-stop", value: "Not reported", freshness: "", ageSeconds: null },
   ];
 
   // Warnings: everything worth knowing that is not the main reason.
@@ -566,6 +587,7 @@ export const deriveReport = (state, nowMs) => {
 
   const make = (display, reason) => ({
     display,
+    lastKnownDisplay: state.lastKnownDisplay,
     reason,
     nextAction:
       display === DISPLAY.NEEDS_ASSISTANCE || display === DISPLAY.WAITING
@@ -580,6 +602,7 @@ export const deriveReport = (state, nowMs) => {
         : "",
     warnings: [...new Set(warnings)],
     rows,
+    staleSources: rows.filter((row) => row.freshness === "Stale"),
   });
 
   // Priority, highest first. See docs/reporting-mode.md, "State priority".
