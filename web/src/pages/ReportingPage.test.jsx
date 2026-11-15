@@ -2,10 +2,17 @@ import React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-import ReportingPage, { EXIT_HOLD_MS, MAX_WARNINGS_SHOWN, STATE_FONT_SIZE, fluid } from "./ReportingPage";
+import ReportingPage, {
+  EXIT_HOLD_MS,
+  MAX_WARNINGS_SHOWN,
+  STATE_FONT_SIZE,
+  StateHeading,
+  fluid,
+} from "./ReportingPage";
 import { RosContext, RosStatusContext } from "../app/App";
 import { AppConfig } from "../shared/constants";
 import { installMockRoslib, uninstallMockRoslib } from "../shared/motion/testing/mockRoslib";
+import { DISPLAY } from "../shared/reporting/reportingAdapter";
 import { battery, diagnostics, goalStatus, lock, navFeedback, navStatus } from "../shared/reporting/testing/fixtures";
 
 // The App module pulls in every page; three.js examples and urdf-loader ship
@@ -62,6 +69,37 @@ const feedHealthy = () => {
 };
 
 const state = () => screen.getByTestId("reporting-page").dataset.state;
+const announcementText = () => screen.getByTestId("reporting-speech-text").textContent;
+
+describe("Reporting Mode state labels", () => {
+  it("renders all eight state names with unique icons and colors", () => {
+    const displays = [
+      DISPLAY.READY,
+      DISPLAY.EXECUTING,
+      DISPLAY.WAITING,
+      DISPLAY.BLOCKED,
+      DISPLAY.RECOVERING,
+      DISPLAY.NEEDS_ASSISTANCE,
+      DISPLAY.SAFETY_STOPPED,
+      DISPLAY.FAULTED,
+    ];
+    render(
+      <>
+        {displays.map((display) => (
+          <StateHeading key={display} display={display} t={(key) => key} />
+        ))}
+      </>,
+    );
+    const headings = screen.getAllByTestId("reporting-state");
+    const icons = screen.getAllByTestId("reporting-state-icon");
+
+    expect(headings.map((heading) => heading.lastElementChild.textContent)).toEqual(displays);
+    expect(icons.every((icon) => icon.textContent && icon.getAttribute("aria-hidden") === "true")).toBe(true);
+    expect(new Set(icons.map((icon) => icon.textContent)).size).toBe(displays.length);
+    expect(headings.every((heading) => heading.style.color)).toBe(true);
+    expect(new Set(headings.map((heading) => heading.style.color)).size).toBe(displays.length);
+  });
+});
 
 describe("Reporting Mode page", () => {
   it("says its scope and lists Arms, Lift and Physical E-stop as Not reported", () => {
@@ -98,23 +136,27 @@ describe("Reporting Mode page", () => {
   });
 
   it("shows a stale source as stale, never as healthy", () => {
-    let nowMs = 1000;
-    const spy = jest.spyOn(Date, "now").mockImplementation(() => nowMs);
     renderPage();
     feedHealthy();
-    nowMs += 3500; // battery (3 s) and everything else stale
+    act(() => jest.advanceTimersByTime(3501));
     emit(AppConfig.STOP_LOCK_TOPIC, lock(false));
     emit(AppConfig.NAVIGATION_STATUS_TOPIC, navStatus());
     emit(AppConfig.DIAGNOSTICS_TOPIC, diagnostics(0));
+
     expect(state()).toBe("WAITING");
-    expect(screen.getByTestId("row-Battery").textContent).toContain("(stale)");
+    expect(screen.getByTestId("reporting-stale-banner").textContent).toContain("Connection is up");
+    expect(screen.getByTestId("row-Battery").textContent).toMatch(/Stale \(\d+ s\)/);
+    expect(screen.getByTestId("row-Battery").dataset.freshness).toBe("Stale");
+    expect(screen.getByTestId("row-Battery").className).toContain("opacity-50");
     expect(screen.getByTestId("reporting-page")).toMatchSnapshot("stale battery");
-    spy.mockRestore();
   });
 
   it("DISCONNECTED when rosbridge is down", () => {
     renderPage("disconnected");
     expect(state()).toBe("DISCONNECTED");
+    expect(screen.getByTestId("reporting-disconnected-banner").textContent).toContain("Last known state");
+    expect(screen.getByTestId("reporting-last-known-state").textContent).toBe("UNKNOWN");
+    expect(screen.queryByTestId("reporting-stale-banner")).toBeNull();
     expect(screen.getByTestId("reporting-page")).toMatchSnapshot("DISCONNECTED");
   });
 
@@ -131,13 +173,25 @@ describe("Reporting Mode page", () => {
     expect(screen.getByText("Operator home")).toBeTruthy();
   });
 
-  it("speech is off by default and, when on, speaks each change once", () => {
+  it("shows the latest announcement on screen with speech off and speaks nothing", () => {
     renderPage();
     feedHealthy();
+    expect(screen.getByRole("button", { name: "Speech off" })).toBeTruthy();
     expect(spoken).toEqual([]);
+    expect(announcementText()).toContain("ready. No blocking faults in current reported data");
+    emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 2));
+    expect(announcementText()).toContain("executing. Driving to the goal");
+    expect(spoken).toEqual([]);
+  });
+
+  it("when speech is on, speaks each change once and does not read out what is already on screen", () => {
+    renderPage();
+    feedHealthy();
     fireEvent.click(screen.getByRole("button", { name: "Speech off" }));
+    expect(screen.getByRole("button", { name: "Speech on" })).toBeTruthy();
     expect(spoken).toEqual([]); // nothing already on screen is read out
     emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 2));
+    expect(announcementText()).toContain("executing. Driving to the goal");
     emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 4));
     emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 4));
     expect(spoken).toEqual([
@@ -146,11 +200,21 @@ describe("Reporting Mode page", () => {
       "Navigation goal: succeeded.",
       "Completed: Navigation goal",
     ]);
+    expect(announcementText()).toContain("Completed: Navigation goal");
+  });
+
+  it("still shows the announcement text when speech is not supported", () => {
+    delete window.speechSynthesis;
+    renderPage();
+    feedHealthy();
+    expect(screen.getByTestId("speech-not-supported")).toBeTruthy();
+    expect(screen.queryByTestId("speech-toggle")).toBeNull();
+    expect(announcementText()).toContain("ready. No blocking faults in current reported data");
   });
 });
 
-// TABLET-MOUNT (decision of 2 Nov 2026, review of #54): the ZX80 is portrait
-// only on a fixed mount, so the page is 1200 wide and 1920 tall. JSDOM has
+// TABLET-MOUNT (decision of 2 Nov 2026, review of #54): the panel is treated
+// as portrait-only on a fixed mount. JSDOM has
 // no layout, so these check the structure that keeps the page inside a
 // portrait screen; the overflow itself was checked in Chromium at 1200 x 1920
 // (see the PR description).
@@ -164,7 +228,7 @@ describe("Reporting Mode portrait layout", () => {
     const footer = screen.getByTestId("reporting-footer");
     expect(footer.className).toMatch(/\bgrid-cols-2\b/);
     expect(footer.className).not.toMatch(/grid-cols-3/);
-    expect(STATE_FONT_SIZE).toBe("min(120px, calc((100vw - 2 * min(40px, 3.3333vw)) / 10))");
+    expect(STATE_FONT_SIZE).toBe("min(120px, calc((100vw - 2 * min(40px, 3.3333vw)) / 11))");
   });
 
   it("keeps the exit control in the header row, not over the header text", () => {
@@ -173,6 +237,16 @@ describe("Reporting Mode portrait layout", () => {
     const exit = screen.getByRole("button", { name: "Hold to exit Reporting Mode" });
     expect(screen.getByTestId("reporting-header").contains(exit)).toBe(true);
     expect(exit.className).not.toMatch(/\babsolute\b/);
+  });
+
+  it("keeps every visible control large enough for touch", () => {
+    renderPage();
+    const controls = screen.getAllByRole("button");
+    expect(controls.length).toBeGreaterThan(0);
+    controls.forEach((control) => {
+      expect(Number.parseFloat(control.style.minHeight)).toBeGreaterThanOrEqual(48);
+      expect(control.className).not.toMatch(/\bhover:/);
+    });
   });
 
   it("lets long names wrap and counts warnings it does not list", () => {

@@ -15,6 +15,7 @@ import MapsPage from "./MapsPage";
 import SchedulerPage from "./SchedulerPage";
 import MissionsPage from "./MissionsPage";
 import ConfigPage from "./ConfigPage";
+import ReportingPage from "./ReportingPage";
 
 /**
  * Single source of truth for every top-level page. Header.jsx's sidebar/
@@ -45,6 +46,13 @@ export const PAGE_REGISTRY = [
   { path: "/params", label: "Parameters", icon: "params", component: ParamsPage },
   { path: "/fleet", label: "Fleet", icon: "fleet", component: FleetPage },
   { path: "/config", label: "Config", icon: "config", component: ConfigPage },
+  {
+    path: "/report",
+    label: "Reporting Mode",
+    icon: "reporting",
+    component: ReportingPage,
+    standalone: true,
+  },
 ];
 
 /** Appends a page plugin to the registry. Call before the app renders. */

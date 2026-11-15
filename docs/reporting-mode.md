@@ -29,11 +29,17 @@ evidence, and a value shown here is never a safety indication.
 4. Speech is off by default. "Speech off" in the footer switches it on for
    this page. Each state change, result, warning and completion is spoken
    once. Switching speech on does not read out what is already on screen,
-   and a disconnect and reconnect does not repeat anything.
+   and a disconnect and reconnect does not repeat anything. The latest
+   announcement text is shown in the footer whether or not speech is on.
 
 Observable success: with the robot stack and rosbridge running, the page
 shows a state word (for example READY or WAITING), a reason, and a row of
 sources at the bottom with no "(stale)" marks.
+
+When a source is stale while the connection remains up, the page shows a
+stale-data banner, dims stale source rows, and shows each stale source's age
+in seconds. When rosbridge disconnects, a separate banner marks the displayed
+state as last known; the disconnected view is not presented as live.
 
 ## Panel setup
 
@@ -66,7 +72,7 @@ the same physical size on the panel whatever the scale. If the content
 still does not fit, the middle of the page scrolls; the header and the
 source rows stay on screen.
 
-The layout was checked in Chromium at 1200 x 1920, 800 x 1280 and 600 x 960
+The reference layout was checked in Chromium at 1200 x 1920, 800 x 1280 and 600 x 960
 (display scales 1, 1.5 and 2). The check looked for elements outside the
 screen, clipped text, text wider than its box, the exit control covering
 header text, and a middle that needs scrolling. It used seven scripted
@@ -74,7 +80,7 @@ screens, including a long fault reason with four sources and a long
 unbroken diagnostic name. None was found at any size. A screen with a much
 longer reason and eleven warnings scrolls the middle at 600 x 960 with the
 source rows still on screen. That is a browser check with a scripted
-rosbridge stand-in, not a check on the ZX80.
+rosbridge stand-in, not a check on the Getac ZX80.
 
 ## Screenshots
 
@@ -82,6 +88,10 @@ Taken at 1200 x 1920 (portrait) with a scripted rosbridge stand-in
 (development evidence only, not the robot). The FAULTED screen shows a
 latched diagnostics fault with a long reason; the same screen at 600 x 960
 is [faulted-600x960.png](reporting-mode/faulted-600x960.png):
+
+The Reporting Mode entry in the sidebar:
+
+![Reporting Mode in the sidebar](reporting-mode/sidebar.png)
 
 | READY | EXECUTING | STOPPED (SOFTWARE) |
 |---|---|---|
@@ -129,6 +139,12 @@ A robot-side run envelope is proposed in
 
 ## States
 
+Each of READY, EXECUTING, WAITING, BLOCKED, RECOVERING, NEEDS_ASSISTANCE,
+SAFETY_STOPPED and FAULTED has a dedicated icon and high-contrast color, with
+its state name also shown as text. SAFETY_STOPPED remains reserved for a
+future physical safety-chain status producer and is not derived by this
+adapter.
+
 `SAFETY_STOPPED` is reserved for a future physical safety-chain status
 producer. This adapter never derives it, and never from the software stop
 lock. A `NavigationStatus` E-stop reason code (9003) is only shown as a
@@ -165,6 +181,10 @@ stale or invalid); only DISCONNECTED ranks higher. This is the owner's
 decision: the lock is the fact the operator acts on (Resume). Stale or
 invalid navigation data then shows as a warning. An unknown lock is itself
 UNKNOWN.
+
+On disconnect, the page keeps the last derived live state in a separately
+labelled "Last known state" field. It does not carry old telemetry values
+forward into the new connection epoch.
 
 READY cannot appear on today's simulation: the navigation status node keeps
 `navigation_readiness` at NOT_READY with reason 9001 (no link to the base
@@ -266,13 +286,13 @@ files.
 ## Proposed defaults to confirm on the panel
 
 The stale thresholds and the battery limit above are accepted. These
-display values remain proposed until checked on the ZX80. Sizes are CSS px
+display values remain proposed until checked on the Getac ZX80. Sizes are CSS px
 for a 1200 x 1920 page and scale down in proportion on a narrower page (see
 Layout).
 
 | Item | Value |
 |---|---|
-| State word | 120 px, or less on a narrower page (the page width less 80 px, divided by 10) |
+| State word | 120 px, or less on a narrower page (the page width less 80 px, divided by 11) |
 | Reason | 44 px |
 | Next action | 32 px |
 | Body text | 28 px |

@@ -1,30 +1,27 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { createAnnouncementMemory, nextAnnouncements, primeMemory } from "../shared/reporting/announcements";
+import { createAnnouncementMemory, nextAnnouncements } from "../shared/reporting/announcements";
 import { DISPLAY } from "../shared/reporting/reportingAdapter";
 import { useReporting } from "../shared/reporting/reportingSource";
+import { useT } from "../shared/i18n/i18n";
 
 /**
  * Reporting Mode: read-only, full-screen view for the operator panel
- * (Getac ZX80, 8 inch, 1920 x 1200, portrait only on a fixed mount, so the
- * page is 1200 wide and 1920 tall; TABLET-MOUNT, decision of 2 Nov 2026;
- * Android Chrome). The layout is a single column. Scope is
- * base and navigation only. It has no command of any kind: it only renders
- * the shared reporting adapter (shared/reporting).
+ * (Getac ZX80, docked, portrait mount -- TABLET-MOUNT decision 2 Nov 2026).
+ * Layout is a single column. Scope is base and navigation only. No command
+ * of any kind: it only renders the shared reporting adapter (shared/reporting).
  *
- * Proposed defaults for Parth to confirm on the ZX80: the type sizes in
- * TYPE below and the 2 s long press on the exit control.
+ * Type sizes, layout constants, state colors and touch target minimums are
+ * defined below. Proposed defaults are noted; accepted defaults are not.
  */
 
 // Type sizes in CSS px for a 1200 x 1920 portrait page. Proposed defaults.
 const TYPE_PX = { state: 120, reason: 44, action: 32, body: 28, row: 24, small: 20 };
 
-// The ZX80 is 1200 physical pixels wide in portrait, but the page width in
-// CSS px depends on the display scale Chrome uses there (width=device-width),
-// which is not confirmed. Each size is therefore a share of the page width
-// (px / 1200 of 100vw), capped at its 1200 px value: the text keeps the same
-// physical size whatever the scale (review of #54).
+// Every size is a share of the page width (px / 1200 of 100vw), capped at
+// its 1200 px value. Text keeps the same physical size whatever the display
+// scale Chrome uses on the panel (the CSS px count is not confirmed).
 export const fluid = (px) => `min(${px}px, ${+(px / 12).toFixed(4)}vw)`;
 const TYPE = Object.fromEntries(Object.entries(TYPE_PX).map(([k, px]) => [k, fluid(px)]));
 
@@ -32,10 +29,8 @@ const TYPE = Object.fromEntries(Object.entries(TYPE_PX).map(([k, px]) => [k, flu
 const SIDE = fluid(40);
 
 // The state word may be one long token (NEEDS_ASSISTANCE, 16 characters).
-// In RobotoMono a character is about 0.6 em wide, so 16 characters need
-// 9.6 em; dividing the width inside the side padding by 10 keeps every
-// state word on the page, and the size never exceeds TYPE_PX.state.
-export const STATE_FONT_SIZE = `min(${TYPE_PX.state}px, calc((100vw - 2 * ${SIDE}) / 10))`;
+// The icon and gap need room too, so divide the available width by 11.
+export const STATE_FONT_SIZE = `min(${TYPE_PX.state}px, calc((100vw - 2 * ${SIDE}) / 11))`;
 
 // Warnings listed on the page. More are counted, never dropped silently.
 // Proposed default (fits the portrait page with long, wrapped warnings).
@@ -47,18 +42,41 @@ const WRAP = { overflowWrap: "anywhere" };
 // Long press on the corner control to leave Reporting Mode. Proposed default.
 export const EXIT_HOLD_MS = 2000;
 
+// Minimum touch target height for every interactive control (48 CSS px,
+// matching the Material Design and WCAG 2.5.5 guidance for touch targets).
+const MIN_TOUCH_H = 48;
+
 const STATE_STYLE = {
-  [DISPLAY.READY]: { bg: "#0b3d1e", fg: "#ffffff", accent: "#34d399" },
-  [DISPLAY.EXECUTING]: { bg: "#0b2a4a", fg: "#ffffff", accent: "#60a5fa" },
-  [DISPLAY.WAITING]: { bg: "#2a2a2a", fg: "#ffffff", accent: "#e5e7eb" },
-  [DISPLAY.BLOCKED]: { bg: "#4a3300", fg: "#ffffff", accent: "#fbbf24" },
-  [DISPLAY.RECOVERING]: { bg: "#4a3300", fg: "#ffffff", accent: "#fbbf24" },
-  [DISPLAY.NEEDS_ASSISTANCE]: { bg: "#5a2a00", fg: "#ffffff", accent: "#fb923c" },
-  [DISPLAY.FAULTED]: { bg: "#5c0b0b", fg: "#ffffff", accent: "#f87171" },
-  [DISPLAY.STOPPED_SOFTWARE]: { bg: "#3a0a0a", fg: "#ffffff", accent: "#f87171" },
-  [DISPLAY.UNKNOWN]: { bg: "#1f1f1f", fg: "#ffffff", accent: "#9ca3af" },
-  [DISPLAY.DISCONNECTED]: { bg: "#111111", fg: "#ffffff", accent: "#9ca3af" },
+  [DISPLAY.READY]:            { bg: "#0b3d1e", fg: "#ffffff", accent: "#34d399", icon: "●" },
+  [DISPLAY.EXECUTING]:        { bg: "#0b2a4a", fg: "#ffffff", accent: "#60a5fa", icon: "▶" },
+  [DISPLAY.WAITING]:          { bg: "#2a2a2a", fg: "#ffffff", accent: "#e5e7eb", icon: "Ⅱ" },
+  [DISPLAY.BLOCKED]:          { bg: "#4a3300", fg: "#ffffff", accent: "#fbbf24", icon: "⛔" },
+  [DISPLAY.RECOVERING]:       { bg: "#063c3b", fg: "#ffffff", accent: "#5eead4", icon: "↻" },
+  [DISPLAY.NEEDS_ASSISTANCE]: { bg: "#5a2a00", fg: "#ffffff", accent: "#fb923c", icon: "✋" },
+  [DISPLAY.SAFETY_STOPPED]:   { bg: "#3b174d", fg: "#ffffff", accent: "#d8b4fe", icon: "⬟" },
+  [DISPLAY.FAULTED]:          { bg: "#5c0b0b", fg: "#ffffff", accent: "#f87171", icon: "▲" },
+  [DISPLAY.STOPPED_SOFTWARE]: { bg: "#3a0a0a", fg: "#ffffff", accent: "#fca5a5", icon: "■" },
+  [DISPLAY.UNKNOWN]:          { bg: "#1f1f1f", fg: "#ffffff", accent: "#9ca3af", icon: "?" },
+  [DISPLAY.DISCONNECTED]:     { bg: "#111111", fg: "#ffffff", accent: "#d1d5db", icon: "⨯" },
 };
+
+export const StateHeading = ({ display, t }) => {
+  const style = STATE_STYLE[display] || STATE_STYLE[DISPLAY.UNKNOWN];
+  return (
+    <h1
+      data-testid="reporting-state"
+      className="flex items-center gap-3 font-bold leading-none"
+      style={{ fontSize: STATE_FONT_SIZE, color: style.accent }}
+    >
+      <span data-testid="reporting-state-icon" aria-hidden="true" style={{ fontSize: "0.6em" }}>
+        {style.icon}
+      </span>
+      <span>{t(display)}</span>
+    </h1>
+  );
+};
+
+// --- Wake lock ---
 
 const useWakeLock = () => {
   const [status, setStatus] = useState("not supported");
@@ -89,7 +107,34 @@ const useWakeLock = () => {
   return status;
 };
 
-const ExitControl = () => {
+// --- Announcements ---
+
+// The announcement text is always worked out and shown on screen, so it is
+// visible with speech off (the default). The speech engine is only called
+// when `speak` is true. Because the memory advances either way, switching
+// speech on never reads out what is already on screen, and a disconnect and
+// reconnect does not repeat anything.
+const useAnnouncements = (view, speak) => {
+  const memory = useRef(createAnnouncementMemory());
+  const [lastAnnouncement, setLastAnnouncement] = useState("");
+
+  useEffect(() => {
+    if (!view) return;
+    const announcements = nextAnnouncements(memory.current, view);
+    if (!announcements.length) return;
+    setLastAnnouncement(announcements.join(" "));
+    if (!speak) return;
+    announcements.forEach((text) => {
+      window.speechSynthesis.speak(new window.SpeechSynthesisUtterance(text));
+    });
+  }, [view, speak]);
+
+  return lastAnnouncement;
+};
+
+// --- Exit control ---
+
+const ExitControl = ({ t }) => {
   const navigate = useNavigate();
   const timer = useRef(null);
   const [holding, setHolding] = useState(false);
@@ -105,49 +150,33 @@ const ExitControl = () => {
   return (
     <button
       type="button"
-      aria-label="Hold to exit Reporting Mode"
+      aria-label={t("Hold to exit Reporting Mode")}
       onPointerDown={start}
       onPointerUp={cancel}
       onPointerLeave={cancel}
       onPointerCancel={cancel}
       onContextMenu={(e) => e.preventDefault()}
-      style={{ fontSize: TYPE.small }}
-      className={`shrink-0 rounded-lg border px-4 py-3 ${
+      style={{ fontSize: TYPE.small, minHeight: MIN_TOUCH_H }}
+      className={`shrink-0 rounded-lg border px-4 ${
         holding ? "border-white bg-white/20" : "border-white/30 bg-black/30"
       } select-none text-white/80`}
     >
-      {holding ? "Keep holding to exit" : "Hold to exit"}
+      {holding ? t("Keep holding to exit") : t("Hold to exit")}
     </button>
   );
 };
 
-const SpeechToggle = ({ view }) => {
-  const supported = typeof window !== "undefined" && "speechSynthesis" in window;
-  const [enabled, setEnabled] = useState(false);
-  const memory = useRef(createAnnouncementMemory());
+// --- Speech toggle ---
 
-  useEffect(() => {
-    if (!enabled || !view) return;
-    nextAnnouncements(memory.current, view).forEach((text) => {
-      window.speechSynthesis.speak(new window.SpeechSynthesisUtterance(text));
-    });
-  }, [enabled, view]);
-
-  const toggle = useCallback(() => {
-    setEnabled((on) => {
-      if (!on) {
-        memory.current = primeMemory(createAnnouncementMemory(), view);
-      } else {
-        window.speechSynthesis?.cancel?.();
-      }
-      return !on;
-    });
-  }, [view]);
-
+const SpeechToggle = ({ supported, enabled, onToggle, t }) => {
   if (!supported) {
     return (
-      <span style={{ fontSize: TYPE.small }} className="text-white/60">
-        Speech not supported
+      <span
+        data-testid="speech-not-supported"
+        style={{ fontSize: TYPE.small }}
+        className="text-white/60"
+      >
+        {t("Speech not supported")}
       </span>
     );
   }
@@ -155,18 +184,41 @@ const SpeechToggle = ({ view }) => {
     <button
       type="button"
       aria-pressed={enabled}
-      onClick={toggle}
-      style={{ fontSize: TYPE.small }}
-      className="rounded-lg border border-white/30 px-4 py-3 text-white"
+      data-testid="speech-toggle"
+      onClick={onToggle}
+      style={{ fontSize: TYPE.small, minHeight: MIN_TOUCH_H }}
+      className="rounded-lg border border-white/30 px-4 text-white"
     >
-      {enabled ? "Speech on" : "Speech off"}
+      {enabled ? t("Speech on") : t("Speech off")}
     </button>
   );
 };
 
+// --- Source row freshness label ---
+
+const freshnessLabel = (row, t) => {
+  const { freshness, ageSeconds } = row;
+  if (!freshness || freshness === "Fresh") return "";
+  if (freshness === "Stale") return ` ${t("Stale")} (${ageSeconds} ${t("s")})`;
+  if (freshness === "No data") return ` ${t("(no data)")}`;
+  if (freshness === "Invalid") return ` ${t("(invalid)")}`;
+  return ` (${freshness.toLowerCase()})`;
+};
+
+// --- Main page ---
+
 const ReportingPage = () => {
+  const { t } = useT();
   const view = useReporting();
   const wakeLock = useWakeLock();
+
+  const speechSupported = typeof window !== "undefined" && "speechSynthesis" in window;
+  const [speechOn, setSpeechOn] = useState(false);
+  const lastAnnouncement = useAnnouncements(view, speechOn && speechSupported);
+  const toggleSpeech = () => {
+    if (speechOn) window.speechSynthesis?.cancel?.();
+    setSpeechOn(!speechOn);
+  };
 
   if (!view) return null;
   const style = STATE_STYLE[view.display] || STATE_STYLE[DISPLAY.UNKNOWN];
@@ -178,21 +230,25 @@ const ReportingPage = () => {
       className="relative flex h-screen w-screen flex-col overflow-hidden font-[RobotoMono]"
       style={{ background: style.bg, color: style.fg }}
     >
+      {/* Header: scope label + exit control */}
       <header
         data-testid="reporting-header"
         className="flex items-start justify-between"
         style={{ fontSize: TYPE.body, gap: fluid(24), padding: `${fluid(24)} ${SIDE} 0` }}
       >
         <div className="flex min-w-0 flex-col gap-1">
-          <span className="font-semibold">Base and navigation</span>
+          <span className="font-semibold">{t("Base and navigation")}</span>
           <span className="text-white/60" style={{ fontSize: TYPE.small }}>
-            Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.
+            {t(
+              "Navigation status covers navigation only. It is not whole-robot readiness or E-stop state."
+            )}
           </span>
         </div>
-        <ExitControl />
+        <ExitControl t={t} />
       </header>
 
-      {/* If a long reason still does not fit, the middle scrolls; the header
+      {/* Main: state word, reason, next action, task, progress, result, warnings.
+          If a long reason still does not fit, the middle scrolls; the header
           and the source rows stay on screen. */}
       <main
         data-testid="reporting-main"
@@ -200,42 +256,79 @@ const ReportingPage = () => {
         style={{ gap: SIDE, padding: `${fluid(24)} ${SIDE}` }}
       >
         <section aria-label="Robot state" style={WRAP}>
-          <h1
-            data-testid="reporting-state"
-            className="font-bold leading-none"
-            style={{ fontSize: STATE_FONT_SIZE, color: style.accent }}
+          {view.display === DISPLAY.DISCONNECTED && (
+            <div
+              data-testid="reporting-disconnected-banner"
+              role="status"
+              className="mb-4 border-2 border-white/60 bg-black px-4 py-3 font-bold"
+              style={{ fontSize: TYPE.body }}
+            >
+              {t("Disconnected")} · {t("Last known state")}:{" "}
+              <span data-testid="reporting-last-known-state">
+                {t(view.lastKnownDisplay || DISPLAY.UNKNOWN)}
+              </span>
+            </div>
+          )}
+          {view.display !== DISPLAY.DISCONNECTED && view.staleSources.length > 0 && (
+            <div
+              data-testid="reporting-stale-banner"
+              role="status"
+              className="mb-4 border-2 border-amber-300 bg-amber-950 px-4 py-3 font-bold text-amber-100"
+              style={{ fontSize: TYPE.body }}
+            >
+              {t("Stale data")}: {t("Connection is up; source data is old")}
+            </div>
+          )}
+          <StateHeading display={view.display} t={t} />
+          <p
+            data-testid="reporting-reason"
+            className="mt-6 font-semibold"
+            style={{ fontSize: TYPE.reason }}
           >
-            {view.display}
-          </h1>
-          <p data-testid="reporting-reason" className="mt-6 font-semibold" style={{ fontSize: TYPE.reason }}>
             {view.reason}
           </p>
-          <p data-testid="reporting-next" className="mt-4 text-white/90" style={{ fontSize: TYPE.action }}>
-            Next: {view.nextAction}
+          <p
+            data-testid="reporting-next"
+            className="mt-4 text-white/90"
+            style={{ fontSize: TYPE.action }}
+          >
+            {t("Next:")} {view.nextAction}
           </p>
           {view.completion && (
-            <p data-testid="reporting-completion" className="mt-6 font-semibold" style={{ fontSize: TYPE.reason, color: "#34d399" }}>
-              {view.completion}
+            <p
+              data-testid="reporting-completion"
+              className="mt-6 font-semibold"
+              style={{ fontSize: TYPE.reason, color: "#34d399" }}
+            >
+              {t("Completed:")} {view.completion.replace(/^Completed:\s*/i, "")}
             </p>
           )}
         </section>
 
-        <section aria-label="Task and result" style={{ fontSize: TYPE.body, ...WRAP }} className="flex min-w-0 flex-col gap-5">
+        <section
+          aria-label="Task and result"
+          style={{ fontSize: TYPE.body, ...WRAP }}
+          className="flex min-w-0 flex-col gap-5"
+        >
           <div data-testid="reporting-task">
-            <p className="text-white/60" style={{ fontSize: TYPE.small }}>Current task</p>
+            <p className="text-white/60" style={{ fontSize: TYPE.small }}>
+              {t("Current task")}
+            </p>
             {view.task ? (
               <p>
                 {view.task.label}
                 {view.task.step ? `, ${view.task.step}` : ""}
               </p>
             ) : (
-              <p className="text-white/70">None</p>
+              <p className="text-white/70">{t("None")}</p>
             )}
           </div>
 
           {view.progress && (
             <div data-testid="reporting-progress">
-              <p className="text-white/60" style={{ fontSize: TYPE.small }}>Progress</p>
+              <p className="text-white/60" style={{ fontSize: TYPE.small }}>
+                {t("Progress")}
+              </p>
               <div
                 role="progressbar"
                 aria-valuenow={view.progress.percent}
@@ -244,65 +337,112 @@ const ReportingPage = () => {
                 className="mt-2 h-6 w-full overflow-hidden rounded-full"
                 style={{ background: "rgba(255, 255, 255, 0.2)" }}
               >
-                <div className="h-full" style={{ width: `${view.progress.percent}%`, background: "#ffffff" }} />
+                <div
+                  className="h-full"
+                  style={{ width: `${view.progress.percent}%`, background: "#ffffff" }}
+                />
               </div>
               <p className="mt-2">
-                {view.progress.distanceRemaining.toFixed(1)} m remaining
-                {Number.isFinite(view.progress.etaSeconds) ? `, about ${Math.round(view.progress.etaSeconds)} s` : ""}
-                {view.progress.recoveries ? `, ${view.progress.recoveries} recoveries` : ""}
+                {view.progress.distanceRemaining.toFixed(1)} {t("m remaining")}
+                {Number.isFinite(view.progress.etaSeconds)
+                  ? `, ${t("about")} ${Math.round(view.progress.etaSeconds)} ${t("s")}`
+                  : ""}
+                {view.progress.recoveries
+                  ? `, ${view.progress.recoveries} ${t("recoveries")}`
+                  : ""}
               </p>
             </div>
           )}
 
           <div data-testid="reporting-result">
-            <p className="text-white/60" style={{ fontSize: TYPE.small }}>Last result</p>
+            <p className="text-white/60" style={{ fontSize: TYPE.small }}>
+              {t("Last result")}
+            </p>
             {view.result ? (
               <p>
-                {view.result.name}: {view.result.invalid ? "Result unknown (invalid data)" : view.result.outcome}
+                {view.result.name}:{" "}
+                {view.result.invalid
+                  ? t("Result unknown (invalid data)")
+                  : view.result.outcome}
                 {view.result.reason ? `. ${view.result.reason}` : ""}
               </p>
             ) : (
-              <p className="text-white/70">None</p>
+              <p className="text-white/70">{t("None")}</p>
             )}
           </div>
 
           <div data-testid="reporting-warnings">
-            <p className="text-white/60" style={{ fontSize: TYPE.small }}>Warnings</p>
+            <p className="text-white/60" style={{ fontSize: TYPE.small }}>
+              {t("Warnings")}
+            </p>
             {view.warnings.length ? (
               <ul className="list-disc pl-8">
                 {view.warnings.slice(0, MAX_WARNINGS_SHOWN).map((w) => (
                   <li key={w}>{w}</li>
                 ))}
                 {view.warnings.length > MAX_WARNINGS_SHOWN && (
-                  <li data-testid="reporting-warnings-more" className="text-white/70">
-                    {view.warnings.length - MAX_WARNINGS_SHOWN} more not shown
+                  <li
+                    data-testid="reporting-warnings-more"
+                    className="text-white/70"
+                  >
+                    {view.warnings.length - MAX_WARNINGS_SHOWN} {t("more not shown")}
                   </li>
                 )}
               </ul>
             ) : (
-              <p className="text-white/70">None</p>
+              <p className="text-white/70">{t("None")}</p>
             )}
           </div>
         </section>
       </main>
 
+      {/* Footer: source rows + last announcement + wake lock + speech toggle */}
       <footer
         data-testid="reporting-footer"
         className="grid grid-cols-2 border-t border-white/20"
-        style={{ fontSize: TYPE.row, columnGap: SIDE, rowGap: fluid(8), padding: `${fluid(16)} ${SIDE}` }}
+        style={{
+          fontSize: TYPE.row,
+          columnGap: SIDE,
+          rowGap: fluid(8),
+          padding: `${fluid(16)} ${SIDE}`,
+        }}
       >
         {view.rows.map((row) => (
-          <div key={row.label} className="flex justify-between gap-4" data-testid={`row-${row.label}`}>
-            <span className="text-white/70">{row.label}</span>
+          <div
+            key={row.label}
+            className={`flex justify-between gap-4 ${row.freshness === "Stale" ? "opacity-50" : ""}`}
+            data-testid={`row-${row.label}`}
+            data-freshness={row.freshness || undefined}
+          >
+            <span className="text-white/70">{t(row.label)}</span>
             <span className="font-semibold">
-              {row.value}
-              {row.freshness && row.freshness !== "Fresh" ? ` (${row.freshness.toLowerCase()})` : ""}
+              {t(row.value)}
+              {freshnessLabel(row, t)}
             </span>
           </div>
         ))}
-        <div className="col-span-2 mt-2 flex items-center justify-between text-white/60" style={{ fontSize: TYPE.small }}>
-          <span>Screen wake lock: {wakeLock}</span>
-          <SpeechToggle view={view} />
+        <p
+          data-testid="reporting-speech-text"
+          role="status"
+          aria-live="polite"
+          className="col-span-2 mt-2"
+          style={{ fontSize: TYPE.small, ...WRAP }}
+        >
+          {t("Last announcement")}: {lastAnnouncement || t("No announcement yet")}
+        </p>
+        <div
+          className="col-span-2 flex items-center justify-between text-white/60"
+          style={{ fontSize: TYPE.small }}
+        >
+          <span>
+            {t("Screen wake lock")}: {wakeLock}
+          </span>
+          <SpeechToggle
+            supported={speechSupported}
+            enabled={speechOn}
+            onToggle={toggleSpeech}
+            t={t}
+          />
         </div>
       </footer>
     </div>

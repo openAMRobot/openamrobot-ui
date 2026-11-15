@@ -3,15 +3,16 @@ import { Routes, Route } from "react-router";
 
 import AppLayout from "../layouts/appLayout";
 import NotFoundPage from "./NotFoundPage";
-import ReportingPage from "./ReportingPage";
 import { PAGE_REGISTRY } from "./registry";
 
 const Routing = () => (
   <Routes>
-    {/* Reporting Mode: full screen, outside AppLayout (no app chrome). */}
-    <Route path="/report" element={<ReportingPage />} />
+    {/* Standalone pages keep their registry route but render outside AppLayout. */}
+    {PAGE_REGISTRY.filter(({ standalone }) => standalone).map(({ path, component: Component }) => (
+      <Route key={path} path={path} element={<Component />} />
+    ))}
     <Route path="/" element={<AppLayout />}>
-      {PAGE_REGISTRY.map(({ path, component: Component }) =>
+      {PAGE_REGISTRY.filter(({ standalone }) => !standalone).map(({ path, component: Component }) =>
         path === "/" ? (
           <Route key={path} index element={<Component />} />
         ) : (

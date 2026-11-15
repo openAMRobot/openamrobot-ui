@@ -231,6 +231,8 @@ describe("staleness", () => {
     expect(v.display).toBe(DISPLAY.WAITING);
     expect(v.reason).toBe("Battery data is stale or invalid");
     expect(v.rows.find((r) => r.label === "Battery").freshness).toBe("Stale");
+    expect(v.rows.find((r) => r.label === "Battery").ageSeconds).toBe(3);
+    expect(v.staleSources).toContainEqual(expect.objectContaining({ label: "Battery", ageSeconds: 3 }));
   });
 
   it("stale diagnostics block READY", () => {
@@ -262,6 +264,18 @@ describe("staleness", () => {
 });
 
 describe("disconnect", () => {
+  it("keeps the previous live state marked as last known while disconnected", () => {
+    const { state } = apply([
+      ...healthy(),
+      [{ type: "connection", status: "disconnected" }, 1100],
+    ]);
+    const v = deriveReport(state, 1100);
+
+    expect(v.display).toBe(DISPLAY.DISCONNECTED);
+    expect(v.lastKnownDisplay).toBe(DISPLAY.READY);
+    expect(v.rows.find((r) => r.label === "Connection").value).toBe("Disconnected");
+  });
+
   it("a reconnect starts with no data, keeping the run and result on screen", () => {
     const { state } = apply([
       ...healthy(),
@@ -272,6 +286,7 @@ describe("disconnect", () => {
     ]);
     const v = deriveReport(state, 1200);
     expect(v.display).toBe(DISPLAY.UNKNOWN);
+    expect(v.lastKnownDisplay).toBe(DISPLAY.READY);
     expect(v.rows.find((r) => r.label === "Battery").value).toBe("Unknown");
     expect(v.result.outcome).toBe("SUCCEEDED");
   });
