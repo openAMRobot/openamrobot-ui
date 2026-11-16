@@ -7,6 +7,9 @@ import { addEvent } from "../shared/events/eventLog";
 import { loadWaypoints } from "../shared/hooks/useSavedWaypoints";
 import { getMission } from "../shared/missions/missions";
 import { getRun, setRun, subscribeCommands } from "../shared/missions/missionRunner";
+import { subscribeAbort } from "../shared/motion/abortBus";
+import { getMotionGate } from "../shared/motion/motionGate";
+import { navGoalBlockedReason } from "../shared/motion/navGoalGate";
 
 // Generous timeouts so a silent Nav2/dock stack can't hang a mission forever —
 // these are "something is clearly wrong" backstops, not tuned durations.
@@ -73,7 +76,9 @@ const MissionRunner = () => {
   const runNavStep = (pose) =>
     new Promise((resolve) => {
       const activeRos = rosRef.current;
-      if (!activeRos || !window.ROSLIB) {
+      // No goal or dock trigger while the stop lock is engaged or unknown
+      // (shared/motion/navGoalGate.js): the step fails instead.
+      if (!activeRos || !window.ROSLIB || navGoalBlockedReason()) {
         resolve(false);
         return;
       }
@@ -144,7 +149,9 @@ const MissionRunner = () => {
   const runDockStep = (undo) =>
     new Promise((resolve) => {
       const activeRos = rosRef.current;
-      if (!activeRos || !window.ROSLIB) {
+      // No goal or dock trigger while the stop lock is engaged or unknown
+      // (shared/motion/navGoalGate.js): the step fails instead.
+      if (!activeRos || !window.ROSLIB || navGoalBlockedReason()) {
         resolve(false);
         return;
       }
@@ -203,6 +210,18 @@ const MissionRunner = () => {
   const startMission = async (missionId) => {
     if (getRun()?.status === "running") {
       toast.warn("A mission is already running — stop it first.");
+      return;
+    }
+    // Not while the stop lock is engaged or unknown, or Stop (software) is
+    // latched in this browser (shared/motion/navGoalGate.js).
+    const blocked = navGoalBlockedReason(getMotionGate());
+    if (blocked) {
+      toast.warn(`Mission not started: ${blocked}`);
+      addEvent({
+        type: "navigation",
+        severity: "warning",
+        message: `Mission not started: ${blocked}`,
+      });
       return;
     }
     const mission = getMission(missionId);
@@ -277,7 +296,15 @@ const MissionRunner = () => {
       if (cmd.type === "start") startMission(cmd.missionId);
       else if (cmd.type === "stop") stopMission();
     });
-    return unsubscribe;
+    // Stop (software), a locked or unknown stop lock, or a disconnect aborts
+    // a running mission the same way its Stop button does.
+    const unsubscribeAbort = subscribeAbort(() => {
+      if (getRun()?.status === "running") stopMission();
+    });
+    return () => {
+      unsubscribe();
+      unsubscribeAbort();
+    };
   }, []);
 
   return null;

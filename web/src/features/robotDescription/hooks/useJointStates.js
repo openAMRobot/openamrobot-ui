@@ -10,8 +10,8 @@ import { AppConfig } from "../../../shared/constants";
  *
  * Live Mode: values come from AppConfig.JOINT_STATES_TOPIC
  * (sensor_msgs/JointState) and are read-only. This robot has no per-joint
- * position command interface (only /cmd_vel, which drives both wheels
- * together), so there is no real command a slider could send in Live Mode —
+ * position command interface (manual drive is one base velocity on
+ * /ui/cmd_vel), so there is no real command a slider could send in Live Mode:
  * setJointValue/resetJoints are no-ops while live, by design, not an
  * oversight. A future robot with real per-joint actuation topics could wire
  * a publisher in here without changing any component that consumes this
