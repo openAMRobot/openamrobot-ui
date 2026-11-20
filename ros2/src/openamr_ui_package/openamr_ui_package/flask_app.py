@@ -1,3 +1,5 @@
+import hashlib
+import html
 import os
 import json
 import re
@@ -1169,15 +1171,76 @@ def serve_ros_libs(filename: str):
     return send_from_directory(REACT_ROS_DIR, filename)
 
 
+_bundle_cache = {"key": None, "status": None}
+
+
+def bundle_status(build_dir=None):
+    """Whether the installed frontend bundle is the one build-info.json names.
+
+    scripts/sync_frontend_to_ros.sh writes build-info.json (commit, main JS
+    path, sha256). Returns {"ok": bool, "reason": str, **build_info}. Without
+    the file, or when the main JS is missing or differs, ok is False and the
+    app does not serve index.html: a stale or partial bundle is refused
+    instead of served (openamrobot-ui#50 review, point 5).
+    """
+    build_dir = build_dir or REACT_BUILD_DIR
+    info_path = os.path.join(build_dir, "build-info.json")
+    manifest_path = os.path.join(build_dir, "asset-manifest.json")
+    try:
+        with open(info_path, encoding="utf-8") as f:
+            info = json.load(f)
+    except (OSError, ValueError):
+        return {"ok": False, "reason": "no build-info.json: run scripts/build_frontend.sh and "
+                "scripts/sync_frontend_to_ros.sh, then rebuild the ROS package"}
+    try:
+        with open(manifest_path, encoding="utf-8") as f:
+            manifest_js = json.load(f)["files"]["main.js"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return {**info, "ok": False, "reason": "asset-manifest.json missing or unreadable"}
+    if manifest_js != info.get("main_js"):
+        return {**info, "ok": False,
+                "reason": f"asset-manifest.json names {manifest_js}, build-info.json names {info.get('main_js')}"}
+    js_path = os.path.join(build_dir, str(info.get("main_js", "")).lstrip("/"))
+    try:
+        stat = os.stat(js_path)
+    except OSError:
+        return {**info, "ok": False, "reason": f"main JS {info.get('main_js')} is not installed"}
+    key = (info_path, js_path, stat.st_mtime_ns, stat.st_size, info.get("main_js_sha256"))
+    if _bundle_cache["key"] == key:
+        return _bundle_cache["status"]
+    with open(js_path, "rb") as f:
+        digest = hashlib.sha256(f.read()).hexdigest()
+    if digest != info.get("main_js_sha256"):
+        status = {**info, "ok": False, "reason": "main JS sha256 differs from build-info.json"}
+    else:
+        status = {**info, "ok": True, "reason": ""}
+    _bundle_cache.update(key=key, status=status)
+    return status
+
+
+@app.route("/api/build-info")
+def api_build_info():
+    status = bundle_status()
+    return jsonify(status), (200 if status["ok"] else 503)
+
+
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_spa(path: str):
     # If someone requests a real file that exists in the build root (e.g., favicon.ico)
     requested = os.path.join(REACT_BUILD_DIR, path)
-    if path and os.path.exists(requested) and os.path.isfile(requested):
+    if path and path != "index.html" and os.path.exists(requested) and os.path.isfile(requested):
         return send_from_directory(REACT_BUILD_DIR, path)
 
-    # Otherwise return React index.html (SPA routing)
+    # Otherwise return React index.html (SPA routing), only for a verified bundle.
+    status = bundle_status()
+    if not status["ok"]:
+        return (
+            "<!doctype html><title>No verified frontend build</title>"
+            "<h1>No verified frontend build</h1><p>" + html.escape(status["reason"]) + "</p>",
+            503,
+            {"Content-Type": "text/html; charset=utf-8"},
+        )
     return send_from_directory(REACT_BUILD_DIR, "index.html")
 
 

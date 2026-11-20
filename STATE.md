@@ -215,3 +215,38 @@ failures and one error; the fixed helper passes all nine. No ROS, Docker,
 web build, simulation or hardware run was performed locally for this fix.
 #48 merged on 10 Nov 2026 as 51b4af3, owned by the platform lead. #51 incorporates the fix by merging `ui/ci`; integration candidate
 #56 must be rebuilt by its owner to include it.
+
+## A2 `ui/twin-operator-view` (operator UI on the digital twin, stacked on A1)
+
+Base: `ui/gate-a-command-path` (#50) at `bb73a17f0da66bb6e215cbf94c7f4daf6f20d0f1`. Ships with #50 and
+openamr-platform-sw#90 or not at all; until then it is twin evidence on an unmerged stop path. Owner of the
+work package: the UI lead adopts, adapts or rejects in the pull request thread.
+
+- `openamr_ui_bringup/launch/twin.launch.py`: the twin (`stack:=platform`, `build1` or `none`), a restricted
+  rosbridge from `config/twin_bridge_allowlist.yaml` (exact read set, write set `/goal_pose` only,
+  services: stop lock, cancels, read-only queries; actions none), rosapi with `params_glob` `[]`, the UI
+  relays and Flask, all bound to 127.0.0.1. `use_docking:=false`. `/ui/cmd_vel` is writable only with
+  `manual_drive:=true` (default false). Pure tests: `test/test_twin_profile.py`.
+- Operator status panel (`components/OperatorStatusPanel.jsx`, `shared/twin/operatorStatus.js`): read
+  only; `/navigation/status` readiness, health, reasons and task, `/safety/stop_state` state and refusal
+  reason, `/baseline1/mission_status` labelled Proposed (openamr-upperbody-sw#82), `/odom` age. Display
+  states DISCONNECTED, STOPPED, STOP STATE UNKNOWN, WAITING FOR STATUS, STALE, FAULTED, NOT READY, READY.
+  It does not change Stop (software), Resume or the motion gate.
+- Served bundle check (#50 review, point 5): `sync_frontend_to_ros.sh` writes `build-info.json`;
+  `flask_app.py` serves `/api/build-info` and refuses `index.html` (503) when the main JS is missing or
+  differs. `static/app/index.html` and `asset-manifest.json` are no longer tracked.
+- Headless twin test: `.github/workflows/twin-e2e.yml` (push to `.github/twin-e2e.trigger` on this branch),
+  `scripts/twin_bridge_probe.py`, `web/e2e-twin/twin.spec.js`, `web/playwright.twin.config.js`.
+- Docs: `docs/digital_twin.md` (inventory of interfaces against the twin, profile, panel, browser
+  acceptance check).
+- Not changed here (stop path, human authorship): the Stop cancel list (#50 review, point 4) and
+  Resume enablement on a refused release. Proposed to the UI lead in the pull request thread.
+- Known gaps: battery (`/battery_status` has no twin source; the SIL publishes `/sil/bms/battery_state`),
+  camera not started by the profile, undock topic and action share a name (#50 review, point 7).
+- Evidence: Jest and pure Python tests locally. Twin run 44803371460 (head c039fba, platform-sw#90
+  2dd1c74): twin up, bundle verified, bridge bound to 127.0.0.1 with the allowlist, `/cmd_vel` published
+  only by collision_monitor, no docking node, 10 of 11 probe checks as expected (the 11th was a probe
+  classification bug, fixed after the run), browser steps 1 to 3 passed (bundle, live status, Resume
+  through the gate), step 4 failed on a test bug (it opened `/map`; the Map page is `/`), steps 5 to 8 not
+  run. The fixes are committed without a new twin run. Not run on the Build 1 scene, the Getac ZX80 or a
+  robot.

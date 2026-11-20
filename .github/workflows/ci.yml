@@ -107,13 +107,15 @@ jobs:
           source /opt/ros/jazzy/setup.bash
           source install/setup.bash
           # Packages with tests, as documented in AGENTS.md;
-          # openamr_ui_bringup has none.
-          colcon test --packages-select openamr_ui_package openamr_ui_msgs
+          # openamr_ui_bringup tests the twin launch profile (pure).
+          colcon test --packages-select openamr_ui_package openamr_ui_msgs openamr_ui_bringup
           colcon test-result --verbose
 
       # The guard's own tests, so a broken counter cannot pass silently.
       - name: Test the zero-test guard
-        run: python3 -m unittest discover -v -s scripts -p 'test_count_test_results.py'
+        run: |
+          python3 -m unittest discover -v -s scripts -p 'test_count_test_results.py'
+          python3 -m unittest discover -v -s scripts -p 'test_twin_bridge_probe.py'
 
       # A run that executes zero tests is a failure, not a pass. Skipped
       # tests are not executed: an all-skipped run fails too. The counts come
