@@ -106,8 +106,11 @@ jobs:
         run: |
           cp -r ../interfaces/ros2/openamr_nav_msgs src/
           source /opt/ros/jazzy/setup.bash
+          # openamrobot_drivers and openamrobot_docking are build dependencies of openamrobot_bringup for colcon
+          # (run 44801004745 stopped there); docking itself stays off (use_docking:=false).
           colcon build --base-paths src --packages-select openamr_nav_msgs openamrobot_description \
-            openamrobot_gazebo openamrobot_perception openamrobot_nav2 openamrobot_bringup --event-handlers console_cohesion+
+            openamrobot_gazebo openamrobot_perception openamrobot_nav2 openamrobot_drivers openamrobot_docking \
+            openamrobot_bringup --cmake-args -DBUILD_TESTING=OFF --event-handlers console_cohesion+
           { git -C src/openamr-platform-sw rev-parse HEAD; git -C ../interfaces rev-parse HEAD; git -C ../ui rev-parse HEAD; } | tee ../pins.txt
           test "$(sed -n 1p ../pins.txt)" = "$PLATFORM_SW_SHA"
 
@@ -164,7 +167,7 @@ jobs:
           [ "$ready" = yes ]
 
       - name: "EVIDENCE: graph snapshot before the browser"
-        if: always()
+        if: always() && hashFiles('twin_env.sh') != ''
         shell: bash
         run: |
           source twin_env.sh
@@ -216,7 +219,8 @@ jobs:
         if: always()
         shell: bash
         run: |
-          source twin_env.sh
+          mkdir -p out
+          [ -f twin_env.sh ] && source twin_env.sh
           { ros2 node list; ros2 topic info -v /cmd_vel; } > out/graph_after.txt 2>&1 || true
           pid=$(cat out/launch.pid 2>/dev/null) && kill -INT -- -"$pid" 2>/dev/null; sleep 15
           pkill -9 -f "gz sim" 2>/dev/null || true
