@@ -9,6 +9,14 @@
   <buildtool_depend>ament_python</buildtool_depend>
 
   <exec_depend>openamr_ui_package</exec_depend>
+  <!-- twin.launch.py: restricted bridge and rosapi; the twin itself
+       (openamrobot_bringup or openamrobot_build1_scene) comes from its own
+       workspace and is looked up only for the stack that is chosen. -->
+  <exec_depend>rosbridge_server</exec_depend>
+  <exec_depend>rosapi</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
 
   <export>
     <build_type>ament_python</build_type>

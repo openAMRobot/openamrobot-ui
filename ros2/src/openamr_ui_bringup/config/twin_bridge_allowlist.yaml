@@ -1,0 +1,65 @@
+# Restricted rosbridge for the operator UI on the digital twin
+# (twin.launch.py). Everything not listed here is refused by rosbridge_suite
+# 2.7.1 (topics_pub_glob, topics_sub_glob, services_glob, actions_glob).
+# Exact names only, no wildcards. rosbridge adds /rosapi/* to the service set
+# by itself; rosapi runs with params_glob "[]", so it reads and sets no
+# parameter. Review of openamrobot-ui#50, point 6.
+#
+# Bound to 127.0.0.1 by default (launch argument bridge_address). Plain ws://,
+# no authentication: a remote browser needs an SSH tunnel, not a wider bind.
+
+# Read set: topics the browser may subscribe to.
+read_topics:
+  - /ui/map                                 # map_relay (volatile copy of /map)
+  - /ui/amcl_pose                           # nav_relays
+  - /odom
+  - /scan_filtered
+  - /plan
+  - /global_costmap/costmap
+  - /local_costmap/costmap
+  - /tf
+  - /tf_static
+  - /clock                                  # robot clock in simulation (robotClock.js)
+  - /ui/navigate_to_pose/status             # nav_relays
+  - /navigate_to_pose/_action/feedback
+  - /navigation/status                      # readiness, health, task
+  - /safety/stop_lock                       # platform-sw#90
+  - /safety/stop_state                      # platform-sw#90
+  - /baseline1/mission_status               # Proposed, openamr-upperbody-sw#82
+  - /diagnostics
+  - /battery_status
+  - /joint_states
+  - /rosout
+  - /ui_message
+  - /dock_trigger_status                    # read only; docking is off on the twin
+  - /ui/dock_robot/status
+  - /ui/undock_robot/status
+
+# Write set: topics the browser may publish.
+write_topics:
+  - /goal_pose                              # one NavigateToPose goal per message (goal_pose_forwarder_node, #90)
+
+# Added to the write set only with manual_drive:=true. Default false: manual
+# driving from the UI stays disabled on the twin until platform-sw#90's
+# conditions are met. Never /cmd_vel or any cmd_vel_* topic.
+manual_drive_topics:
+  - /ui/cmd_vel                             # TwistStamped into ui_cmd_vel_relay_node (#90)
+
+# Services the browser may call.
+services:
+  - /safety/stop_lock_engage                # Stop (software)
+  - /safety/stop_lock_release               # Resume
+  - /navigate_to_pose/_action/cancel_goal   # Stop (software) and Cancel
+  - /navigate_through_poses/_action/cancel_goal
+  - /compute_path_to_pose/_action/cancel_goal
+  - /dock_robot/_action/cancel_goal
+  - /undock_robot/_action/cancel_goal
+  - /ui_cmd_vel_relay_node/get_parameters   # clock mode (use_sim_time) only
+  - /map_server/get_state                   # lifecycle panel, read only
+  - /amcl/get_state
+  - /controller_server/get_state
+  - /planner_server/get_state
+  - /bt_navigator/get_state
+
+# Actions the browser may send. None: the UI uses topics and cancel services.
+actions: []
