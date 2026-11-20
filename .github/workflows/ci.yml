@@ -107,8 +107,8 @@ jobs:
           source /opt/ros/jazzy/setup.bash
           source install/setup.bash
           # Packages with tests, as documented in AGENTS.md;
-          # openamr_ui_bringup has none.
-          colcon test --packages-select openamr_ui_package openamr_ui_msgs
+          # openamr_ui_bringup tests the twin launch profile (pure).
+          colcon test --packages-select openamr_ui_package openamr_ui_msgs openamr_ui_bringup
           colcon test-result --verbose
 
       # The guard's own tests, so a broken counter cannot pass silently.

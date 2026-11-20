@@ -8,6 +8,7 @@ import SchedulerRunner from "../components/SchedulerRunner";
 import MissionRunner from "../components/MissionRunner";
 import StatusBar from "../components/StatusBar";
 import MotionStopBanner from "../components/MotionStopBanner";
+import OperatorStatusPanel from "../components/OperatorStatusPanel";
 import MotionBridge from "../shared/motion/MotionBridge";
 import AuthModeBanner from "../components/AuthModeBanner";
 import DemoModeBanner from "../components/DemoModeBanner";
@@ -49,6 +50,7 @@ const AppLayout = () => {
         className="mx-auto min-h-0 w-full max-w-[1600px] flex-1 px-3 pb-4 sm:px-4 lg:px-6"
       >
         <MotionStopBanner />
+        <OperatorStatusPanel />
         <DemoModeBanner />
         <ReplayModeBanner />
         <AuthModeBanner />

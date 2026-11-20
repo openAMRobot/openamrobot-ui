@@ -306,6 +306,7 @@ volumes.
 | [Installation guide](docs/installation.md) | Docker, manual installation, networking, and launch options |
 | [Development guide](docs/development.md) | Frontend and ROS workflows, tests, and generated files |
 | [Troubleshooting guide](docs/troubleshooting.md) | Symptom-based checks and ROS commands |
+| [Digital twin](docs/digital_twin.md) | The UI on the simulated robot: restricted bridge, status panel, browser check |
 | [Frontend guide](web/README.md) | React development |
 | [Blockly guide](web/src/features/blocks/README.md) | Blocks, execution, Voice Command, and troubleshooting |
 | [Contributing](CONTRIBUTING.md) | Development and pull-request expectations |
