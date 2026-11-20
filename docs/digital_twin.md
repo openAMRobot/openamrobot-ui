@@ -128,7 +128,7 @@ send back. Write PASS, FAIL or BLOCKED per step; BLOCKED is not PASS.
 2. Start the twin: `ros2 launch openamr_ui_bringup twin.launch.py gui:=true`. See: the Gazebo window with
    the robot. Send: the first 200 lines of the launch output if anything fails.
 3. Open `http://127.0.0.1:5050/api/build-info`. See: `"ok": true` and the commit of step 1. Send: the JSON.
-4. Open `http://127.0.0.1:5050/map`. See: header "Robot connected", the map, the robot on it, the status
+4. Open `http://127.0.0.1:5050/` (the Map page). See: header "Robot connected", the map, the robot on it, the status
    panel with Robot pose "fresh" and Nav status "fresh". Send: a screenshot.
 5. Status panel. See: Readiness with its reasons (the platform twin reports NOT READY with BASE_LINK_LOST
    until a base status adapter exists), Stop state LOCKED after start. Send: the panel text.

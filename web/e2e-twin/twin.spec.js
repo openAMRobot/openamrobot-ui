@@ -87,7 +87,7 @@ test("the served bundle matches build-info.json", async ({ request }) => {
 });
 
 test("connects to the twin and shows live status, map and pose", async () => {
-  await page.goto("/map");
+  await page.goto("/"); // the Map page is the app root (pages/registry.js)
   await expect(page.getByText("Robot connected").first()).toBeVisible({ timeout: 60000 });
   await expect(display()).not.toHaveText("DISCONNECTED", { timeout: 30000 });
   await expect(page.getByTestId("operator-status-pose-age")).toHaveText("fresh", { timeout: 60000 });

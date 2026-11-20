@@ -113,7 +113,9 @@ jobs:
 
       # The guard's own tests, so a broken counter cannot pass silently.
       - name: Test the zero-test guard
-        run: python3 -m unittest discover -v -s scripts -p 'test_count_test_results.py'
+        run: |
+          python3 -m unittest discover -v -s scripts -p 'test_count_test_results.py'
+          python3 -m unittest discover -v -s scripts -p 'test_twin_bridge_probe.py'
 
       # A run that executes zero tests is a failure, not a pass. Skipped
       # tests are not executed: an all-skipped run fails too. The counts come

@@ -193,7 +193,8 @@ jobs:
         run: |
           source twin_env.sh
           remote=$(hostname -I | awk '{print $1}')
-          python3 ui/scripts/twin_bridge_probe.py --url ws://127.0.0.1:9090 --remote-host "$remote" --out out/probe.json
+          rc=0
+          python3 ui/scripts/twin_bridge_probe.py --url ws://127.0.0.1:9090 --remote-host "$remote" --out out/probe.json || rc=$?
           sleep 2
           # rosbridge refuses silently to the client; its own log names each refusal.
           grep -E "No match found for (topic|service|action)" out/twin.log | sort | uniq -c | tee out/probe_refusals.txt
@@ -202,6 +203,7 @@ jobs:
             if grep -q "rosbridge" "out/probe_${t//\//_}.txt"; then echo "FAIL: rosbridge publishes $t"; exit 1; fi
           done
           echo "no rosbridge publisher on /cmd_vel, /ui/cmd_vel, /initialpose"
+          exit $rc
 
       - name: "TEST: Playwright against the twin (headless Chromium)"
         id: playwright
@@ -226,6 +228,9 @@ jobs:
           pkill -9 -f "gz sim" 2>/dev/null || true
           cp versions.txt pins.txt out/ 2>/dev/null || true
           echo "probe=${{ steps.probe.outcome }} playwright=${{ steps.playwright.outcome }}" | tee out/verdict.txt
+          # Evidence in the log as well: artifacts are not readable from every review environment.
+          echo "### browser steps"; cat out/browser/steps.jsonl 2>/dev/null || echo "none"
+          echo "### graph after"; cat out/graph_after.txt
           {
             echo "### Twin e2e (headless), simulation evidence only"
             echo '```'; cat out/pins.txt out/verdict.txt; echo '```'
