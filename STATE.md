@@ -243,5 +243,10 @@ work package: the UI lead adopts, adapts or rejects in the pull request thread.
   Resume enablement on a refused release. Proposed to the UI lead in the pull request thread.
 - Known gaps: battery (`/battery_status` has no twin source; the SIL publishes `/sil/bms/battery_state`),
   camera not started by the profile, undock topic and action share a name (#50 review, point 7).
-- Evidence: Jest and pure Python tests locally; twin run in CI as recorded in the pull request. Not run
-  on the Build 1 scene, the Getac ZX80 or a robot.
+- Evidence: Jest and pure Python tests locally. Twin run 44803371460 (head c039fba, platform-sw#90
+  2dd1c74): twin up, bundle verified, bridge bound to 127.0.0.1 with the allowlist, `/cmd_vel` published
+  only by collision_monitor, no docking node, 10 of 11 probe checks as expected (the 11th was a probe
+  classification bug, fixed after the run), browser steps 1 to 3 passed (bundle, live status, Resume
+  through the gate), step 4 failed on a test bug (it opened `/map`; the Map page is `/`), steps 5 to 8 not
+  run. The fixes are committed without a new twin run. Not run on the Build 1 scene, the Getac ZX80 or a
+  robot.

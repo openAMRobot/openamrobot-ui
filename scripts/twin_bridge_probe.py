@@ -18,8 +18,6 @@ import asyncio
 import json
 import sys
 
-import websockets
-
 
 async def _exchange(ws, message, wait_s=3.0):
     await ws.send(json.dumps(message))
@@ -41,7 +39,11 @@ def _refused(replies):
     # "nothing useful came back"; the workflow matches the bridge log line per check.
     for r in replies:
         if r.get('op') == 'service_response' and r.get('result', False):
-            return False, 'service answered: ' + json.dumps(r.get('values'))[:200]
+            values = r.get('values') or {}
+            # rosapi answers its own refusal: successful false, "does not match any of the glob strings".
+            if isinstance(values, dict) and values.get('successful') is False:
+                return True, 'refused by the service: ' + str(values.get('reason', ''))[:200]
+            return False, 'service answered: ' + json.dumps(values)[:200]
         if r.get('op') in ('publish', 'action_result', 'action_feedback'):
             return False, 'data came back: ' + r.get('op')
     return True, 'no reply' if not replies else json.dumps(replies)[:300]
@@ -87,6 +89,8 @@ CHECKS = [
 
 
 async def probe(url, remote_url):
+    import websockets  # imported here so the classification helpers test without it
+
     results = []
     async with websockets.connect(url, open_timeout=10) as ws:
         for check_id, expect, message in CHECKS:
