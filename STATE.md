@@ -136,11 +136,10 @@ branch at `d527ea65` (branched from `0ca798b4`). Merge only after
 openamr-platform-sw#90, the source of the interfaces below. The interfaces
 were checked at #90 `710c98bc3d384a3d0612e87ff5e8c0c00b804dc0` and the stop
 gate tick rate at `a23bca14`. #90's current head
-`2425d4d75fd309ca97b1e75b92db47e7ba08df8f` (open, D-13 status-readiness
-changes pending) is not re-checked: refresh the pin once #90's D-13 changes
-are accepted, and re-check topic names, QoS and timings at its merged
-commit. Evidence from the older heads is not current for #90's final
-interface.
+`2dd1c7425cd907939a543a0c260a30faadf29e1c` (open, 21 Nov) is not
+re-checked: refresh the pin once #90's D-13 changes are accepted, and
+re-check topic names, QoS and timings at its merged commit. Evidence from
+the older heads is not current for #90's final interface.
 
 - Manual drive (joystick, gamepad, map page drive controls, Blockly drive,
   rotate and stop blocks, voice-planned drive actions run through Blockly)
@@ -186,9 +185,23 @@ interface.
   Draft #49 describes the earlier one-shot stop; where both change the same
   lines, keep this PR's text.
 - Platform gap (openamr-platform-sw, owner Kunal): the `dock_trigger.py`
-  docking sequence is not an action and cannot be cancelled by the UI.
-- `.github/decisions.yaml` entries for the UI command topic and the stop
-  lock interface: needed, handled separately in openAMRobot/.github.
+  docking sequence is not an action and cannot be cancelled by the UI. At
+  #90 `2dd1c742` the stop gate calls a `dock_trigger` `~/abort` service on
+  engage (read in the source, not run).
+- A lock engaged by something other than this UI (review of #50): this UI
+  blocks new goals and aborts its own runs, but sends no cancels itself.
+  At #90 `2dd1c742` the gate cancels every goal on `navigate_to_pose`,
+  `navigate_through_poses`, `dock_robot` and `undock_robot` on any engage,
+  whatever its origin, and again on every tick while locked (read in the
+  source, not run). `compute_path_to_pose`, which only plans, is cancelled
+  by this UI's own Stop only.
+- A remount or a new effect run of `MotionBridge` while connected no longer
+  drops held input or aborts runs; only a disconnect does (review of #50).
+- `.github/decisions.yaml`: the UI command topic and the stop lock
+  interface are entry UI-MANUAL-VELOCITY-INPUT on openAMRobot/.github
+  `main` (status open, Proposed until #90 merges and the owner accepts it;
+  review by 11 Dec 2026). The new `use_sim_time` launch argument of
+  `new_ui_launch.py` is not in the register.
 - Evidence: unit and component tests (Jest, mocked ROSLIB), pure launch
   test. Not run in a browser, in simulation, on the Getac ZX80 or on a
   robot.
