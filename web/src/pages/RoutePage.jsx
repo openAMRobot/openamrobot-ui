@@ -4,6 +4,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import { useRos } from "../app/App";
 import { AppConfig } from "../shared/constants/index";
+import { navGoalBlockedReason } from "../shared/motion/navGoalGate";
 import TimeModal from "../components/modal/TimeModal";
 import RouteModal from "../components/modal/RouteModal";
 import TextInputModal from "../components/modal/TextInputModal";
@@ -463,6 +464,14 @@ const RoutePage = () => {
 
       // Remove the goal marker we just placed temporarily
       removePointFromCanvas();
+
+      // Planning sends a compute_path_to_pose goal. Like every other Nav2
+      // goal it is not sent while the stop lock is engaged or unknown.
+      const blocked = navGoalBlockedReason();
+      if (blocked) {
+        toast.warn(`Route not planned: ${blocked}`);
+        return;
+      }
 
       toast.info("Calculating a route...");
 
