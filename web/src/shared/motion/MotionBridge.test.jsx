@@ -69,7 +69,8 @@ describe("MotionBridge", () => {
     const aborted = jest.fn();
     const unsubscribe = subscribeAbort(aborted);
     render(<MotionBridge />);
-    aborted.mockClear();
+    // Mounting while connected aborts nothing (review of #50).
+    expect(aborted).not.toHaveBeenCalled();
     act(() => latest(AppConfig.STOP_LOCK_TOPIC).emit({ data: false }));
     expect(aborted).not.toHaveBeenCalled();
     act(() => latest(AppConfig.STOP_LOCK_TOPIC).emit({ data: true }));
@@ -80,6 +81,32 @@ describe("MotionBridge", () => {
     act(() => jest.advanceTimersByTime(1100));
     expect(getMotionGate().lock).toBe("unknown");
     expect(aborted).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  // Review of #50 (Kunal, 21 Nov): the release and abort ran on every run of
+  // the effect, so a remount while connected dropped held input and aborted
+  // running programs and missions with no change in connection or lock.
+  it("a remount while connected does not abort programs or missions", () => {
+    const aborted = jest.fn();
+    const unsubscribe = subscribeAbort(aborted);
+    const first = render(<MotionBridge />);
+    act(() => latest(AppConfig.STOP_LOCK_TOPIC).emit({ data: false }));
+    first.unmount();
+    render(<MotionBridge />);
+    expect(aborted).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it("a disconnect still aborts programs and missions", () => {
+    const aborted = jest.fn();
+    const unsubscribe = subscribeAbort(aborted);
+    const { rerender } = render(<MotionBridge />);
+    act(() => latest(AppConfig.STOP_LOCK_TOPIC).emit({ data: false }));
+    mockRosStatus = "disconnected";
+    rerender(<MotionBridge />);
+    expect(aborted).toHaveBeenCalledTimes(1);
+    expect(aborted.mock.calls[0][0]).toBe("rosbridge disconnected or reconnecting");
     unsubscribe();
   });
 });

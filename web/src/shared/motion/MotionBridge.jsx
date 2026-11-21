@@ -35,10 +35,16 @@ const MotionBridge = () => {
   useEffect(() => {
     resetMotionGate(rosStatus === "connected" ? "connected" : "disconnected");
     lastLockRef.current = null;
-    // Disconnected is the same as an unknown lock: nothing may keep running.
-    releaseAll();
-    abortUiMotion("rosbridge disconnected or reconnecting");
-    if (rosStatus !== "connected" || !ros || !window.ROSLIB) return undefined;
+    if (rosStatus !== "connected" || !ros || !window.ROSLIB) {
+      // Disconnected is the same as an unknown lock: nothing may keep
+      // running. Only here: a remount or a new effect run while connected
+      // must not drop held input or abort runs (review of #50). A new
+      // connection still starts with the lock unknown, so the gate stays
+      // closed until a released sample arrives.
+      releaseAll();
+      abortUiMotion("rosbridge disconnected or reconnecting");
+      return undefined;
+    }
 
     const lock = createStopLock({
       ros,
