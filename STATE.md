@@ -215,6 +215,29 @@ the older heads is not current for #90's final interface.
   test. Not run in a browser, in simulation, on the Getac ZX80 or on a
   robot.
 
+## A2 `proposal/rosbridge-allowlist` (Proposed, #63)
+
+Stacked on A1 at `21e95b9e83ea473c0b8d727ce4326a770f475ef4`; draft into
+`ui/gate-a-command-path`. Proposed until the software lead accepts
+contract change request #63.
+
+- Without globs rosbridge accepted any topic, so a client (for example a tab
+  still running the old UI) could publish `/cmd_vel` and skip the #90 chain.
+- `new_ui_launch.py` now passes one constant, `ROSBRIDGE_ALLOWLIST`
+  (`topics_pub_glob` 10, `topics_sub_glob` 22, `services_glob` 29 plus the
+  `/rosapi/*` rosbridge adds itself, `actions_glob` empty), to
+  `rosbridge_websocket`, and `ROSAPI_ALLOWLIST` (`params_glob` empty) to
+  `rosapi_node`. Exact names only; `/cmd_vel` and every `cmd_vel_*` input
+  are not publishable. Parameter names checked in rosbridge_suite 2.7.1:
+  `rosbridge_websocket` has no `params_glob`, rosapi does.
+- `test/test_rosbridge_allowlist.py` (pure Python, fnmatch as rosbridge
+  uses) fails if `/cmd_vel` or a glob matching it is allowed, if a web app
+  name is refused, or if the web app gains a name the test table lacks.
+- Narrowed: Topic echo, Devices page status topics and Params page nodes
+  outside the default rows reach only listed names.
+- Evidence: pure tests only. Not run with rosbridge, in a browser, in
+  simulation or on a robot.
+
 Open issues on 30 Oct: #19, #28, #29, #31, #32, #33, #34, #35, #36, #37,
 #39. Open pull requests on 30 Oct: drafts #21 and #40 to #46, plus A1.
 

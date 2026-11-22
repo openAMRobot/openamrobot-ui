@@ -271,6 +271,9 @@ Only unauthenticated `AUTH_MODE=open` is implemented today. Anyone who can
 reach the configured UI and rosbridge ports can potentially view data and
 command the robot.
 
+- rosbridge accepts only the topics, services and parameters this UI uses
+  (`ROSBRIDGE_ALLOWLIST` in `new_ui_launch.py`); `/cmd_vel` is never
+  publishable from a browser. This limits a client, it does not authenticate one.
 - Keep the dashboard on a trusted local network.
 - Don't expose ports `5050`, `9090`, or `8080` directly to the internet.
 - Use firewall rules or an authenticated reverse proxy when network isolation
