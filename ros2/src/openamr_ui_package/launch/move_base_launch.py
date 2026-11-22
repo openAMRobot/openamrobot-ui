@@ -15,7 +15,12 @@ def generate_launch_description():
     base_local_planner_conf=PathJoinSubstitution([pkg_share, 'param', 'move_base', 'base_local_planner_default_params.yaml'])
 
     return LaunchDescription([
-        DeclareLaunchArgument('cmd_vel_topic', default_value='/cmd_vel'),
+        # Issue #31: never the final /cmd_vel. cmd_vel_nav is twist_mux's
+        # navigation input (openamr-platform-sw#90 config/twist_mux.yaml), so
+        # this legacy controller passes the stop gate, velocity_smoother and
+        # collision_monitor like the platform's own controller_server.
+        # Relative, matching twist_mux.yaml. B1/B2 remove this file.
+        DeclareLaunchArgument('cmd_vel_topic', default_value='cmd_vel_nav'),
         DeclareLaunchArgument('odom_topic', default_value='odom'),
 
         Node(
