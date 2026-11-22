@@ -360,32 +360,7 @@ OpenAMRobot UI is available under the [MIT License](LICENSE).
 Support open-source robotics, ROS 2 development, AI robotics education, and
 dual-arm mobile robot research.
 
-**⚡ Back the build — one-time, no strings**
-
-| Tier | What it says about you | Link |
-| --- | --- | --- |
-| ⚡ First Mover — €5 | You got here first, and you didn't overthink it. Your name goes on the backers wall as one of the people who moved before it was obvious. | [Back it →](https://buy.stripe.com/eVqcN5b99eeAaSd7WPgUM06) |
-| 🎯 Sharpshooter — €25 | You spotted it early and called it. Name on the wall, plus a shareable "OpenAMRobot Backer" badge. | [Back it →](https://buy.stripe.com/4gMdR9ell1rO2lH90TgUM07) |
-| 🕶️ Insider — €50 | You want in behind the curtain. Everything above, plus the backer-only build log and early files. | [Back it →](https://buy.stripe.com/eVq14nfpp4E0gcx2CvgUM08) |
-| 🔩 Immortal — €100 | Your name goes on the actual robot — physically, and for as long as the machine keeps rolling around. | [Back it →](https://buy.stripe.com/00w00jdhhb2o4tPfphgUM09) |
-| 🏆 Founding Backer — €250 | Not a supporter — a co-author. Everything above, plus a personal thank-you in a build video. | [Back it →](https://buy.stripe.com/28EeVdcdddawaSdeldgUM0a) |
-
-**🔁 Monthly subscriptions — build it with us, every month**
-
-| Tier | What you get | Link |
-| --- | --- | --- |
-| 😇 Benefactor — €5/mo | A small, recurring push toward an open robot for everyone. Your name goes on the wall. | [Subscribe →](https://buy.stripe.com/9B6cN5dhh9Yk7G1cd5gUM05) |
-| ❤️ Community — €19/mo | Community access, project and roadmap updates, basic documentation, and community Q&A. | [Subscribe →](https://buy.stripe.com/6oUcN55OPc6s3pL4KDgUM00) |
-| 🔧 Builder — €79/mo | For the ones who actually build: everything in Community, plus builder docs, monthly group Q&A, selected tutorials, early design updates, and discounts on digital packs. | [Subscribe →](https://buy.stripe.com/14A28r0uvdaw9O9eldgUM01) |
-| 🚀 Pro Support — €299/mo | Expert support for advanced builders, early founders, and small labs — one private consulting call and up to 3 hours/month of technical guidance. | [Subscribe →](https://buy.stripe.com/dRm4gz4KLdaw6BX4KDgUM02) |
-| 🏢 Startup Support — €750/mo | For robotics startups and teams heading toward a prototype — two private consulting calls/month, roadmap support, GitHub/documentation review, supplier review, and up to 6 hours/month. | [Subscribe →](https://buy.stripe.com/7sY8wPfpp8Ugf8t90TgUM03) |
-| 🔬 Lab Support — €1,500/mo | For universities, corporate labs, and training centers — four private sessions/month, lab implementation support, architecture reviews, training-roadmap support, and up to 10 hours/month. | [Subscribe →](https://buy.stripe.com/eVq14ndhh2vSaSda4XgUM04) |
-
-❤️ You can also support the project through
-[GitHub Sponsors](https://github.com/sponsors/openAMRobot).
-
-Every contribution — €5 or €1,500 — goes directly toward building this
-robot. You're not donating; you're building it. 🤖
+You can support the project through [GitHub Sponsors](https://github.com/sponsors/openAMRobot).
 
 ### Third-party notices
 
