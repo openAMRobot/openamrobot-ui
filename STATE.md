@@ -243,8 +243,10 @@ contract change request #63.
   name is refused, or if the web app gains a name the test table lacks.
 - Narrowed: Topic echo, Devices page status topics and Params page nodes
   outside the default rows reach only listed names.
-- Evidence: pure tests only. Not run with rosbridge, in a browser, in
-  simulation or on a robot.
+- `test/test_rosbridge_allowlist_live.py` starts `rosbridge_websocket` 2.7.1
+  with these parameters and publishes over a websocket: `/ui/cmd_vel` must
+  arrive, `/cmd_vel` must not. Runs under colcon test only (imports rclpy).
+- Evidence: CI only. Not run in a browser, in simulation or on a robot.
 
 Open issues on 30 Oct: #19, #28, #29, #31, #32, #33, #34, #35, #36, #37,
 #39. Open pull requests on 30 Oct: drafts #21 and #40 to #46, plus A1.
