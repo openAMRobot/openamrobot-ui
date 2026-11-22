@@ -19,6 +19,7 @@ import importlib.util
 import json
 import os
 import random
+import signal
 import socket
 import struct
 import subprocess
@@ -62,7 +63,7 @@ class _WebSocket:
         deadline = time.monotonic() + timeout_s
         while True:
             try:
-                self.sock = socket.create_connection(('127.0.0.1', port), timeout=2.0)
+                self.sock = socket.create_connection(('127.0.0.1', port), timeout=5.0)
                 break
             except OSError:
                 if time.monotonic() > deadline:
@@ -94,6 +95,19 @@ class _WebSocket:
         self.sock.close()
 
 
+def _stop(process):
+    for sig, wait_s in ((signal.SIGINT, 10), (signal.SIGKILL, 10)):
+        try:
+            os.killpg(process.pid, sig)
+        except ProcessLookupError:
+            return
+        try:
+            process.wait(timeout=wait_s)
+            return
+        except subprocess.TimeoutExpired:
+            continue
+
+
 def _counter(received, topic):
     def count(_msg):
         received[topic] += 1
@@ -110,10 +124,13 @@ def test_rosbridge_refuses_cmd_vel_and_forwards_ui_cmd_vel():
     env['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
     for name in ('ROS_DOMAIN_ID', 'ROS_AUTOMATIC_DISCOVERY_RANGE'):
         os.environ[name] = env[name]
+    # Output to a file, not a pipe, and signals to the whole process group:
+    # `ros2 run` starts rosbridge as a child that outlives a signal to ros2 alone.
+    log = tempfile.TemporaryFile('w+')
     bridge = subprocess.Popen(
         ['ros2', 'run', 'rosbridge_server', 'rosbridge_websocket',
          '--ros-args', '--params-file', params],
-        env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     received = {'/cmd_vel': 0, '/ui/cmd_vel': 0}
     rclpy.init()
     node = rclpy.create_node('allowlist_live_probe')
@@ -142,14 +159,11 @@ def test_rosbridge_refuses_cmd_vel_and_forwards_ui_cmd_vel():
     finally:
         node.destroy_node()
         rclpy.shutdown()
-        bridge.terminate()
-        try:
-            output = bridge.communicate(timeout=10)[0]
-        except subprocess.TimeoutExpired:
-            bridge.kill()
-            output = bridge.communicate()[0]
+        _stop(bridge)
         os.unlink(params)
-    print(output[-3000:])
+        log.seek(0)
+        print(log.read()[-3000:])
+        log.close()
     assert received['/ui/cmd_vel'] > 0, (
         f'no /ui/cmd_vel message arrived; the websocket path itself failed: {received}')
     assert received['/cmd_vel'] == 0, (
