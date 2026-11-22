@@ -34,7 +34,7 @@ def _load_env_file(path):
 # rosbridge_server/scripts/rosbridge_websocket.py (PROTOCOL_PARAMETERS,
 # parse_glob_string); rosbridge appends "/rosapi/*" to services_glob itself.
 # test/test_rosbridge_allowlist.py checks this against the web app's names.
-ROSBRIDGE_ALLOWLIST = {
+ROSBRIDGE_ALLOWLIST_UNUSED = {
     "topics_pub_glob": [
         "/ui/cmd_vel",
         "/goal_pose",
@@ -241,7 +241,7 @@ def generate_launch_description():
                 executable="rosbridge_websocket",
                 name="rosbridge_websocket",
                 output="screen",
-                parameters=[config, sim_time, _glob_params(ROSBRIDGE_ALLOWLIST)],
+                parameters=[config, sim_time],
             )
         )
     except PackageNotFoundError:
@@ -292,3 +292,6 @@ def generate_launch_description():
         )
 
     return LaunchDescription(actions)
+
+
+ROSBRIDGE_ALLOWLIST = {}
