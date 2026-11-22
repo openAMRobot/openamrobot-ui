@@ -184,6 +184,15 @@ the older heads is not current for #90's final interface.
   Resume and the disabled controls (`web/src/shared/motion/stopDocs.test.js`).
   Draft #49 describes the earlier one-shot stop; where both change the same
   lines, keep this PR's text.
+- Legacy launch (P0-D audit, 22 Nov): `launch/move_base_launch.py`, which
+  `mapping_launch.py` and `navigation_launch.py` include and
+  `folders_handler.py` (`physnode_launch.py`, not started by default) runs
+  from the Maps page, remapped its `controller_server` to `/cmd_vel`,
+  bypassing the #90 chain. Its `cmd_vel_topic` default is now `cmd_vel_nav`,
+  twist_mux's navigation input at #90 `a00e4976`. The file stays until
+  B1/B2 remove it. `test/test_no_direct_cmd_vel.py` (pure Python) fails if
+  a UI launch file, UI Python node or web source writes `/cmd_vel`. Read in
+  the source, not run in simulation.
 - Platform gap (openamr-platform-sw, owner Kunal): the `dock_trigger.py`
   docking sequence is not an action and cannot be cancelled by the UI. At
   #90 `2dd1c742` the stop gate calls a `dock_trigger` `~/abort` service on
