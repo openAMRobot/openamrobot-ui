@@ -15,7 +15,7 @@ export const PAGE_HELP = {
       "Layer toggles above the map control what's drawn — costmap, laser scan, planned path, saved waypoints, the robot's trail.",
       "Goal Mode / Set Pose / Add Waypoint / Go Home change what a click on the map does, or send it straight to the origin.",
       "Right-click the map for a quick menu — send a goal, save a waypoint, or set the initial pose — without switching modes first.",
-      "The joystick drives the robot manually at any time; the max-speed slider caps how fast, and STOP halts it and cancels any active goal.",
+      "The joystick drives the robot manually when rosbridge is connected, the software stop lock is released and the robot clock is synced; otherwise it is disabled and shows why. The max-speed slider caps how fast. Stop (software) engages the platform stop lock and cancels active goals; only Resume releases it. It is not the hardwired E-stop.",
       "Linear velocity, map position, and heading update live next to the joystick.",
       "Dock/Undock trigger the robot's charging-dock behaviors, when supported.",
     ],
@@ -55,7 +55,7 @@ export const PAGE_HELP = {
       "A 3D model of the robot from its real URDF description — Description Mode is a safe, offline visualization; Live Mode overlays real robot data.",
     tips: [
       "Description Mode needs no robot connection — joint sliders here only move the on-screen model, nothing is published anywhere.",
-      "Live Mode positions the model at its real map-frame pose and draws Nav2's planned path — but joint sliders become read-only telemetry, since this robot only has /cmd_vel (no per-joint position command).",
+      "Live Mode positions the model at its real map-frame pose and draws Nav2's planned path, but joint sliders become read-only telemetry, since this robot has no per-joint position command (manual drive goes to the platform as a velocity on /ui/cmd_vel).",
       "The kinematic tree and layer toggles (TF axes, joint axes, link names, centre-of-mass, footprint) work in both modes.",
     ],
   },
