@@ -17,7 +17,7 @@ export const createAnnouncementMemory = () => ({
   spoken: new Set(),
 });
 
-const stateText = (view) => `${view.display.replace(/_/g, " ").toLowerCase()}. ${view.reason}`;
+export const stateText = (view) => `${view.display.replace(/_/g, " ").toLowerCase()}. ${view.reason}`;
 
 /** Mark everything currently shown as already spoken (used when speech is switched on). */
 export const primeMemory = (memory, view) => {

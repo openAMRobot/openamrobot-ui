@@ -30,16 +30,31 @@ evidence, and a value shown here is never a safety indication.
    this page. Each state change, result, warning and completion is spoken
    once. Switching speech on does not read out what is already on screen,
    and a disconnect and reconnect does not repeat anything. The latest
-   announcement text is shown in the footer whether or not speech is on.
+   announcement text is shown in the footer whether or not speech is on,
+   with the panel time it was made, for example "Last announcement
+   (09:41:05): ready. ...", so it reads as a past event. When the page
+   goes back to the state it was in before a disconnect, nothing is
+   spoken, but the footer text is replaced by the current state, so it
+   never names a state the page has left.
 
 Observable success: with the robot stack and rosbridge running, the page
 shows a state word (for example READY or WAITING), a reason, and a row of
-sources at the bottom with no "(stale)" marks.
+sources at the bottom with no "Stale" marks.
 
 When a source is stale while the connection remains up, the page shows a
 stale-data banner, dims stale source rows, and shows each stale source's age
-in seconds. When rosbridge disconnects, a separate banner marks the displayed
-state as last known; the disconnected view is not presented as live.
+in seconds. When rosbridge disconnects, a separate banner says "Disconnected since"
+with the panel time the connection was lost, and the last known state.
+The current task and progress stay on screen dimmed, under a "Last known,
+not live" label. The disconnected view is not presented as live.
+
+## Demo Mode
+
+The app's Demo Mode banner is part of the main layout, and this page is
+outside it. So when Demo Mode is on, the page shows its own label at the
+top: "Demo mode: Every value on this page is simulated. No robot is
+connected." The route smoke test (`web/e2e/routes.spec.js`) checks that
+this label is visible.
 
 ## Panel setup
 
@@ -59,8 +74,10 @@ while the panel clock is set automatically.
 One column, top to bottom: the header with the exit control at its right
 end, the state word, the reason and next action, then task, progress, last
 result and warnings, and the source rows in two columns at the bottom. The
-state word shrinks with the page width so that the longest one
-(NEEDS_ASSISTANCE) fits; long diagnostic names and reasons wrap. Up to 8
+state word shrinks with the page width so that the longest unbroken word
+fits, in English or German (WIEDERHERSTELLUNG, 17 characters; a Jest test
+checks every state word against this); long diagnostic names and reasons
+wrap. Up to 8
 warnings are listed; any more are counted ("3 more not shown").
 
 The panel is 1200 physical pixels wide, but the page width in CSS px
@@ -101,6 +118,11 @@ The Reporting Mode entry in the sidebar:
 |---|---|---|
 | ![FAULTED](reporting-mode/faulted.png) | ![Stale battery](reporting-mode/stale.png) | ![DISCONNECTED](reporting-mode/disconnected.png) |
 
+The page in Demo Mode, with its own Demo Mode label (Demo Mode has no stop
+lock sample, so the state is UNKNOWN):
+
+![Demo Mode](reporting-mode/demo.png)
+
 ## What the page shows
 
 - State, from the list below, with the reason in plain words.
@@ -139,9 +161,11 @@ A robot-side run envelope is proposed in
 
 ## States
 
-Each of READY, EXECUTING, WAITING, BLOCKED, RECOVERING, NEEDS_ASSISTANCE,
-SAFETY_STOPPED and FAULTED has a dedicated icon and high-contrast color, with
-its state name also shown as text. SAFETY_STOPPED remains reserved for a
+Every state (READY, EXECUTING, WAITING, BLOCKED, RECOVERING,
+NEEDS_ASSISTANCE, SAFETY_STOPPED, FAULTED, STOPPED (SOFTWARE), UNKNOWN and
+DISCONNECTED) has its own icon and high-contrast color, with its state name
+also shown as text. The icons are inline SVG drawn in the state color, so
+they look the same on every device (no emoji or font glyphs). SAFETY_STOPPED remains reserved for a
 future physical safety-chain status producer and is not derived by this
 adapter.
 
@@ -212,7 +236,9 @@ Owner decision, 30 Oct 2026:
   fault. With no valid fresh entry the page shows WAITING ("No valid
   diagnostics received" or "Diagnostics are stale").
 - The Diagnostics row shows Error while any source is latched in fault,
-  otherwise Unknown (no valid fresh entry), Warning or OK.
+  otherwise Unknown (no valid fresh entry), Warning or OK. Its age is the
+  time since the newest entry, like the other rows, so one source that
+  stopped reporting long ago does not make the row look hours old.
 
 ### Diagnostics fault latch
 
@@ -292,7 +318,7 @@ Layout).
 
 | Item | Value |
 |---|---|
-| State word | 120 px, or less on a narrower page (the page width less 80 px, divided by 11) |
+| State word | 120 px, or less on a narrower page (the page width less 80 px, divided by 12) |
 | Reason | 44 px |
 | Next action | 32 px |
 | Body text | 28 px |
@@ -301,3 +327,12 @@ Layout).
 | Exit long press | 2 s |
 | Warnings listed | 8, then a count |
 | View refresh | 250 ms |
+
+## Known gaps
+
+- German is done for the page labels, the state words and the source row
+  values. The text that comes from the adapter is still English: reasons,
+  next actions, task labels ("Mission: ...", "Step n of m"), warnings and
+  the completion text. That waits for the shared adapter from #21.
+- "Not-Halt" is used for E-stop in German throughout the page. Not yet
+  confirmed by the owner.

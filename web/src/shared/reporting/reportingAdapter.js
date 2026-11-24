@@ -137,6 +137,9 @@ export const RESULT_UNKNOWN_TEXT = "Result unknown (invalid data)";
 export const initialReportingState = () => ({
   connection: "disconnected",
   lastKnownDisplay: null,
+  // Panel wall-clock time the live connection was lost, or null when the
+  // page has not been connected yet.
+  disconnectedAtWallMs: null,
   lock: { lastValue: null, lastSampleMs: null },
   nav: { msg: null, receivedAt: null, invalid: "" },
   battery: { percent: null, receivedAt: null, invalid: "" },
@@ -364,10 +367,10 @@ export const reduceReporting = (state, event, nowMs, wallMs = null) => {
   switch (event.type) {
     case "connection": {
       if (event.status === state.connection) break;
-      const lastKnownDisplay =
-        event.status === "disconnected" && state.connection === "connected"
-          ? deriveReport(state, nowMs).display
-          : state.lastKnownDisplay;
+      const lostLive = event.status === "disconnected" && state.connection === "connected";
+      const lastKnownDisplay = lostLive ? deriveReport(state, nowMs).display : state.lastKnownDisplay;
+      const disconnectedAtWallMs =
+        event.status === "connected" ? null : lostLive ? wallMs : state.disconnectedAtWallMs;
       // A new connection starts with no data: nothing from before the
       // disconnect may look fresh or known, and latched diagnostics faults
       // are cleared (a new connection epoch). The current run and last
@@ -376,6 +379,7 @@ export const reduceReporting = (state, event, nowMs, wallMs = null) => {
         ...initialReportingState(),
         connection: event.status,
         lastKnownDisplay,
+        disconnectedAtWallMs,
         goal: state.goal,
         seenGoals: state.seenGoals,
         task: state.task,
@@ -515,9 +519,12 @@ export const deriveReport = (state, nowMs) => {
   // Per-entry freshness: an entry older than the threshold drops out.
   const diagAll = Object.entries(state.diagnostics.entries);
   const diagEntries = diagAll.filter(([, e]) => fresh(e.receivedAt, STALE_AFTER_MS.diagnostics, nowMs));
+  // Row age is the time since the newest entry, like the other rows (time
+  // since the last message). One node that went quiet long ago must not
+  // make the row look hours old while others still report.
   const diagAgeSeconds = diagAll.reduce(
-    (oldest, [, entry]) => Math.max(oldest, ageSeconds(entry.receivedAt, nowMs) ?? 0),
-    0,
+    (newest, [, entry]) => Math.min(newest, ageSeconds(entry.receivedAt, nowMs) ?? Infinity),
+    Infinity,
   );
   const diagFresh = diagEntries.length > 0;
   // Latched faults: every name whose last report was ERROR or STALE, fresh
@@ -563,7 +570,7 @@ export const deriveReport = (state, nowMs) => {
             ? "Warning"
             : "OK",
       freshness: diagAll.length === 0 ? "No data" : diagFresh ? "Fresh" : "Stale",
-      ageSeconds: diagAll.length === 0 ? null : diagAgeSeconds,
+      ageSeconds: Number.isFinite(diagAgeSeconds) ? diagAgeSeconds : null,
     },
     { label: "Arms", value: "Not reported", freshness: "", ageSeconds: null },
     { label: "Lift", value: "Not reported", freshness: "", ageSeconds: null },
@@ -588,6 +595,7 @@ export const deriveReport = (state, nowMs) => {
   const make = (display, reason) => ({
     display,
     lastKnownDisplay: state.lastKnownDisplay,
+    disconnectedAtWallMs: state.disconnectedAtWallMs,
     reason,
     nextAction:
       display === DISPLAY.NEEDS_ASSISTANCE || display === DISPLAY.WAITING

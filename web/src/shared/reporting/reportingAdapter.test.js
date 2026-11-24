@@ -276,6 +276,14 @@ describe("disconnect", () => {
     expect(v.rows.find((r) => r.label === "Connection").value).toBe("Disconnected");
   });
 
+  it("records the panel time the live connection was lost, and clears it on reconnect", () => {
+    expect(deriveReport(initialReportingState(), 0).disconnectedAtWallMs).toBeNull();
+    const { state } = apply([...healthy(), [{ type: "connection", status: "disconnected" }, 1100]]);
+    expect(deriveReport(state, 1100).disconnectedAtWallMs).toBe(WALL0 + 1100);
+    const back = apply([[{ type: "connection", status: "connected" }, 1200]], state).state;
+    expect(deriveReport(back, 1200).disconnectedAtWallMs).toBeNull();
+  });
+
   it("a reconnect starts with no data, keeping the run and result on screen", () => {
     const { state } = apply([
       ...healthy(),
@@ -473,6 +481,22 @@ describe("diagnostics validation and per-entry freshness", () => {
     expect(v.display).toBe(DISPLAY.WAITING);
     expect(v.reason).toBe("Diagnostics are stale");
     expect(diagRow(v)).toEqual(expect.objectContaining({ value: "Unknown", freshness: "Stale" }));
+  });
+
+  // Review of #61 (16 Nov, point 4): the row age is the newest entry's age,
+  // like every other row, not the age of the oldest name ever seen.
+  it("the Diagnostics row age is the time since the newest entry", () => {
+    // imu reported once at t=1000 and went quiet; lidar last reported at 2500.
+    const at = 2500 + STALE_AFTER_MS.diagnostics + 3000;
+    const v = view(
+      [
+        ...healthyWithDiagnostics(diagnostics(0, "imu")),
+        [{ type: "diagnostics", msg: diagnostics(0, "lidar") }, 2500],
+      ],
+      at,
+    );
+    expect(diagRow(v).freshness).toBe("Stale");
+    expect(diagRow(v).ageSeconds).toBe(Math.floor((at - 2500) / 1000));
   });
 
   it("a fresh ERROR or STALE level shows FAULTED and the row Error", () => {

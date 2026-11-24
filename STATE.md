@@ -268,6 +268,35 @@ Branched from A1 (`ui/gate-a-command-path`); merges after A1.
   a scripted rosbridge stand-in). Not run against simulation, on the panel
   or on a robot.
 
+### A2 follow-up, #61 (`reporting-mode-followup`, Parth)
+
+Stacked on #54. Changes from Mohamed's review of 16 Nov:
+
+- Demo Mode: `/report` shows its own Demo Mode label (it is outside
+  AppLayout's banner); the route smoke test checks it is visible.
+- Last announcement shows the panel time it was made, and after a silent
+  return to the pre-disconnect state it shows the current state instead.
+- Disconnected: "Disconnected since" with the panel time; task and
+  progress dimmed under "Last known, not live". The adapter view carries
+  `disconnectedAtWallMs`.
+- Diagnostics row age is the newest entry's age.
+- State icons are inline SVG for all 11 states.
+- German: row values and wake lock values translated; one E-stop word
+  (Not-Halt); "No result yet" for an empty last result. The state word
+  width rule now allows 17 characters (WIEDERHERSTELLUNG), divisor 12.
+
+Open points:
+
+- Adapter text (reasons, next actions, task labels, warnings) is still
+  English; waits for the #21 adapter.
+- German "Not-Halt" needs owner confirmation.
+- Screenshots in `docs/reporting-mode/` retaken with a scripted rosbridge
+  stand-in (development evidence, not the panel), plus `demo.png`.
+- Alex's integration review of 19 Nov (restricted bridge, robot-side
+  mission status, lock producer note, battery source) is not done here.
+- Evidence: Jest and the route smoke test locally. Not run against
+  simulation, on the Getac ZX80 or on a robot.
+
 Open issues on 30 Oct: #19, #28, #29, #31, #32, #33, #34, #35, #36, #37,
 #39. Open pull requests on 30 Oct: drafts #21 and #40 to #46, #50 (A1) and
 #54 (A2).

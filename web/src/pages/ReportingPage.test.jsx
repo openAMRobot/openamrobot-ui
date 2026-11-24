@@ -6,10 +6,12 @@ import ReportingPage, {
   EXIT_HOLD_MS,
   MAX_WARNINGS_SHOWN,
   STATE_FONT_SIZE,
+  STATE_MAX_TOKEN_CHARS,
   StateHeading,
   fluid,
 } from "./ReportingPage";
-import { RosContext, RosStatusContext } from "../app/App";
+import { RosContext, RosStatusContext, RuntimeConfigContext } from "../app/App";
+import { setLang, translate } from "../shared/i18n/i18n";
 import { AppConfig } from "../shared/constants";
 import { installMockRoslib, uninstallMockRoslib } from "../shared/motion/testing/mockRoslib";
 import { DISPLAY } from "../shared/reporting/reportingAdapter";
@@ -25,8 +27,12 @@ let mock;
 let ros;
 let spoken;
 
+// Panel clock for every test: 24 Nov 2026, 09:41:05 local time.
+const PANEL_NOW = new Date(2026, 10, 24, 9, 41, 5);
+
 beforeEach(() => {
   jest.useFakeTimers();
+  jest.setSystemTime(PANEL_NOW);
   mock = installMockRoslib();
   ros = new window.ROSLIB.Ros();
   spoken = [];
@@ -42,8 +48,8 @@ afterEach(() => {
   delete window.SpeechSynthesisUtterance;
 });
 
-const renderPage = (status = "connected") =>
-  render(
+const page = (status = "connected", config = { demoMode: false }) => (
+  <RuntimeConfigContext.Provider value={{ config, updateConfig: jest.fn() }}>
     <RosContext.Provider value={ros}>
       <RosStatusContext.Provider value={status}>
         <MemoryRouter initialEntries={["/report"]}>
@@ -53,8 +59,11 @@ const renderPage = (status = "connected") =>
           </Routes>
         </MemoryRouter>
       </RosStatusContext.Provider>
-    </RosContext.Provider>,
-  );
+    </RosContext.Provider>
+  </RuntimeConfigContext.Provider>
+);
+
+const renderPage = (status = "connected", config) => render(page(status, config));
 
 const emit = (name, msg) =>
   act(() => {
@@ -72,17 +81,12 @@ const state = () => screen.getByTestId("reporting-page").dataset.state;
 const announcementText = () => screen.getByTestId("reporting-speech-text").textContent;
 
 describe("Reporting Mode state labels", () => {
-  it("renders all eight state names with unique icons and colors", () => {
-    const displays = [
-      DISPLAY.READY,
-      DISPLAY.EXECUTING,
-      DISPLAY.WAITING,
-      DISPLAY.BLOCKED,
-      DISPLAY.RECOVERING,
-      DISPLAY.NEEDS_ASSISTANCE,
-      DISPLAY.SAFETY_STOPPED,
-      DISPLAY.FAULTED,
-    ];
+  // Review of #61 (16 Nov, point 5 and the icon test note): every state,
+  // including STOPPED (SOFTWARE), UNKNOWN and DISCONNECTED, has its own
+  // inline SVG icon in the state color. No text glyph or emoji.
+  it("renders every state name with a unique SVG icon and color", () => {
+    const displays = Object.values(DISPLAY);
+    expect(displays).toHaveLength(11);
     render(
       <>
         {displays.map((display) => (
@@ -94,10 +98,28 @@ describe("Reporting Mode state labels", () => {
     const icons = screen.getAllByTestId("reporting-state-icon");
 
     expect(headings.map((heading) => heading.lastElementChild.textContent)).toEqual(displays);
-    expect(icons.every((icon) => icon.textContent && icon.getAttribute("aria-hidden") === "true")).toBe(true);
-    expect(new Set(icons.map((icon) => icon.textContent)).size).toBe(displays.length);
+    icons.forEach((icon, i) => {
+      expect(icon.tagName.toLowerCase()).toBe("svg");
+      expect(icon.getAttribute("aria-hidden")).toBe("true");
+      expect(icon.dataset.icon).toBe(displays[i]);
+      expect(icon.textContent).toBe("");
+      expect(icon.innerHTML).toContain("currentColor");
+    });
+    expect(new Set(icons.map((icon) => icon.innerHTML)).size).toBe(displays.length);
     expect(headings.every((heading) => heading.style.color)).toBe(true);
     expect(new Set(headings.map((heading) => heading.style.color)).size).toBe(displays.length);
+  });
+
+  // Review of #61 (16 Nov): the width rule must hold for the longest German
+  // word too (WIEDERHERSTELLUNG, 17 characters).
+  it("no state word, in English or German, has a token longer than the width rule allows", () => {
+    const tokens = [];
+    ["en", "de"].forEach((lang) => {
+      setLang(lang);
+      Object.values(DISPLAY).forEach((d) => tokens.push(...translate(d).split(" ")));
+    });
+    setLang("en");
+    expect(Math.max(...tokens.map((tok) => tok.length))).toBe(STATE_MAX_TOKEN_CHARS);
   });
 });
 
@@ -149,6 +171,38 @@ describe("Reporting Mode page", () => {
     expect(screen.getByTestId("row-Battery").dataset.freshness).toBe("Stale");
     expect(screen.getByTestId("row-Battery").className).toContain("opacity-50");
     expect(screen.getByTestId("reporting-page")).toMatchSnapshot("stale battery");
+  });
+
+  // Review of #61 (16 Nov, point 1): /report is outside AppLayout, so it
+  // must show its own Demo Mode label.
+  it("shows a Demo Mode label when Demo Mode is on, and none when it is off", () => {
+    const { unmount } = renderPage("connected", { demoMode: true });
+    expect(screen.getByTestId("reporting-demo-banner").textContent).toMatch(/Demo mode.*simulated/);
+    unmount();
+    renderPage("connected", { demoMode: false });
+    expect(screen.queryByTestId("reporting-demo-banner")).toBeNull();
+  });
+
+  // Review of #61 (16 Nov, point 3 and "Disconnected since"): after the
+  // connection is lost, the task and progress are dimmed and labelled as
+  // last known, and the banner says since when.
+  it("after a disconnect, shows the task and progress as last known, with the time", () => {
+    const { rerender } = renderPage();
+    feedHealthy();
+    emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 2));
+    emit(AppConfig.NAV_FEEDBACK_TOPIC, navFeedback(1, 8));
+    emit(AppConfig.NAV_FEEDBACK_TOPIC, navFeedback(1, 2, 4));
+    expect(state()).toBe("EXECUTING");
+    expect(screen.getByTestId("reporting-task-block").className).not.toContain("opacity-50");
+    expect(screen.queryByTestId("reporting-task-last-known")).toBeNull();
+
+    rerender(page("disconnected"));
+    expect(state()).toBe("DISCONNECTED");
+    expect(screen.getByTestId("reporting-disconnected-since").textContent).toBe("09:41:05");
+    expect(screen.getByTestId("reporting-last-known-state").textContent).toBe("EXECUTING");
+    expect(screen.getByTestId("reporting-task-block").className).toContain("opacity-50");
+    expect(screen.getByTestId("reporting-task-last-known").textContent).toBe("Last known, not live");
+    expect(screen.getByTestId("reporting-task-block").contains(screen.getByTestId("reporting-progress"))).toBe(true);
   });
 
   it("DISCONNECTED when rosbridge is down", () => {
@@ -203,6 +257,30 @@ describe("Reporting Mode page", () => {
     expect(announcementText()).toContain("Completed: Navigation goal");
   });
 
+  // Review of #61 (16 Nov, point 2): the on-screen announcement is a past
+  // event with its panel time, and never names a state the page has left.
+  it("shows the announcement time, and after a reconnect does not keep an old state", () => {
+    const { rerender } = renderPage();
+    feedHealthy();
+    expect(screen.getByTestId("reporting-speech-time").textContent).toBe("09:41:05");
+    expect(announcementText()).toContain("ready.");
+
+    act(() => jest.advanceTimersByTime(60 * 1000));
+    rerender(page("disconnected"));
+    expect(announcementText()).toContain("disconnected.");
+    expect(screen.getByTestId("reporting-speech-time").textContent).toBe("09:42:05");
+
+    act(() => jest.advanceTimersByTime(60 * 1000));
+    rerender(page("connected"));
+    feedHealthy();
+    expect(state()).toBe("READY");
+    // Back to the state spoken before the interruption: nothing new is
+    // spoken, but the screen text follows the page.
+    expect(announcementText()).toContain("ready. No blocking faults in current reported data");
+    expect(announcementText()).not.toMatch(/disconnected|unknown/);
+    expect(screen.getByTestId("reporting-speech-time").textContent).toBe("09:43:05");
+  });
+
   it("still shows the announcement text when speech is not supported", () => {
     delete window.speechSynthesis;
     renderPage();
@@ -228,7 +306,7 @@ describe("Reporting Mode portrait layout", () => {
     const footer = screen.getByTestId("reporting-footer");
     expect(footer.className).toMatch(/\bgrid-cols-2\b/);
     expect(footer.className).not.toMatch(/grid-cols-3/);
-    expect(STATE_FONT_SIZE).toBe("min(120px, calc((100vw - 2 * min(40px, 3.3333vw)) / 11))");
+    expect(STATE_FONT_SIZE).toBe("min(120px, calc((100vw - 2 * min(40px, 3.3333vw)) / 12))");
   });
 
   it("keeps the exit control in the header row, not over the header text", () => {

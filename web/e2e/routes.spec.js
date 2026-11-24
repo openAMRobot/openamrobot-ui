@@ -4,7 +4,7 @@
 // editing this file.
 //
 // /report is a standalone registry page: it has a sidebar link but renders
-// outside AppLayout. Its layout is tested in the second block below.
+// outside AppLayout. It has its own test below.
 const fs = require("fs");
 const path = require("path");
 const { test, expect } = require("@playwright/test");
@@ -66,8 +66,8 @@ for (const route of ROUTES) {
 }
 
 // /report uses a separate full-screen layout (no AppLayout chrome), so it
-// does not show the Demo Mode banner. It is tested separately here so that
-// the smoke test covers it without weakening the banner check above.
+// does not get AppLayout's Demo Mode banner. It shows its own Demo Mode
+// label instead, and this test checks that label is visible.
 test("/report renders in Demo Mode without console errors", async ({ page }) => {
   const errors = [];
   page.on("console", (message) => {
@@ -86,6 +86,10 @@ test("/report renders in Demo Mode without console errors", async ({ page }) => 
   await expect(page.getByTestId("reporting-page")).toBeVisible();
   await expect(page.getByTestId("reporting-header")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Primary navigation" })).toHaveCount(0);
+  // Demo Mode is on: the page's own Demo Mode label is shown.
+  const demoLabel = page.getByTestId("reporting-demo-banner");
+  await expect(demoLabel).toBeVisible();
+  await expect(demoLabel).toContainText(/demo mode/i);
   // Let any timers tick.
   await page.waitForTimeout(1500);
 

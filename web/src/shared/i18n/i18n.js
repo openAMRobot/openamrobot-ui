@@ -37,7 +37,11 @@ const DE = {
   // Reporting Mode: scope header
   "Base and navigation": "Basis und Navigation",
   "Navigation status covers navigation only. It is not whole-robot readiness or E-stop state.":
-    "Navigationsstatus gilt nur für die Navigation. Er zeigt nicht die Gesamtbereitschaft des Roboters oder den E-Stopp-Zustand.",
+    "Navigationsstatus gilt nur für die Navigation. Er zeigt nicht die Gesamtbereitschaft des Roboters oder den Not-Halt-Zustand.",
+  // Reporting Mode: Demo Mode label (the page is outside AppLayout's banner)
+  "Demo mode": "Demo-Modus",
+  "Every value on this page is simulated. No robot is connected.":
+    "Alle Werte auf dieser Seite sind simuliert. Kein Roboter ist verbunden.",
   READY: "BEREIT",
   EXECUTING: "IN AUSFÜHRUNG",
   WAITING: "WARTEND",
@@ -53,6 +57,8 @@ const DE = {
   "Stale data": "Veraltete Daten",
   "Connection is up; source data is old": "Verbindung besteht; Quelldaten sind veraltet",
   "Last known state": "Letzter bekannter Zustand",
+  "Disconnected since": "Getrennt seit",
+  "Last known, not live": "Zuletzt bekannt, nicht live",
   // Reporting Mode: exit control
   "Hold to exit Reporting Mode": "Gedrückt halten zum Beenden",
   "Hold to exit": "Zum Beenden halten",
@@ -70,6 +76,7 @@ const DE = {
   "recoveries": "Wiederherstellungen",
   // Reporting Mode: result
   "Result unknown (invalid data)": "Ergebnis unbekannt (ungültige Daten)",
+  "No result yet": "Noch kein Ergebnis",
   // Reporting Mode: footer
   "Screen wake lock": "Bildschirm-Wachhalten",
   "Speech off": "Sprache aus",
@@ -77,6 +84,11 @@ const DE = {
   "Speech not supported": "Sprache nicht unterstützt",
   "Last announcement": "Letzte Ansage",
   "No announcement yet": "Noch keine Ansage",
+  // Reporting Mode: screen wake lock status values
+  "not supported": "nicht unterstützt",
+  on: "ein",
+  refused: "abgelehnt",
+  released: "freigegeben",
   "more not shown": "weitere nicht angezeigt",
   // Reporting Mode: source row labels
   Connection: "Verbindung",
@@ -89,9 +101,18 @@ const DE = {
   Lift: "Lift",
   "Physical E-stop": "Physischer Not-Halt",
   "Not reported": "Nicht gemeldet",
-  // Reporting Mode: source freshness labels
+  // Reporting Mode: source row values (set in reportingAdapter.js)
   Disconnected: "Getrennt",
-  "(stale)": "(veraltet)",
+  Engaged: "Aktiv",
+  Released: "Gelöst",
+  Unknown: "Unbekannt",
+  Ready: "Bereit",
+  "Not ready": "Nicht bereit",
+  Lost: "Verloren",
+  Degraded: "Eingeschränkt",
+  OK: "OK",
+  Warning: "Warnung",
+  // Reporting Mode: source freshness labels
   "(no data)": "(keine Daten)",
   "(invalid)": "(ungültig)",
   // Reporting Mode: Next: prefix on next-action line
