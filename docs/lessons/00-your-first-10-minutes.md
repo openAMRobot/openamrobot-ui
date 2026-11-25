@@ -13,10 +13,14 @@ safe real-robot session.
 ## Before touching a real robot
 
 > [!CAUTION]
-> The dashboard's red **E-STOP** is a software stop. It publishes one
-> zero-velocity command and asks Nav2 to cancel the active goal. It is not
-> latched or safety-rated and depends on the browser, network, rosbridge, and
-> robot controller. Always keep a tested physical emergency stop within reach.
+> **Stop (software)** engages the platform's software stop lock, cancels the
+> active navigation and docking goals, and aborts programs and missions. The
+> lock stays engaged until you press **Resume** in the "Stopped (software)"
+> banner and confirm. While it is engaged or its state is unknown, manual
+> drive, programs, missions and new navigation goals are disabled. It is not
+> safety-rated, depends on the browser, network, rosbridge, and robot
+> controller, and is not an emergency stop. Always keep a tested physical
+> emergency stop within reach.
 
 For real hardware:
 
@@ -57,7 +61,8 @@ The shared layout contains:
 - The sidebar for moving between pages.
 - A connection indicator showing the browser-to-rosbridge state.
 - Battery status.
-- The red software-stop control.
+- The red **Stop (software)** control, and the "Stopped (software)" banner
+  with **Resume** while the stop lock is engaged or unknown.
 - A **?** help button with page-specific guidance.
 
 Connection and robot-data freshness are different. A green connection means
@@ -72,7 +77,9 @@ In Demo Mode:
 2. Select **Send Goal** and place a practice goal.
 3. Open the saved-waypoint area and inspect its actions.
 4. Move the joystick briefly and release it.
-5. Press the red software-stop control once to learn where it is.
+5. Press the red **Stop (software)** control once to learn where it is. On a
+   connected robot the "Stopped (software)" banner then stays until you press
+   **Resume** and confirm.
 
 Demo Mode intercepts these actions in the browser. Repeat them on real
 hardware only after completing the real-robot checklist below.
@@ -125,8 +132,9 @@ in [Lesson 12](12-debugging-with-ros-cli.md).
 ## Ending a session
 
 1. Stop active Programs, Missions, recordings, and manual motion.
-2. Use the software stop if motion is still active, then verify the robot
-   physically stops.
+2. Use **Stop (software)** if motion is still active, then verify the robot
+   physically stops. The stop lock stays engaged until someone presses
+   **Resume**.
 3. Follow the robot platform's shutdown or docking procedure.
 4. Stop the UI process with `Ctrl+C`, or use `docker compose down`.
 5. Never rely on closing the browser tab as an emergency-stop method.
