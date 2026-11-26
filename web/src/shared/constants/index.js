@@ -13,6 +13,18 @@ export const AppConfig = {
   // std_msgs/Bool, true = engaged, RELIABLE + TRANSIENT_LOCAL depth 1.
   STOP_LOCK_TOPIC: "/safety/stop_lock",
   STOP_LOCK_ENGAGE_SERVICE: "/safety/stop_lock_engage", // std_srvs/Trigger
+  // Read-only status shown by OperatorStatusPanel (display only, no command).
+  // openamr_nav_msgs/StopState, published by safety_stop_gate_node every tick
+  // (openamr-platform-sw#90): state LOCKED, RELEASE_REFUSED (with reason) or
+  // RUNNING. Absent on a stack without #90.
+  STOP_STATE_TOPIC: "/safety/stop_state",
+  // openamr_nav_msgs/NavigationStatus from navigation_status_node
+  // (openamr-platform-sw): navigation readiness, health, reasons, task.
+  NAVIGATION_STATUS_TOPIC: "/navigation/status",
+  // std_msgs/String JSON {phase, state, sim, phases}, latched, published by
+  // the Baseline 1 mission. Proposed contract (openamr-upperbody-sw#82), not
+  // accepted: the UI labels it Proposed wherever it shows it.
+  MISSION_STATUS_TOPIC: "/baseline1/mission_status",
   STOP_LOCK_RELEASE_SERVICE: "/safety/stop_lock_release", // std_srvs/Trigger
   // Robot clock sources for stamping /ui/cmd_vel (see shared/motion/robotClock.js).
   UI_CMD_VEL_RELAY_GET_PARAMETERS_SERVICE: "/ui_cmd_vel_relay_node/get_parameters",
