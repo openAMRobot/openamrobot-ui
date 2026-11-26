@@ -232,7 +232,7 @@ contract change request #63.
 - Without globs rosbridge accepted any topic, so a client (for example a tab
   still running the old UI) could publish `/cmd_vel` and skip the #90 chain.
 - `new_ui_launch.py` now passes one constant, `ROSBRIDGE_ALLOWLIST`
-  (`topics_pub_glob` 10, `topics_sub_glob` 22, `services_glob` 29 plus the
+  (`topics_pub_glob` 10, `topics_sub_glob` 28, `services_glob` 29 plus the
   `/rosapi/*` rosbridge adds itself, `actions_glob` empty), to
   `rosbridge_websocket`, and `ROSAPI_ALLOWLIST` (`params_glob` empty) to
   `rosapi_node`. Exact names only; `/cmd_vel` and every `cmd_vel_*` input
@@ -270,3 +270,13 @@ failures and one error; the fixed helper passes all nine. No ROS, Docker,
 web build, simulation or hardware run was performed locally for this fix.
 #48 merged on 10 Nov 2026 as 51b4af3, owned by the platform lead. #51 incorporates the fix by merging `ui/ci`; integration candidate
 #56 must be rebuilt by its owner to include it.
+
+## #64 owner-feedback update (26 November 2026)
+
+Explicit docking/sensor/camera subscriptions added; AppConfig and nav2d key sets
+are derived from source and must be completely classified. Inactive SET_POINT
+is explicitly denied until it has a reviewed caller. Camera options are derived
+from constants; their default must be selectable. README distinguishes publish,
+subscribe, rosapi introspection/parameter access and the separate HTTP stream.
+Link checks retry transient failures without accepting 503. ROS JUnit is retained
+as a workflow artifact on success/failure. Proposed #63; owner adoption pending.

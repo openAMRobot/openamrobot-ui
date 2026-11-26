@@ -32,6 +32,9 @@ rosbridge_suite 2.7.1 (the Jazzy release; same logic on the jazzy branch):
 import ast
 import fnmatch
 import os
+import json
+
+import pytest
 import re
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -78,8 +81,10 @@ WEB_APP_USES = {
     'STOP_LOCK_TOPIC': {'sub'},
     'CLOCK_TOPIC': {'sub'},
     'ROBOT_POSE_TOPIC': {'sub'},
+    'ROBOT_VELOCITY_TOPIC': {'sub'},
     'MAP_TOPIC': {'sub'},
     'GLOBAL_COSTMAP_TOPIC': {'sub'},
+    'LOCAL_COSTMAP_TOPIC': {'sub'},
     'SCAN_TOPIC': {'sub'},
     'PLAN_TOPIC': {'sub'},
     'TF_TOPIC': {'sub'},
@@ -88,6 +93,11 @@ WEB_APP_USES = {
     'NAV_STATUS_TOPIC': {'sub'},
     'NAV_FEEDBACK_TOPIC': {'sub'},
     'DOCK_TRIGGER_STATUS_TOPIC': {'sub'},
+    'DOCK_STATUS_TOPIC': {'sub'},
+    'UNDOCK_STATUS_TOPIC': {'sub'},
+    'SENSORS_TOPIC': {'sub'},
+    'UI_OPERATION': {'pub'},
+    'SET_POINT': {'pub'},
     'BATTERY_TOPIC': {'sub'},
     'CHARGE_STATION_CONNECTED': {'sub'},
     'NAV_DATA_RESP_TOPIC': {'sub'},
@@ -119,6 +129,14 @@ WEB_APP_USES = {
     '/rosout': {'sub'},
     '/reinitialize_global_localization': {'srv'},
 }
+# This legacy endpoint has no caller; do not grant publication just because a
+# constant exists. Any future use must remove this exemption and add the policy.
+INACTIVE_NAMES = {'SET_POINT': 'Unused legacy constant; no caller in web/src'}
+NON_ROS_CONFIG_KEYS = {
+    'ROSBRIDGE_SERVER_IP', 'ROSBRIDGE_SERVER_PORT', 'CAMERA_PORT',
+    'RECONNECTION_TIME', 'MAX_LINEAR_SPEED', 'MAX_ANGULAR_SPEED',
+}
+
 KIND_GLOB = {'pub': 'topics_pub_glob', 'sub': 'topics_sub_glob', 'srv': 'services_glob'}
 
 
@@ -206,7 +224,33 @@ def _allowed(name, globs):
 
 
 def _appconfig():
-    return dict(re.findall(r'^\s*([A-Z][A-Z0-9_]*):\s*"([^"]*)"', _read(CONSTANTS_JS), re.M))
+    block = re.search(r'export const AppConfig = \{(.*?)\n\};', _read(CONSTANTS_JS), re.S).group(1)
+    keys = set(re.findall(r'^\s*([A-Z][A-Z0-9_]*):', block, re.M))
+    values = dict((key, json.loads(value)) for key, value in re.findall(
+        r'^\s*([A-Z][A-Z0-9_]*):\s*("[^"\n]*"|-?\d+(?:\.\d+)?),', block, re.M))
+    assert set(values) == keys, 'AppConfig has an unparsed value: classify its syntax explicitly'
+    return values
+
+
+def _camera_topics():
+    source = _read(CONSTANTS_JS)
+    block = re.search(r'export const CAMERA_TOPIC_OPTIONS = \[(.*?)\];', source, re.S).group(1)
+    topics = set(re.findall(r'value:\s*"([^"]+)"', block))
+    default = re.search(r'export const DEFAULT_CAMERA_TOPIC = "([^"]+)"', source).group(1)
+    assert default in topics, 'Default camera topic is not a selectable option'
+    return topics
+
+
+def _assert_classified(config, nav2d):
+    classified = {key for key in WEB_APP_USES if not key.startswith(('/', 'nav2d.'))}
+    assert classified == set(config) - NON_ROS_CONFIG_KEYS, (
+        'AppConfig keys missing or stale in pub/sub/srv classification: '
+        + str(sorted(classified ^ (set(config) - NON_ROS_CONFIG_KEYS))))
+    assert NON_ROS_CONFIG_KEYS <= set(config), 'Stale non-ROS classification'
+    assert {key[6:] for key in WEB_APP_USES if key.startswith('nav2d.')} == set(nav2d), (
+        'nav2d keys missing or stale in pub/sub/srv classification')
+    for key, kinds in WEB_APP_USES.items():
+        assert kinds and kinds <= {'pub', 'sub', 'srv'}, f'Invalid classification: {key}'
 
 
 def _nav2d_topics():
@@ -281,11 +325,16 @@ def test_command_chain_parameters_cannot_be_set():
 def test_every_web_app_name_is_allowed():
     _tree, bridge, _rosapi = _effective_globs()
     missing = []
+    _assert_classified(_appconfig(), _nav2d_topics())
     for key, kinds in WEB_APP_USES.items():
+        if key in INACTIVE_NAMES:
+            continue
         name = _resolve(key)
         for kind in kinds:
             if not _allowed(name, bridge[KIND_GLOB[kind]]):
                 missing.append(f'{kind} {name} ({key})')
+    missing += [f'sub {name} (camera option)' for name in _camera_topics()
+                if not _allowed(name, bridge['topics_sub_glob'])]
     assert not missing, f'web app names rosbridge would refuse: {missing}'
 
 
@@ -305,15 +354,43 @@ def test_table_covers_every_name_the_web_app_references():
     # A new topic or service in the web app must be added to WEB_APP_USES
     # and the allowlist in the same change.
     config = _appconfig()
+    _assert_classified(config, _nav2d_topics())
     used = set()
     for path in _web_sources():
         if os.path.abspath(path) == os.path.abspath(CONSTANTS_JS):
             continue
         used |= set(re.findall(r'AppConfig\.([A-Z][A-Z0-9_]*)', _read(path)))
         used |= set(re.findall(r'name:\s*"(/[^"]+)"', _read(path)))
+    assert {key for key in used if not key.startswith('/')} <= set(config), 'Unknown AppConfig reference'
     cancel = re.search(r'ACTION_CANCEL_SERVICES = \[(.*?)\];', _read(CONSTANTS_JS), re.S)
     used |= set(re.findall(r'AppConfig\.([A-Z][A-Z0-9_]*)', cancel.group(1)))
-    used = {k for k in used if k.startswith('/') or config.get(k, '').startswith('/')}
+    assert not (used & set(INACTIVE_NAMES)), 'An inactive endpoint gained a caller; review its allowlist policy'
+    used = {k for k in used if k.startswith('/') or
+            (isinstance(config.get(k), str) and config[k].startswith('/'))}
     used |= {f'nav2d.{k}' for k in _nav2d_topics()}
     unlisted = sorted(used - set(WEB_APP_USES))
     assert not unlisted, f'names the web app uses but the test table does not list: {unlisted}'
+
+
+@pytest.mark.parametrize('source', ['AppConfig', 'nav2d'])
+def test_new_unclassified_key_fails_even_without_a_caller(source):
+    config, nav2d = _appconfig(), _nav2d_topics()
+    (config if source == 'AppConfig' else nav2d)['NEW_UNCLASSIFIED_TOPIC'] = '/new_topic'
+    with pytest.raises(AssertionError, match='classification'):
+        _assert_classified(config, nav2d)
+
+
+@pytest.mark.parametrize('topic', ['/ui/dock_robot/status', '/ui/undock_robot/status', '/sensors',
+                                  '/camera/color/image_raw', '/rgb_image', '/camera/image_raw'])
+def test_panel_subscriptions_stay_allowed(topic):
+    _tree, bridge, _rosapi = _effective_globs()
+    assert _allowed(topic, bridge['topics_sub_glob'])
+
+
+
+def test_introspection_does_not_grant_unlisted_topic_access():
+    _tree, bridge, rosapi = _effective_globs()
+    assert _allowed('/rosapi/topics', bridge['services_glob'])
+    assert not _allowed('/unlisted_topic', bridge['topics_pub_glob'])
+    assert not _allowed('/unlisted_topic', bridge['topics_sub_glob'])
+    assert rosapi['params_glob'] == []

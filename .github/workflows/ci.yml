@@ -111,6 +111,16 @@ jobs:
           colcon test --packages-select openamr_ui_package openamr_ui_msgs
           colcon test-result --verbose
 
+      - name: Retain ROS JUnit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ros-junit-results
+          path: |
+            ros2/build/**/test_results/**/*.xml
+            ros2/build/**/pytest.xml
+          if-no-files-found: warn
+
       # The guard's own tests, so a broken counter cannot pass silently.
       - name: Test the zero-test guard
         run: python3 -m unittest discover -v -s scripts -p 'test_count_test_results.py'
@@ -139,6 +149,8 @@ jobs:
         with:
           args: >-
             --no-progress
+            --max-retries 3
+            --retry-wait-time 5
             --exclude-loopback
             --include-mail=false
             --accept 200,206,429
