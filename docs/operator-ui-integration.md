@@ -169,9 +169,38 @@ approved paths.
   and the gripper semantics change (4.1) has already invalidated any open/closed mapping in the UI.
 - **A status panel that believes odometry in SIL.** See 4.3: the twin's odom is not yet truthful.
 
-## 8. What I will do next
+## 8. Agreed
 
-1. Open this as a PR for review (docs only, no code).
-2. Ask Mohamed for adopt/adapt/reject per PR in the batch, with this sequence as the order.
-3. Prepare the S1 rebase list, with the exact rebase order and conflict notes, so S1 is mechanical.
-4. Keep the twin work parked until #90 merges — no evidence is published from an unmerged path.
+**Mohamed (code owner), 26 Nov 09:43:** the plan in #68 is accepted. **No #56 — one decision per PR.**
+Order as above: #64/#63 first, then the four stacks, #62 last (after platform-sw #90). Work starts
+**Monday 30 November**, after the rc.1 tag.
+
+That settles the three things that were open: the batch does not merge as one; the bridge contract is
+decided before any consumer moves; the twin view stays off the critical path.
+
+## 9. S1 prep — what must be true before each is ready
+
+`main` has moved **2–4 commits** since every one of these branches was cut, so each needs a rebase and a
+fresh CI run before it can be called ready. This is queue work, not judgement.
+
+| PR | Branch | Behind `main` | Files | Prep |
+|---|---|---|---|---|
+| #64 | `proposal/rosbridge-allowlist` | 2 | 5 | Rebase onto `main` (its parent #50 merged); ready only after #63 is accepted |
+| #40 | `ui/no-ui-nav-launch` | 4 | 8 | First of the nav stack |
+| #52 | `ui/remove-nav-launches` | 4 | 26 | After #40; deletes launches — highest conflict risk in the batch |
+| #47 | `ui/persistent-maps-routes` | 4 | 8 | First of the maps stack |
+| #53 | `ui/shared-maps-volume` | 4 | 9 | After #47 |
+| #54 | `ui/reporting-mode` | 2 | 27 | Largest of the reporting stack |
+| #61 | `reporting-mode-followup` | — | 27 | **Fork branch** (`parthkeshari/openamrobot-ui`): cannot be rebased from the org repo — Parth has to update it after #54 lands, or it is recreated on an org branch |
+| #55 | `ui/upper-body-view` | 4 | 18 | Read-only; can go any time after the interfaces are settled |
+| #62 | `ui/twin-operator-view` | 3 | 78 | Last; rebase after #90 (merged) and re-run the twin evidence |
+| independents | #41 #42 #43 #44 #45 #46 #49 #51 #58 | 2–4 | 3–15 | Any order, but each still needs the rebase + CI |
+
+## 10. What I will do next
+
+1. ~~Open this as a PR~~ — done: #68.
+2. ~~Ask Mohamed for adopt/adapt/reject per PR~~ — agreed 26 Nov, order accepted, start Monday 30 Nov.
+3. Rebase the stack in the agreed order so every PR arrives conflict-free and CI-green; #64 first, #62
+   last. #61 needs Parth to update the fork branch after #54 lands.
+4. Twin work is no longer parked — platform-sw #90 merged — but #62's evidence must be re-run on merged
+   heads before it is presented as anything.
