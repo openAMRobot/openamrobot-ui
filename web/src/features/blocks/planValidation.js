@@ -1,5 +1,3 @@
-import { AppConfig } from "../../shared/constants";
-
 const START_BLOCK_TYPE = "openamr_start";
 
 const actionChildren = (action) => {
@@ -26,7 +24,50 @@ const blockTypeLabel = (type) =>
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-export const validateRobotPlan = (workspace, plan) => {
+// Mirrors the backend rules in openamr_ui_package/voice_limits.py; the
+// limits themselves come from GET /api/limits (see backendLimits.js).
+const isFiniteNumber = (value) => typeof value === "number" && Number.isFinite(value);
+
+const NUMERIC_FIELDS = {
+  set_speed: ["linear", "angular"],
+  drive_for: ["linear", "seconds"],
+  rotate_for: ["angular", "seconds"],
+  wait: ["seconds"],
+};
+
+export const limitErrors = (action, limits) => {
+  const fields = NUMERIC_FIELDS[action.type] || [];
+  const notFinite = fields.filter((field) => !isFiniteNumber(action[field]));
+  if (notFinite.length) {
+    return notFinite.map((field) => `${field} must be a finite number.`);
+  }
+  const errors = [];
+  const maxLinear = limits.max_linear_speed_mps;
+  const maxAngular = limits.max_angular_speed_radps;
+  const maxDuration = limits.max_duration_per_action_s;
+  const maxDistance = limits.max_distance_per_action_m;
+  if (fields.includes("linear") && Math.abs(action.linear) > maxLinear) {
+    errors.push(`linear speed ${action.linear} m/s exceeds the ${maxLinear} m/s limit.`);
+  }
+  if (fields.includes("angular") && Math.abs(action.angular) > maxAngular) {
+    errors.push(`angular speed ${action.angular} rad/s exceeds the ${maxAngular} rad/s limit.`);
+  }
+  if (fields.includes("seconds")) {
+    if (action.seconds < 0) errors.push("duration must not be negative.");
+    else if (action.seconds > maxDuration) {
+      errors.push(`duration ${action.seconds} s exceeds the ${maxDuration} s limit.`);
+    }
+  }
+  if (action.type === "drive_for") {
+    const distance = Math.abs(action.linear) * Math.abs(action.seconds);
+    if (distance > maxDistance) {
+      errors.push(`distance ${distance} m (speed x duration) exceeds the ${maxDistance} m limit.`);
+    }
+  }
+  return errors;
+};
+
+export const validateRobotPlan = (workspace, plan, limits) => {
   const messages = [];
   const topBlocks = workspace?.getTopBlocks(false) || [];
   const startBlocks = topBlocks.filter(
@@ -67,45 +108,18 @@ export const validateRobotPlan = (workspace, plan) => {
     });
   });
 
+  if (!limits) {
+    messages.push({
+      severity: "error",
+      text: "Plan limits have not been loaded from the backend, so the plan cannot be checked or run.",
+    });
+  }
+
   allActions.forEach(({ action, label }) => {
-    if (
-      action.type === "set_speed" &&
-      Math.abs(action.linear) > AppConfig.MAX_LINEAR_SPEED
-    ) {
-      messages.push({
-        severity: "error",
-        text: `${label}: linear speed ${action.linear} m/s exceeds the ${AppConfig.MAX_LINEAR_SPEED} m/s limit.`,
-      });
-    }
-
-    if (
-      action.type === "set_speed" &&
-      Math.abs(action.angular) > AppConfig.MAX_ANGULAR_SPEED
-    ) {
-      messages.push({
-        severity: "error",
-        text: `${label}: angular speed ${action.angular} rad/s exceeds the ${AppConfig.MAX_ANGULAR_SPEED} rad/s limit.`,
-      });
-    }
-
-    if (
-      action.type === "drive_for" &&
-      Math.abs(action.linear) > AppConfig.MAX_LINEAR_SPEED
-    ) {
-      messages.push({
-        severity: "error",
-        text: `${label}: drive speed ${action.linear} m/s exceeds the ${AppConfig.MAX_LINEAR_SPEED} m/s limit.`,
-      });
-    }
-
-    if (
-      action.type === "rotate_for" &&
-      Math.abs(action.angular) > AppConfig.MAX_ANGULAR_SPEED
-    ) {
-      messages.push({
-        severity: "error",
-        text: `${label}: rotate speed ${action.angular} rad/s exceeds the ${AppConfig.MAX_ANGULAR_SPEED} rad/s limit.`,
-      });
+    if (limits) {
+      limitErrors(action, limits).forEach((text) =>
+        messages.push({ severity: "error", text: `${label}: ${text}` }),
+      );
     }
 
     if (
