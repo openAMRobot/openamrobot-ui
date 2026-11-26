@@ -134,6 +134,12 @@ jobs:
       # the README and docs tree. External flakiness must not fail the build,
       # so we skip loopback/private hosts, non-HTTP schemes, POST-only API
       # endpoints, and the placeholder release URL, and accept rate-limit codes.
+      #
+      # 503 is not a broken link: github.com answers 503 to the runner when
+      # many pull requests check their links at once (seen on #40, #47, #55 and
+      # #64 against this repo's own README and the org CLA). Retries plus the
+      # transient gateway codes below keep that out of the verdict; a link that
+      # is genuinely dead still fails every attempt with 404.
       - name: Check links
         uses: lycheeverse/lychee-action@v2
         with:
@@ -141,7 +147,10 @@ jobs:
             --no-progress
             --exclude-loopback
             --include-mail=false
-            --accept 200,206,429
+            --accept 200,206,429,502,503,504
+            --max-retries 5
+            --retry-wait-time 5
+            --timeout 30
             --exclude '^ws://'
             --exclude 'api\.anthropic\.com'
             --exclude 'openamrobot-release'
