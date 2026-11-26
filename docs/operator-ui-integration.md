@@ -79,6 +79,12 @@ reviewed, adapted, and kept draft.
 **Then:** publish a version. The UI codes against a version, not against a branch.
 **Gate:** `openamrobot-ui` contains zero message definitions and its CI proves it.
 
+**Already broken by a merged change:** the gripper change announced in `software-ai` (upperbody-sw #66)
+flipped the meaning of open/closed — *"+0.7854 rad on the left and -0.7854 rad on the right"*, joint
+positions and physical motion unchanged, only the label semantics — and named the UI as an owner that
+must fix its use of gripper names or values. Any UI control, status field or Blockly action that says
+"open"/"closed" is now wrong until updated.
+
 ### 4.2 Restricted ROS bridge
 **Decision:** the software lead accepts or rejects #63. Until then no consumer may rely on the allowlist.
 **Then:** land #64 against `main` (it was drafted into #50, which has merged, so it needs a rebase), and
@@ -91,6 +97,11 @@ moves through `/ui/cmd_vel` → twist_mux → stop gate → velocity_smoother �
 **Then:** the panel reads approved topics only; it publishes nothing.
 **Gate:** panel shows disconnected / stale / live distinctly; no status value is invented when a topic is
 missing.
+
+**SIL caveat that affects what the panel may claim:** the DART finding in `software-ai` — odometry
+reporting 0.98 m while the true position moved 0.006 m, lift joint staying at 0.0 — means odom-only
+simulation results are unverified until ros2_control/gz_ros2_control is fixed. A status panel that shows
+odometry as fact in the twin is showing a number that does not describe the robot.
 
 ### 4.4 Navigation commands
 **Already true on `main`:** the UI no longer publishes `/cmd_vel`; #40/#52 remove the legacy launches.
@@ -154,7 +165,9 @@ approved paths.
 - **Twin evidence on an unmerged stop path.** #62's results are only evidence once #90 is merged.
 - **A stale browser tab.** Allowlisting helps only if `/cmd_vel` is not publishable at all; a tab that
   survived a reload must not be able to drive.
-- **Interface drift.** Eighteen drafts written before I8 landed will contain hand-rolled status fields.
+- **Interface drift.** Eighteen drafts written before I8 landed will contain hand-rolled status fields —
+  and the gripper semantics change (4.1) has already invalidated any open/closed mapping in the UI.
+- **A status panel that believes odometry in SIL.** See 4.3: the twin's odom is not yet truthful.
 
 ## 8. What I will do next
 
