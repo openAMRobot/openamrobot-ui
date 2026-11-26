@@ -14,6 +14,19 @@ import JointSliderPanel from "../features/robotDescription/components/JointSlide
 import DisplayLayerControls from "../features/robotDescription/components/DisplayLayerControls";
 import ModelLoadStatus from "../features/robotDescription/components/ModelLoadStatus";
 import DescriptionModeBanner from "../features/robotDescription/components/DescriptionModeBanner";
+import useRobotDescriptionTopic from "../features/upperBody/hooks/useRobotDescriptionTopic";
+import useUpperBodyJointStates from "../features/upperBody/hooks/useUpperBodyJointStates";
+import CandidateModelBanner from "../features/upperBody/components/CandidateModelBanner";
+import UpperBodyPanel from "../features/upperBody/components/UpperBodyPanel";
+import LiftPanel from "../features/upperBody/components/LiftPanel";
+import {
+  FLOOR_FRAME,
+  LIFT_JOINT,
+  SHOULDER_LINKS,
+  findPlaceholderLinks,
+  isCombinedDescription,
+  linkHeightAbove,
+} from "../features/upperBody/upperBodyModel";
 
 const DEFAULT_LAYERS = {
   visual: true,
@@ -54,6 +67,32 @@ const RobotDescriptionPage = () => {
     };
   }, []);
 
+  // The combined OpenAMRobot 2.0 model, when the robot publishes it. It
+  // replaces the backend's platform-only model; meshes still resolve through
+  // the backend's package map.
+  const publishedUrdf = useRobotDescriptionTopic({ ros });
+  const combinedUrdf = useMemo(
+    () => (isCombinedDescription(publishedUrdf) ? publishedUrdf : null),
+    [publishedUrdf],
+  );
+  const placeholderLinks = useMemo(() => findPlaceholderLinks(combinedUrdf), [combinedUrdf]);
+  const sceneManifest = useMemo(() => {
+    if (!combinedUrdf) return manifest;
+    return {
+      ...(manifest || {}),
+      displayName: "OpenAMRobot 2.0 (candidate model)",
+      available: true,
+      urdfText: combinedUrdf,
+      packages: manifest?.packages || {},
+    };
+  }, [manifest, combinedUrdf]);
+
+  const { positions: upperBodyPositions, freshness: upperBodyFreshness } = useUpperBodyJointStates({ ros });
+  const shoulderM = useMemo(
+    () => (combinedUrdf ? linkHeightAbove(combinedUrdf, FLOOR_FRAME, SHOULDER_LINKS.left, upperBodyPositions) : null),
+    [combinedUrdf, upperBodyPositions],
+  );
+
   const handleSelect = (name, kind) => setSelected({ name, kind });
 
   const { pose, source: poseSource } = useRobotPose({ mode, ros });
@@ -68,7 +107,7 @@ const RobotDescriptionPage = () => {
     toggleFullscreen,
     isFullscreen,
     setJointValues: applyJointValuesToScene,
-  } = useRobotScene({ manifest, layers, selected, onSelect: handleSelect, pose, path });
+  } = useRobotScene({ manifest: sceneManifest, layers, selected, onSelect: handleSelect, pose, path });
 
   const movableJointNames = useMemo(
     () =>
@@ -96,7 +135,7 @@ const RobotDescriptionPage = () => {
   return (
     <div className="sectionHeight flex flex-col gap-5 py-4 sm:gap-6 sm:py-6 xl:h-[calc(100vh-145px)] xl:min-h-0">
       <SectionHeader
-        eyebrow={manifest ? manifest.displayName : "Digital twin"}
+        eyebrow={sceneManifest ? sceneManifest.displayName : "Digital twin"}
         title="Robot description"
         description="Explore a 3D model of the robot's parts and joints, built from its design files — no robot connection needed. (Technically: its URDF/Xacro description.)"
       />
@@ -104,6 +143,8 @@ const RobotDescriptionPage = () => {
       {manifestError ? (
         <p className="text-sm text-statusRed">Could not load the robot description manifest: {manifestError}</p>
       ) : null}
+
+      {combinedUrdf ? <CandidateModelBanner placeholderLinks={placeholderLinks} /> : null}
 
       <DescriptionModeBanner
         mode={mode}
@@ -127,13 +168,19 @@ const RobotDescriptionPage = () => {
             />
           </div>
           <DisplayLayerControls robot={robot} layers={layers} onChange={handleLayerChange} />
-          <ModelLoadStatus manifest={manifest} status={status} />
+          <ModelLoadStatus manifest={sceneManifest} status={status} />
         </section>
 
-        <section className="flex min-w-0 flex-col gap-4 xl:min-h-0">
+        <section className="flex min-w-0 flex-col gap-4 xl:min-h-0 xl:overflow-y-auto">
           <div className="h-[280px] min-w-0 xl:h-auto xl:flex-1 xl:min-h-0">
             <KinematicTree robot={robot} selected={selected} onSelect={handleSelect} />
           </div>
+          <UpperBodyPanel positions={upperBodyPositions} freshness={upperBodyFreshness} />
+          <LiftPanel
+            liftPositionM={upperBodyPositions[LIFT_JOINT]}
+            shoulderM={shoulderM}
+            freshness={upperBodyFreshness.lift}
+          />
           <ComponentInspector robot={robot} selected={selected} meshesReady={status.stage === "ready"} />
           <div className="h-[360px] min-w-0 xl:h-auto xl:flex-1 xl:min-h-0">
             <JointSliderPanel
