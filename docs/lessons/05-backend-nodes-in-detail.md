@@ -103,13 +103,13 @@ Every map/route operation reads or updates one file,
 *currently active* — see [Lesson 08](08-map-and-route-model.md) for the full
 file model this node manages.
 
-Beyond route file CRUD, this same node also has mapping-mode functions
-(`build_map_func`, `save_map_func`) that shut down AMCL/map_server/move_base
-lifecycle-wise and launch a separate mapping launch file. These are what the
-Maps page's **Start mapping**/**Save current map** buttons actually trigger
-(see [Lesson 06](06-the-pages.md#maps--mapspagejsx)) — for a long time this
-was functionality present in the node with no button wired to it; it has one
-now.
+Beyond route file CRUD, this same node handles the Maps page's
+**How to map** and **Save current map** buttons (see
+[Lesson 06](06-the-pages.md#maps--mapspagejsx)). It starts no process and
+changes no node's lifecycle state: `build_map_func` only replies that mapping
+runs on the robot platform, and `save_map_func` calls the platform's map
+saver service and then loads the saved map through
+`/map_server/load_map`.
 
 ## waypoint_nav.py — a second subscriber on the same topic
 
