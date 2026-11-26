@@ -120,6 +120,14 @@ ZX80 or on a robot.
 - Merge after B4 and B8, whose behaviour it documents.
 - Evidence: Jest docs consistency test.
 
+### Proposed (owner decision) `proposed/rc1-remove-public-prices` (22 Nov 2026)
+
+- README.md "Support the project": backer-tier prices and payment links
+  removed, one GitHub Sponsors sentence kept (rc.1 audit, release #18).
+- Alex decides. Merging moves the rc.1 pin in manifest #23.
+- Evidence: check_public_extract.py on README.md, 13 price findings before,
+  0 after.
+
 ## Known gaps
 
 - The Stop (software) lock is not on `main` yet; see A1 below.
