@@ -196,6 +196,30 @@ fresh CI run before it can be called ready. This is queue work, not judgement.
 | #62 | `ui/twin-operator-view` | 3 | 78 | Last; rebase after #90 (merged) and re-run the twin evidence |
 | independents | #41 #42 #43 #44 #45 #46 #49 #51 #58 | 2–4 | 3–15 | Any order, but each still needs the rebase + CI |
 
+## 9a. Rebasing rule: `STATE.md` is append-only
+
+`STATE.md` is not a shared document that can be resolved by picking a side — it is a ledger in which
+each item owns one section (B1–B10, A1, A2, …). A rebase that keeps the target's copy and drops the
+branch's hunk silently deletes that item's section, and the loss is invisible in the diff of the code
+being reviewed.
+
+This happened during the rebase queue on #54: its A2 Reporting Mode section was resolved to `main`'s
+copy and removed, and the author had to restore it in `316a8415`. The other twelve branches were
+checked — #41, #42, #49, #51 have no section of their own (main already carries B2, B3, B10, B9) and
+#55 never touched the file, so #54 was the only loss, but the rule exists because the failure mode is
+silent.
+
+**Rule for every rebase in this queue:**
+
+1. On a `STATE.md` conflict, keep the target's *existing* sections verbatim.
+2. Re-append the branch's own section under the target's last section — do not replace the file.
+3. If the section already exists on the target, merge the two by item id, never by line position.
+4. Refresh the `Last updated:` line and the base SHA only if they are wrong; a stale date is not a
+   conflict.
+
+A branch whose `STATE.md` is byte-identical to the target's after a rebase should be treated as
+suspicious: either it never added a section, or the rebase dropped one.
+
 ## 10. What I will do next
 
 1. ~~Open this as a PR~~ — done: #68.
