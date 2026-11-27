@@ -46,14 +46,32 @@ stale-data banner, dims stale source rows, and shows each stale source's age
 in seconds. When rosbridge disconnects, a separate banner says "Disconnected since"
 with the panel time the connection was lost, and the last known state.
 The current task and progress stay on screen dimmed, under a "Last known,
-not live" label. The disconnected view is not presented as live.
+not live" label. Warnings are old data too, so they are dimmed with the
+task block, and an empty list shows "Unknown" instead of "None". The
+disconnected view is not presented as live.
+
+## Operator states a wall panel must tell apart
+
+These four were measured on the merged pair and are the ones to check
+against the code (`reportingAdapter.js`) and `ReportingPage.test.jsx`:
+
+| Situation | Page shows | Source |
+|---|---|---|
+| Stopped by the software lock (`/safety/stop_lock` true) | STOPPED (SOFTWARE) | lock state locked |
+| Lock state unknown (no sample, or stale; fails closed) | UNKNOWN, "Software stop lock state is unknown" | lock state unknown |
+| rosbridge disconnected | DISCONNECTED, "Disconnected since", last known state | connection |
+| Running | EXECUTING, with task and progress | navigation status |
+
+STOPPED (SOFTWARE) and DISCONNECTED must not look alike on a screen, and
+stale data (connection up, a source old) is a fifth, separate view. The
+software stop lock is not the hardwired E-stop.
 
 ## Demo Mode
 
 The app's Demo Mode banner is part of the main layout, and this page is
 outside it. So when Demo Mode is on, the page shows its own label at the
-top: "Demo mode: Every value on this page is simulated. No robot is
-connected." The route smoke test (`web/e2e/routes.spec.js`) checks that
+top: "Demo mode: Every value on this page is sample data, not from a
+robot." The route smoke test (`web/e2e/routes.spec.js`) checks that
 this label is visible.
 
 ## Panel setup

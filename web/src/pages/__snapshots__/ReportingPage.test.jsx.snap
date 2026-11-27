@@ -141,6 +141,7 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
         </p>
       </div>
       <div
+        class="opacity-50"
         data-testid="reporting-warnings"
       >
         <p
@@ -151,7 +152,7 @@ exports[`Reporting Mode page DISCONNECTED when rosbridge is down: DISCONNECTED 1
         <p
           class="text-white/70"
         >
-          None
+          Unknown
         </p>
       </div>
     </section>
@@ -493,6 +494,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         </p>
       </div>
       <div
+        class=""
         data-testid="reporting-warnings"
       >
         <p
@@ -858,6 +860,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         </p>
       </div>
       <div
+        class=""
         data-testid="reporting-warnings"
       >
         <p
@@ -1179,6 +1182,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         </p>
       </div>
       <div
+        class=""
         data-testid="reporting-warnings"
       >
         <p
@@ -1530,6 +1534,7 @@ exports[`Reporting Mode page renders READY, EXECUTING with progress, STOPPED (SO
         </p>
       </div>
       <div
+        class=""
         data-testid="reporting-warnings"
       >
         <p
@@ -1870,6 +1875,7 @@ exports[`Reporting Mode page shows a stale source as stale, never as healthy: st
         </p>
       </div>
       <div
+        class=""
         data-testid="reporting-warnings"
       >
         <p

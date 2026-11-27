@@ -178,7 +178,7 @@ const DemoLabel = ({ t }) => {
     >
       <span className="uppercase tracking-wider">{t("Demo mode")}</span>
       {": "}
-      {t("Every value on this page is simulated. No robot is connected.")}
+      {t("Every value on this page is sample data, not from a robot.")}
     </div>
   );
 };
@@ -524,7 +524,10 @@ const ReportingPage = () => {
             )}
           </div>
 
-          <div data-testid="reporting-warnings">
+          <div
+            data-testid="reporting-warnings"
+            className={disconnected ? "opacity-50" : ""}
+          >
             <p className="text-white/60" style={{ fontSize: TYPE.small }}>
               {t("Warnings")}
             </p>
@@ -543,7 +546,9 @@ const ReportingPage = () => {
                 )}
               </ul>
             ) : (
-              <p className="text-white/70">{t("None")}</p>
+              <p className="text-white/70">
+                {t(disconnected ? "Unknown" : "None")}
+              </p>
             )}
           </div>
         </section>

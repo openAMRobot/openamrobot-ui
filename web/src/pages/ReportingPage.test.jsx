@@ -177,7 +177,7 @@ describe("Reporting Mode page", () => {
   // must show its own Demo Mode label.
   it("shows a Demo Mode label when Demo Mode is on, and none when it is off", () => {
     const { unmount } = renderPage("connected", { demoMode: true });
-    expect(screen.getByTestId("reporting-demo-banner").textContent).toMatch(/Demo mode.*simulated/);
+    expect(screen.getByTestId("reporting-demo-banner").textContent).toMatch(/Demo mode.*sample data, not from a robot/);
     unmount();
     renderPage("connected", { demoMode: false });
     expect(screen.queryByTestId("reporting-demo-banner")).toBeNull();
@@ -203,6 +203,10 @@ describe("Reporting Mode page", () => {
     expect(screen.getByTestId("reporting-task-block").className).toContain("opacity-50");
     expect(screen.getByTestId("reporting-task-last-known").textContent).toBe("Last known, not live");
     expect(screen.getByTestId("reporting-task-block").contains(screen.getByTestId("reporting-progress"))).toBe(true);
+    // Warnings are old data too: dimmed, and never "None" while disconnected.
+    expect(screen.getByTestId("reporting-warnings").className).toContain("opacity-50");
+    expect(screen.getByTestId("reporting-warnings").textContent).toContain("Unknown");
+    expect(screen.getByTestId("reporting-warnings").textContent).not.toContain("None");
   });
 
   it("DISCONNECTED when rosbridge is down", () => {

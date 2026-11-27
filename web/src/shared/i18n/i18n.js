@@ -40,8 +40,8 @@ const DE = {
     "Navigationsstatus gilt nur für die Navigation. Er zeigt nicht die Gesamtbereitschaft des Roboters oder den Not-Halt-Zustand.",
   // Reporting Mode: Demo Mode label (the page is outside AppLayout's banner)
   "Demo mode": "Demo-Modus",
-  "Every value on this page is simulated. No robot is connected.":
-    "Alle Werte auf dieser Seite sind simuliert. Kein Roboter ist verbunden.",
+  "Every value on this page is sample data, not from a robot.":
+    "Alle Werte auf dieser Seite sind Beispieldaten, nicht von einem Roboter.",
   READY: "BEREIT",
   EXECUTING: "IN AUSFÜHRUNG",
   WAITING: "WARTEND",
