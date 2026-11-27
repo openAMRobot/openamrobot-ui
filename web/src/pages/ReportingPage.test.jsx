@@ -1,0 +1,371 @@
+import React from "react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+
+import ReportingPage, {
+  EXIT_HOLD_MS,
+  MAX_WARNINGS_SHOWN,
+  STATE_FONT_SIZE,
+  STATE_MAX_TOKEN_CHARS,
+  StateHeading,
+  fluid,
+} from "./ReportingPage";
+import { RosContext, RosStatusContext, RuntimeConfigContext } from "../app/App";
+import { setLang, translate } from "../shared/i18n/i18n";
+import { AppConfig } from "../shared/constants";
+import { installMockRoslib, uninstallMockRoslib } from "../shared/motion/testing/mockRoslib";
+import { DISPLAY } from "../shared/reporting/reportingAdapter";
+import { battery, diagnostics, goalStatus, lock, navFeedback, navStatus } from "../shared/reporting/testing/fixtures";
+
+// The App module pulls in every page; three.js examples and urdf-loader ship
+// as ES modules that CRA's Jest does not transform. Not used here.
+jest.mock("three/examples/jsm/controls/OrbitControls.js", () => ({ OrbitControls: function OrbitControls() {} }));
+jest.mock("urdf-loader", () => function URDFLoader() {});
+jest.mock("../shared/events/eventLog", () => ({ addEvent: jest.fn() }));
+
+let mock;
+let ros;
+let spoken;
+
+// Panel clock for every test: 24 Nov 2026, 09:41:05 local time.
+const PANEL_NOW = new Date(2026, 10, 24, 9, 41, 5);
+
+beforeEach(() => {
+  jest.useFakeTimers();
+  jest.setSystemTime(PANEL_NOW);
+  mock = installMockRoslib();
+  ros = new window.ROSLIB.Ros();
+  spoken = [];
+  window.SpeechSynthesisUtterance = function Utterance(text) {
+    this.text = text;
+  };
+  window.speechSynthesis = { speak: (u) => spoken.push(u.text), cancel: jest.fn() };
+});
+afterEach(() => {
+  jest.useRealTimers();
+  uninstallMockRoslib();
+  delete window.speechSynthesis;
+  delete window.SpeechSynthesisUtterance;
+});
+
+const page = (status = "connected", config = { demoMode: false }) => (
+  <RuntimeConfigContext.Provider value={{ config, updateConfig: jest.fn() }}>
+    <RosContext.Provider value={ros}>
+      <RosStatusContext.Provider value={status}>
+        <MemoryRouter initialEntries={["/report"]}>
+          <Routes>
+            <Route path="/report" element={<ReportingPage />} />
+            <Route path="/" element={<div>Operator home</div>} />
+          </Routes>
+        </MemoryRouter>
+      </RosStatusContext.Provider>
+    </RosContext.Provider>
+  </RuntimeConfigContext.Provider>
+);
+
+const renderPage = (status = "connected", config) => render(page(status, config));
+
+const emit = (name, msg) =>
+  act(() => {
+    mock.topicsNamed(name).forEach((t) => t.emit(msg));
+  });
+
+const feedHealthy = () => {
+  emit(AppConfig.STOP_LOCK_TOPIC, lock(false));
+  emit(AppConfig.NAVIGATION_STATUS_TOPIC, navStatus());
+  emit(AppConfig.DIAGNOSTICS_TOPIC, diagnostics(0));
+  emit(AppConfig.BATTERY_TOPIC, battery(80));
+};
+
+const state = () => screen.getByTestId("reporting-page").dataset.state;
+const announcementText = () => screen.getByTestId("reporting-speech-text").textContent;
+
+describe("Reporting Mode state labels", () => {
+  // Review of #61 (16 Nov, point 5 and the icon test note): every state,
+  // including STOPPED (SOFTWARE), UNKNOWN and DISCONNECTED, has its own
+  // inline SVG icon in the state color. No text glyph or emoji.
+  it("renders every state name with a unique SVG icon and color", () => {
+    const displays = Object.values(DISPLAY);
+    expect(displays).toHaveLength(11);
+    render(
+      <>
+        {displays.map((display) => (
+          <StateHeading key={display} display={display} t={(key) => key} />
+        ))}
+      </>,
+    );
+    const headings = screen.getAllByTestId("reporting-state");
+    const icons = screen.getAllByTestId("reporting-state-icon");
+
+    expect(headings.map((heading) => heading.lastElementChild.textContent)).toEqual(displays);
+    icons.forEach((icon, i) => {
+      expect(icon.tagName.toLowerCase()).toBe("svg");
+      expect(icon.getAttribute("aria-hidden")).toBe("true");
+      expect(icon.dataset.icon).toBe(displays[i]);
+      expect(icon.textContent).toBe("");
+      expect(icon.innerHTML).toContain("currentColor");
+    });
+    expect(new Set(icons.map((icon) => icon.innerHTML)).size).toBe(displays.length);
+    expect(headings.every((heading) => heading.style.color)).toBe(true);
+    expect(new Set(headings.map((heading) => heading.style.color)).size).toBe(displays.length);
+  });
+
+  // Review of #61 (16 Nov): the width rule must hold for the longest German
+  // word too (WIEDERHERSTELLUNG, 17 characters).
+  it("no state word, in English or German, has a token longer than the width rule allows", () => {
+    const tokens = [];
+    ["en", "de"].forEach((lang) => {
+      setLang(lang);
+      Object.values(DISPLAY).forEach((d) => tokens.push(...translate(d).split(" ")));
+    });
+    setLang("en");
+    expect(Math.max(...tokens.map((tok) => tok.length))).toBe(STATE_MAX_TOKEN_CHARS);
+  });
+});
+
+describe("Reporting Mode page", () => {
+  it("says its scope and lists Arms, Lift and Physical E-stop as Not reported", () => {
+    renderPage();
+    expect(screen.getByText("Base and navigation")).toBeTruthy();
+    ["Arms", "Lift", "Physical E-stop"].forEach((label) =>
+      expect(screen.getByTestId(`row-${label}`).textContent).toContain("Not reported"),
+    );
+  });
+
+  it("renders READY, EXECUTING with progress, STOPPED (SOFTWARE), FAULTED, stale and DISCONNECTED", () => {
+    const { unmount } = renderPage();
+    expect(state()).toBe("UNKNOWN");
+    feedHealthy();
+    expect(state()).toBe("READY");
+    expect(screen.getByTestId("reporting-page")).toMatchSnapshot("READY");
+
+    emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 2));
+    emit(AppConfig.NAV_FEEDBACK_TOPIC, navFeedback(1, 8));
+    emit(AppConfig.NAV_FEEDBACK_TOPIC, navFeedback(1, 2, 4));
+    expect(state()).toBe("EXECUTING");
+    expect(screen.getByTestId("reporting-progress").textContent).toContain("2.0 m remaining");
+    expect(screen.getByTestId("reporting-page")).toMatchSnapshot("EXECUTING");
+
+    emit(AppConfig.STOP_LOCK_TOPIC, lock(true));
+    expect(state()).toBe("STOPPED (SOFTWARE)");
+    expect(screen.getByTestId("reporting-page")).toMatchSnapshot("STOPPED (SOFTWARE)");
+
+    emit(AppConfig.STOP_LOCK_TOPIC, lock(false));
+    emit(AppConfig.NAVIGATION_STATUS_TOPIC, navStatus({ health: 3, active_reasons: [4009] }));
+    expect(state()).toBe("FAULTED");
+    expect(screen.getByTestId("reporting-page")).toMatchSnapshot("FAULTED");
+    unmount();
+  });
+
+  it("shows a stale source as stale, never as healthy", () => {
+    renderPage();
+    feedHealthy();
+    act(() => jest.advanceTimersByTime(3501));
+    emit(AppConfig.STOP_LOCK_TOPIC, lock(false));
+    emit(AppConfig.NAVIGATION_STATUS_TOPIC, navStatus());
+    emit(AppConfig.DIAGNOSTICS_TOPIC, diagnostics(0));
+
+    expect(state()).toBe("WAITING");
+    expect(screen.getByTestId("reporting-stale-banner").textContent).toContain("Connection is up");
+    expect(screen.getByTestId("row-Battery").textContent).toMatch(/Stale \(\d+ s\)/);
+    expect(screen.getByTestId("row-Battery").dataset.freshness).toBe("Stale");
+    expect(screen.getByTestId("row-Battery").className).toContain("opacity-50");
+    expect(screen.getByTestId("reporting-page")).toMatchSnapshot("stale battery");
+  });
+
+  // Review of #61 (16 Nov, point 1): /report is outside AppLayout, so it
+  // must show its own Demo Mode label.
+  it("shows a Demo Mode label when Demo Mode is on, and none when it is off", () => {
+    const { unmount } = renderPage("connected", { demoMode: true });
+    expect(screen.getByTestId("reporting-demo-banner").textContent).toMatch(/Demo mode.*sample data, not from a robot/);
+    unmount();
+    renderPage("connected", { demoMode: false });
+    expect(screen.queryByTestId("reporting-demo-banner")).toBeNull();
+  });
+
+  // Review of #61 (16 Nov, point 3 and "Disconnected since"): after the
+  // connection is lost, the task and progress are dimmed and labelled as
+  // last known, and the banner says since when.
+  it("after a disconnect, shows the task and progress as last known, with the time", () => {
+    const { rerender } = renderPage();
+    feedHealthy();
+    emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 2));
+    emit(AppConfig.NAV_FEEDBACK_TOPIC, navFeedback(1, 8));
+    emit(AppConfig.NAV_FEEDBACK_TOPIC, navFeedback(1, 2, 4));
+    expect(state()).toBe("EXECUTING");
+    expect(screen.getByTestId("reporting-task-block").className).not.toContain("opacity-50");
+    expect(screen.queryByTestId("reporting-task-last-known")).toBeNull();
+
+    rerender(page("disconnected"));
+    expect(state()).toBe("DISCONNECTED");
+    expect(screen.getByTestId("reporting-disconnected-since").textContent).toBe("09:41:05");
+    expect(screen.getByTestId("reporting-last-known-state").textContent).toBe("EXECUTING");
+    expect(screen.getByTestId("reporting-task-block").className).toContain("opacity-50");
+    expect(screen.getByTestId("reporting-task-last-known").textContent).toBe("Last known, not live");
+    expect(screen.getByTestId("reporting-task-block").contains(screen.getByTestId("reporting-progress"))).toBe(true);
+    // Warnings are old data too: dimmed, and never "None" while disconnected.
+    expect(screen.getByTestId("reporting-warnings").className).toContain("opacity-50");
+    expect(screen.getByTestId("reporting-warnings").textContent).toContain("Unknown");
+    expect(screen.getByTestId("reporting-warnings").textContent).not.toContain("None");
+  });
+
+  it("DISCONNECTED when rosbridge is down", () => {
+    renderPage("disconnected");
+    expect(state()).toBe("DISCONNECTED");
+    expect(screen.getByTestId("reporting-disconnected-banner").textContent).toContain("Last known state");
+    expect(screen.getByTestId("reporting-last-known-state").textContent).toBe("UNKNOWN");
+    expect(screen.queryByTestId("reporting-stale-banner")).toBeNull();
+    expect(screen.getByTestId("reporting-page")).toMatchSnapshot("DISCONNECTED");
+  });
+
+  it("leaves only after a long press on the corner control", () => {
+    renderPage();
+    const exit = screen.getByRole("button", { name: /hold to exit/i });
+    fireEvent.pointerDown(exit);
+    act(() => jest.advanceTimersByTime(EXIT_HOLD_MS - 100));
+    fireEvent.pointerUp(exit);
+    act(() => jest.advanceTimersByTime(1000));
+    expect(screen.queryByText("Operator home")).toBeNull();
+    fireEvent.pointerDown(exit);
+    act(() => jest.advanceTimersByTime(EXIT_HOLD_MS));
+    expect(screen.getByText("Operator home")).toBeTruthy();
+  });
+
+  it("shows the latest announcement on screen with speech off and speaks nothing", () => {
+    renderPage();
+    feedHealthy();
+    expect(screen.getByRole("button", { name: "Speech off" })).toBeTruthy();
+    expect(spoken).toEqual([]);
+    expect(announcementText()).toContain("ready. No blocking faults in current reported data");
+    emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 2));
+    expect(announcementText()).toContain("executing. Driving to the goal");
+    expect(spoken).toEqual([]);
+  });
+
+  it("when speech is on, speaks each change once and does not read out what is already on screen", () => {
+    renderPage();
+    feedHealthy();
+    fireEvent.click(screen.getByRole("button", { name: "Speech off" }));
+    expect(screen.getByRole("button", { name: "Speech on" })).toBeTruthy();
+    expect(spoken).toEqual([]); // nothing already on screen is read out
+    emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 2));
+    expect(announcementText()).toContain("executing. Driving to the goal");
+    emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 4));
+    emit(AppConfig.NAV_STATUS_TOPIC, goalStatus(1, 4));
+    expect(spoken).toEqual([
+      "executing. Driving to the goal",
+      "ready. No blocking faults in current reported data",
+      "Navigation goal: succeeded.",
+      "Completed: Navigation goal",
+    ]);
+    expect(announcementText()).toContain("Completed: Navigation goal");
+  });
+
+  // Review of #61 (16 Nov, point 2): the on-screen announcement is a past
+  // event with its panel time, and never names a state the page has left.
+  it("shows the announcement time, and after a reconnect does not keep an old state", () => {
+    const { rerender } = renderPage();
+    feedHealthy();
+    expect(screen.getByTestId("reporting-speech-time").textContent).toBe("09:41:05");
+    expect(announcementText()).toContain("ready.");
+
+    act(() => jest.advanceTimersByTime(60 * 1000));
+    rerender(page("disconnected"));
+    expect(announcementText()).toContain("disconnected.");
+    expect(screen.getByTestId("reporting-speech-time").textContent).toBe("09:42:05");
+
+    act(() => jest.advanceTimersByTime(60 * 1000));
+    rerender(page("connected"));
+    feedHealthy();
+    expect(state()).toBe("READY");
+    // Back to the state spoken before the interruption: nothing new is
+    // spoken, but the screen text follows the page.
+    expect(announcementText()).toContain("ready. No blocking faults in current reported data");
+    expect(announcementText()).not.toMatch(/disconnected|unknown/);
+    expect(screen.getByTestId("reporting-speech-time").textContent).toBe("09:43:05");
+  });
+
+  it("still shows the announcement text when speech is not supported", () => {
+    delete window.speechSynthesis;
+    renderPage();
+    feedHealthy();
+    expect(screen.getByTestId("speech-not-supported")).toBeTruthy();
+    expect(screen.queryByTestId("speech-toggle")).toBeNull();
+    expect(announcementText()).toContain("ready. No blocking faults in current reported data");
+  });
+});
+
+// TABLET-MOUNT (decision of 2 Nov 2026, review of #54): the panel is treated
+// as portrait-only on a fixed mount. JSDOM has
+// no layout, so these check the structure that keeps the page inside a
+// portrait screen; the overflow itself was checked in Chromium at 1200 x 1920
+// (see the PR description).
+describe("Reporting Mode portrait layout", () => {
+  it("uses one column, a two-column source footer and a width-bounded state word", () => {
+    renderPage();
+    feedHealthy();
+    const main = screen.getByTestId("reporting-main");
+    expect(main.className).toMatch(/\bflex-col\b/);
+    expect(main.className).not.toMatch(/grid-cols-/);
+    const footer = screen.getByTestId("reporting-footer");
+    expect(footer.className).toMatch(/\bgrid-cols-2\b/);
+    expect(footer.className).not.toMatch(/grid-cols-3/);
+    expect(STATE_FONT_SIZE).toBe("min(120px, calc((100vw - 2 * min(40px, 3.3333vw)) / 12))");
+  });
+
+  it("keeps the exit control in the header row, not over the header text", () => {
+    renderPage();
+    feedHealthy();
+    const exit = screen.getByRole("button", { name: "Hold to exit Reporting Mode" });
+    expect(screen.getByTestId("reporting-header").contains(exit)).toBe(true);
+    expect(exit.className).not.toMatch(/\babsolute\b/);
+  });
+
+  it("keeps every visible control large enough for touch", () => {
+    renderPage();
+    const controls = screen.getAllByRole("button");
+    expect(controls.length).toBeGreaterThan(0);
+    controls.forEach((control) => {
+      expect(Number.parseFloat(control.style.minHeight)).toBeGreaterThanOrEqual(48);
+      expect(control.className).not.toMatch(/\bhover:/);
+    });
+  });
+
+  it("lets long names wrap and counts warnings it does not list", () => {
+    renderPage();
+    feedHealthy();
+    const many = Array.from({ length: MAX_WARNINGS_SHOWN + 3 }, (_, i) => [1, `source_${i}_with_a_long_name`, "warn"]);
+    emit(AppConfig.DIAGNOSTICS_TOPIC, {
+      header: { stamp: { sec: 100, nanosec: 0 } },
+      status: many.map(([level, name, message]) => ({ level, name, message, hardware_id: "", values: [] })),
+    });
+    const warnings = screen.getByTestId("reporting-warnings");
+    expect(warnings.querySelectorAll("li")).toHaveLength(MAX_WARNINGS_SHOWN + 1);
+    expect(screen.getByTestId("reporting-warnings-more").textContent).toBe("3 more not shown");
+    expect(warnings.closest("section").getAttribute("style")).toContain("overflow-wrap: anywhere");
+  });
+});
+
+// Review of #54 (5 Nov): the page width in CSS px depends on the display
+// scale Chrome uses on the ZX80, which is not confirmed. Sizes are a share
+// of the page width, capped at their 1200 px value, and the middle scrolls
+// rather than clipping. Checked in Chromium at 1200 x 1920, 800 x 1280 and
+// 600 x 960 (see the PR description); JSDOM drops min() from inline styles,
+// so these check the values and classes.
+describe("Reporting Mode on a scaled display", () => {
+  it("scales every size with the page width, capped at its 1200 px value", () => {
+    expect(fluid(44)).toBe("min(44px, 3.6667vw)");
+    expect(fluid(120)).toBe("min(120px, 10vw)");
+    expect(fluid(20)).toBe("min(20px, 1.6667vw)");
+  });
+
+  it("scrolls the middle instead of clipping it, keeping the source rows on screen", () => {
+    renderPage();
+    feedHealthy();
+    const main = screen.getByTestId("reporting-main");
+    expect(main.className).toMatch(/\boverflow-y-auto\b/);
+    expect(main.className).not.toMatch(/\boverflow-hidden\b/);
+    expect(main.className).toMatch(/\bmin-h-0\b/);
+    expect(screen.getByTestId("reporting-footer").parentElement).toBe(screen.getByTestId("reporting-page"));
+  });
+});
