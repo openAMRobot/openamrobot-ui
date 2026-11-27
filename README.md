@@ -144,6 +144,7 @@ Before enabling motion:
 | Node.js | 18–20 | Enforced by `web/package.json` `engines` (`>=18 <21`); CI validates on Node 20 |
 | `openamr-platform-sw` | `main` branch | Pin it to a commit you've validated against this UI version — treat that pin as part of your deployment configuration, not a fixed release |
 | Robot hardware | Topic-compatible OpenAMRobot platform | Hardware revision is not yet pinned; validate drivers, limits, docking, and E-stop behavior per robot |
+| Operator panel | Getac ZX80 | Target panel for OpenAMRobot 2.0; not yet verified on the device |
 
 For complete installation details, Docker Desktop networking, simulation
 commands, and dependency explanations, see the
@@ -235,7 +236,7 @@ This should list `openamr_ui_bringup`, `openamr_ui_msgs`, and
 | Parameters | `/params` | Read or change Nav2 parameters |
 | Fleet | `/fleet` | Robot profiles and active-robot selection |
 | Config | `/config` | Connections, Demo Mode, limits, and preferences |
-| Notes | `/notes` | Example plugin page |
+| Notes | `/notes` | Example plugin page (added by `web/src/plugins/notesPlugin`) |
 
 Scheduler and Missions run in the browser tab — keep the tab open for
 scheduled actions, and don't assume an interrupted browser session resumes
@@ -286,10 +287,41 @@ Requesting either currently falls back to `open` and shows a warning.
 
 | Data | Location |
 | --- | --- |
-| Backend programs, locations, history, recordings, and certificates | `~/.openamr_ui/` |
-| Docker backend data | Named `openamr_ui_data` volume |
+| Backend programs, locations, history, recordings, and certificates | `~/.openamr_ui/` (the data directory) |
+| Maps | `OPENAMROBOT_MAPS_DIR`; default `~/.openamr_ui/maps/` |
+| Routes and the active map/route selection | `~/.openamr_ui/paths/`, `~/.openamr_ui/current_map_route.yaml` |
+| Docker backend data | Named `openamr_ui_data` volume, mounted at the container's `~/.openamr_ui/` |
+| Docker maps | Named `openamrobot_maps` volume at `/data/maps` (`OPENAMROBOT_MAPS_DIR=/data/maps`) |
 | Schedules, missions, devices, profiles, metrics, and preferences | Current browser profile's `localStorage` |
-| Maps and routes | `ros2/src/openamr_ui_package/maps/` and `paths/` |
+
+The UI writes maps to the maps directory (`OPENAMROBOT_MAPS_DIR`) and routes
+to the data directory, never into the package share directory or the source
+tree, so rebuilding or reinstalling the package keeps saved maps and routes.
+On the first start of a data directory it copies the example maps and routes
+shipped in `ros2/src/openamr_ui_package/maps/` and `paths/`, once, without
+overwriting files that are already there.
+
+In Docker, maps are on the `openamrobot_maps` volume at `/data/maps`, so the
+platform map saver and map server can reach the same files. The platform
+must mount the same volume at `/data/maps`; that is a pending platform-sw
+change. When `OPENAMROBOT_MAPS_DIR` is first set on an installation that
+already has maps in `~/.openamr_ui/maps/`, they are copied into it once;
+the old folder is left unchanged as a backup.
+
+### Recording replay policy
+
+Replay publishes only the telemetry topics listed in
+`ros2/src/openamr_ui_package/param/replay_topics.yaml`; the backend passes
+exactly those to `ros2 bag play --topics`. `/cmd_vel`, `/ui/cmd_vel`, any
+`cmd_vel*` topic, `/tf`, `/tf_static`, `/goal_pose`, `/initialpose`,
+`/safety/*` and action or service topics are never played.
+
+- Without a topic list, a replay plays the recording's topics that are on
+  the allowlist and lists every other topic as skipped, with the reason. A
+  recording made with "Record all topics" therefore replays its telemetry
+  only.
+- A request that names one of the never-played topics is refused (HTTP
+  400, with the reason) before any process starts.
 
 Browser-local data doesn't automatically move to another browser or computer.
 Back it up before reinstalling, clearing browser storage, or removing Docker

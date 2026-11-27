@@ -89,7 +89,8 @@ decision. A text check proves textual consistency, never mechanical, electrical 
 # Repository-specific rules: openamrobot-ui
 ## Layout and ownership
 - Existing React frontend: web/. Flask/ROS packages: ros2/.
-- Mohamed owns operator UI/backend integration (interim); Parth owns Reporting Mode presentation.
+- Ownership (decision of 19 Oct): Parth Keshari is UI lead and Reporting Mode owner;
+  Mohamed Sayed and ND are reviewers; Nikolai runs simulation checks.
 - Reporting Mode is a full-screen route in this app, sharing backend state and adapters.
 - Execution belongs to the robot-side executor; a browser view never establishes success.
 - Operational state and terminal outcome are separate. Preserve UNKNOWN/stale semantics.

@@ -324,8 +324,11 @@ copying or restoring backend data.
 
 ### Manual backend data
 
-Backend programs, locations, run history, recordings, and generated
-certificates live in `~/.openamr_ui/`.
+Backend programs, locations, run history, recordings, routes, and generated
+certificates live in `~/.openamr_ui/`, the data directory. Maps live in
+`OPENAMROBOT_MAPS_DIR`, which defaults to `~/.openamr_ui/maps/`; back that up
+too if you set it elsewhere. In Docker, maps are on the `openamrobot_maps`
+volume at `/data/maps`.
 
 Back up:
 
@@ -425,11 +428,11 @@ a completely clean rebuild is required.
 ### Remove a manual installation
 
 1. Stop the UI and robot/simulation launch processes.
-2. Back up `~/.openamr_ui/`, maps, and routes if needed.
+2. Back up `~/.openamr_ui/` (including maps and routes) if needed.
 3. Move the repository directory to a backup location or delete that exact
    checkout.
-4. Delete `~/.openamr_ui/` only if backend programs and recordings are no
-   longer needed.
+4. Delete `~/.openamr_ui/` only if backend programs, recordings, maps, and
+   routes are no longer needed.
 5. ROS, Node.js, and system packages are shared dependencies; remove them only
    if no other workspace uses them.
 
