@@ -143,17 +143,19 @@ jobs:
       # assets (e.g. a renamed/deleted screenshot or a dead relative route) in
       # the README and docs tree. External flakiness must not fail the build,
       # so we skip loopback/private hosts, non-HTTP schemes, POST-only API
-      # endpoints, and the placeholder release URL, and accept rate-limit codes.
+      # endpoints, and the placeholder release URL, and accept rate-limit and transient gateway codes. Gateway responses
+      # do not prove a link is healthy; 404 and other non-accepted codes still fail.
       - name: Check links
         uses: lycheeverse/lychee-action@v2
         with:
           args: >-
             --no-progress
-            --max-retries 3
+            --max-retries 5
             --retry-wait-time 5
+            --timeout 30
             --exclude-loopback
             --include-mail=false
-            --accept 200,206,429
+            --accept 200,206,429,502,503,504
             --exclude '^ws://'
             --exclude 'api\.anthropic\.com'
             --exclude 'openamrobot-release'

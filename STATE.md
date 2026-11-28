@@ -280,3 +280,12 @@ from constants; their default must be selectable. README distinguishes publish,
 subscribe, rosapi introspection/parameter access and the separate HTTP stream.
 Link checks retry transient failures without accepting 503. ROS JUnit is retained
 as a workflow artifact on success/failure. Proposed #63; owner adoption pending.
+
+## #64 link-check owner adaptation (28 November 2026)
+
+Per owner comment 7235156460, the existing CI link check accepts transient
+502/503/504 responses as well as 200/206/429, retries five times with a
+five-second wait, and has a 30-second timeout. A gateway response is tolerated,
+not proof of link health; 404 and other non-accepted statuses still fail.
+This incorporates the overlapping #69 policy into #64 without a new PR.
+The rosbridge implementation is unchanged; #63 adoption remains pending.
