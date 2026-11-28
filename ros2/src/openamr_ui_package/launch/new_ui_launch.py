@@ -24,6 +24,106 @@ def _load_env_file(path):
     return env_vars
 
 
+# PROPOSED (contract change request, awaiting the software lead).
+# What a rosbridge client may do. Without these globs rosbridge accepts any
+# topic, service or action, so a browser tab still running an older UI could
+# publish /cmd_vel and bypass the platform command chain (twist_mux, stop
+# gate, velocity_smoother, collision_monitor). Exact names only, no wildcard:
+# /cmd_vel and every cmd_vel_* input stay unreachable; manual drive enters
+# only on /ui/cmd_vel. Parameter names and parsing: rosbridge_suite 2.7.1
+# rosbridge_server/scripts/rosbridge_websocket.py (PROTOCOL_PARAMETERS,
+# parse_glob_string); rosbridge appends "/rosapi/*" to services_glob itself.
+# test/test_rosbridge_allowlist.py checks this against the web app's names.
+ROSBRIDGE_ALLOWLIST = {
+    "topics_pub_glob": [
+        "/ui/cmd_vel",
+        "/goal_pose",
+        "/initialpose",
+        "/dock_trigger",
+        "/undock_robot",
+        "/ui_operation",
+        "/ui_message",
+        "/WP_req",
+        "/nav_data_req",
+        "/new_way_point",
+    ],
+    "topics_sub_glob": [
+        "/safety/stop_lock",
+        "/clock",
+        "/odom",
+        "/ui/map",
+        "/global_costmap/costmap",
+        "/local_costmap/costmap",
+        "/scan_filtered",
+        "/plan",
+        "/tf",
+        "/tf_static",
+        "/ui/amcl_pose",
+        "/ui/navigate_to_pose/status",
+        "/navigate_to_pose/_action/feedback",
+        "/dock_trigger_status",
+        "/ui/dock_robot/status",
+        "/ui/undock_robot/status",
+        "/sensors",
+        "/camera/color/image_raw",
+        "/rgb_image",
+        "/camera/image_raw",
+        "/battery_status",
+        "/charge_station_connected",
+        "/ui_message",
+        "/nav_data_resp",
+        "/WayPoints_topic",
+        "/joint_states",
+        "/diagnostics",
+        "/rosout",
+    ],
+    "services_glob": [
+        "/safety/stop_lock_engage",
+        "/safety/stop_lock_release",
+        "/navigate_to_pose/_action/cancel_goal",
+        "/navigate_through_poses/_action/cancel_goal",
+        "/compute_path_to_pose/_action/cancel_goal",
+        "/dock_robot/_action/cancel_goal",
+        "/undock_robot/_action/cancel_goal",
+        "/compute_path_to_pose/_action/send_goal",
+        "/compute_path_to_pose/_action/get_result",
+        "/reinitialize_global_localization",
+        "/ui_cmd_vel_relay_node/get_parameters",
+        "/map_server/get_state",
+        "/amcl/get_state",
+        "/controller_server/get_state",
+        "/planner_server/get_state",
+        "/bt_navigator/get_state",
+        "/map_server/change_state",
+        "/amcl/change_state",
+        "/controller_server/change_state",
+        "/planner_server/change_state",
+        "/bt_navigator/change_state",
+        "/controller_server/get_parameters",
+        "/controller_server/set_parameters",
+        "/planner_server/get_parameters",
+        "/planner_server/set_parameters",
+        "/global_costmap/global_costmap/get_parameters",
+        "/global_costmap/global_costmap/set_parameters",
+        "/local_costmap/local_costmap/get_parameters",
+        "/local_costmap/local_costmap/set_parameters",
+    ],
+    # The web app sends no native rosbridge action goals.
+    "actions_glob": [],
+}
+
+# rosapi_node: the web app reads and writes no parameter through
+# /rosapi/get_param or /rosapi/set_param (rosbridge always allows /rosapi/*),
+# so none is reachable there (rosapi/src/rosapi/glob_helper.py any_match).
+ROSAPI_ALLOWLIST = {
+    "params_glob": [],
+}
+
+
+def _glob_params(allowlist):
+    """Render each glob list in the "[a, b]" string form rosbridge and rosapi parse."""
+    return {name: "[" + ", ".join(globs) + "]" for name, globs in allowlist.items()}
+
 
 # Launch file for the web related components (Flask app, camera feed, ros communication)
 def generate_launch_description():
@@ -147,7 +247,7 @@ def generate_launch_description():
                 executable="rosbridge_websocket",
                 name="rosbridge_websocket",
                 output="screen",
-                parameters=[config, sim_time],
+                parameters=[config, sim_time, _glob_params(ROSBRIDGE_ALLOWLIST)],
             )
         )
     except PackageNotFoundError:
@@ -167,7 +267,7 @@ def generate_launch_description():
                 executable="rosapi_node",
                 name="rosapi",
                 output="screen",
-                parameters=[sim_time],
+                parameters=[sim_time, _glob_params(ROSAPI_ALLOWLIST)],
             )
         )
     except PackageNotFoundError:

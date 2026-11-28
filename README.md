@@ -267,10 +267,28 @@ For the communication and topic model, read
 
 ## Security and access
 
+The proposed rosbridge allowlist (#63/#64) filters publishing, subscribing and
+service calls separately. A stale client cannot publish `/cmd_vel` or any
+`cmd_vel_*` input; manual drive enters only on `/ui/cmd_vel`. `/rosapi/*`
+introspection remains callable (including the topic graph); it does not grant
+permission to subscribe to every discovered topic. Direct subscriptions still
+use `topics_sub_glob`. Parameter access through rosapi is denied by its empty
+`params_glob`. This filter provides no authentication or safety acceptance.
+
+Dock/undock status, sensor status and the three explicit camera topics remain
+subscribable. The Camera panel itself streams MJPEG through web_video_server
+HTTP, separately from rosbridge; this topic filter does not secure that HTTP
+endpoint. The unused `SET_POINT` constant grants no publish permission; tests
+fail if it gains a caller before its policy is reviewed.
+
+
 Only unauthenticated `AUTH_MODE=open` is implemented today. Anyone who can
 reach the configured UI and rosbridge ports can potentially view data and
 command the robot.
 
+- rosbridge accepts only the topics, services and parameters this UI uses
+  (`ROSBRIDGE_ALLOWLIST` in `new_ui_launch.py`); `/cmd_vel` is never
+  publishable from a browser. This limits a client, it does not authenticate one.
 - Keep the dashboard on a trusted local network.
 - Don't expose ports `5050`, `9090`, or `8080` directly to the internet.
 - Use firewall rules or an authenticated reverse proxy when network isolation

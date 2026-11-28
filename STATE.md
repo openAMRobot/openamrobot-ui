@@ -223,6 +223,31 @@ the older heads is not current for #90's final interface.
   test. Not run in a browser, in simulation, on the Getac ZX80 or on a
   robot.
 
+## A2 `proposal/rosbridge-allowlist` (Proposed, #63)
+
+Stacked on A1 at `21e95b9e83ea473c0b8d727ce4326a770f475ef4`; draft into
+`ui/gate-a-command-path`. Proposed until the software lead accepts
+contract change request #63.
+
+- Without globs rosbridge accepted any topic, so a client (for example a tab
+  still running the old UI) could publish `/cmd_vel` and skip the #90 chain.
+- `new_ui_launch.py` now passes one constant, `ROSBRIDGE_ALLOWLIST`
+  (`topics_pub_glob` 10, `topics_sub_glob` 28, `services_glob` 29 plus the
+  `/rosapi/*` rosbridge adds itself, `actions_glob` empty), to
+  `rosbridge_websocket`, and `ROSAPI_ALLOWLIST` (`params_glob` empty) to
+  `rosapi_node`. Exact names only; `/cmd_vel` and every `cmd_vel_*` input
+  are not publishable. Parameter names checked in rosbridge_suite 2.7.1:
+  `rosbridge_websocket` has no `params_glob`, rosapi does.
+- `test/test_rosbridge_allowlist.py` (pure Python, fnmatch as rosbridge
+  uses) fails if `/cmd_vel` or a glob matching it is allowed, if a web app
+  name is refused, or if the web app gains a name the test table lacks.
+- Narrowed: Topic echo, Devices page status topics and Params page nodes
+  outside the default rows reach only listed names.
+- `test/test_rosbridge_allowlist_live.py` starts `rosbridge_websocket` 2.7.1
+  with these parameters and publishes over a websocket: `/ui/cmd_vel` must
+  arrive, `/cmd_vel` must not. Runs under colcon test only (imports rclpy).
+- Evidence: CI only. Not run in a browser, in simulation or on a robot.
+
 Open issues on 30 Oct: #19, #28, #29, #31, #32, #33, #34, #35, #36, #37,
 #39. Open pull requests on 30 Oct: drafts #21 and #40 to #46, plus A1.
 
@@ -245,3 +270,23 @@ failures and one error; the fixed helper passes all nine. No ROS, Docker,
 web build, simulation or hardware run was performed locally for this fix.
 #48 merged on 10 Nov 2026 as 51b4af3, owned by the platform lead. #51 incorporates the fix by merging `ui/ci`; integration candidate
 #56 must be rebuilt by its owner to include it.
+
+## #64 owner-feedback update (26 November 2026)
+
+Explicit docking/sensor/camera subscriptions added; AppConfig and nav2d key sets
+are derived from source and must be completely classified. Inactive SET_POINT
+is explicitly denied until it has a reviewed caller. Camera options are derived
+from constants; their default must be selectable. README distinguishes publish,
+subscribe, rosapi introspection/parameter access and the separate HTTP stream.
+Link checks retry transient failures without accepting 503. ROS JUnit is retained
+as a workflow artifact on success/failure. Proposed #63; owner adoption pending.
+
+## #64 strict link-check owner correction (28 November 2026)
+
+Owner comment 7239575295 supersedes the earlier gateway acceptance policy.
+The existing blocking link check accepts only 200/206/429, with five retries,
+a five-second retry wait and a 30-second timeout. Persistent 502/503/504 and
+404 responses fail. Retry settings do not guarantee HTTP 5xx responses are
+retried: local lychee 0.24.2 rejected the first returned 503 immediately.
+The earlier 8650c4c policy accepted gateway errors as success and is replaced.
+The rosbridge implementation is unchanged; #63 owner adoption remains pending.

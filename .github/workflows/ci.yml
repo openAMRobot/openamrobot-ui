@@ -111,6 +111,16 @@ jobs:
           colcon test --packages-select openamr_ui_package openamr_ui_msgs
           colcon test-result --verbose
 
+      - name: Retain ROS JUnit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ros-junit-results
+          path: |
+            ros2/build/**/test_results/**/*.xml
+            ros2/build/**/pytest.xml
+          if-no-files-found: warn
+
       # The guard's own tests, so a broken counter cannot pass silently.
       - name: Test the zero-test guard
         run: python3 -m unittest discover -v -s scripts -p 'test_count_test_results.py'
@@ -129,16 +139,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The point of this job is catching broken *local* links and missing
-      # assets (e.g. a renamed/deleted screenshot or a dead relative route) in
-      # the README and docs tree. External flakiness must not fail the build,
-      # so we skip loopback/private hosts, non-HTTP schemes, POST-only API
-      # endpoints, and the placeholder release URL, and accept rate-limit codes.
+      # Check local assets and external links. Keep bounded request retries,
+      # but keep persistent gateway errors (502/503/504) failing the job.
+      # 429 remains accepted for rate limiting; 404 remains a failure.
+      # Exclude loopback/private hosts, unsupported schemes, POST-only APIs
+      # and the placeholder release URL.
       - name: Check links
         uses: lycheeverse/lychee-action@v2
         with:
           args: >-
             --no-progress
+            --max-retries 5
+            --retry-wait-time 5
+            --timeout 30
             --exclude-loopback
             --include-mail=false
             --accept 200,206,429
